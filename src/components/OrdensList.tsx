@@ -36,20 +36,57 @@ export function OrdensList() {
   const { data: ordens = [], isLoading } = useQuery({
     queryKey: ['ordens'],
     queryFn: async () => {
+      console.log('Fetching ordens...')
       const { data, error } = await supabase
         .from('view_ordem_servico_completa')
         .select('*')
         .order('data_abertura', { ascending: false })
       
-      if (error) throw error
-      return data as OrdemCompleta[]
+      if (error) {
+        console.error('Error fetching ordens:', error)
+        throw error
+      }
+      
+      console.log('Raw data from Supabase:', data)
+      
+      // Transform the data to match our interface
+      const transformedData = data?.map(item => ({
+        id: item.ordem_id || item.id,
+        ordem_id: item.ordem_id,
+        cliente_id: item.cliente_id,
+        tecnico_id: item.tecnico_id,
+        descricao_problema: item.descricao_problema,
+        diagnostico: item.diagnostico,
+        servico_realizado: item.servico_realizado,
+        status: item.status,
+        data_abertura: item.data_abertura,
+        data_conclusao: item.data_conclusao,
+        cliente: {
+          id: item.cliente_id || '',
+          nome: item.cliente_nome || '',
+          telefone: item.cliente_telefone || '',
+          email: item.cliente_email || '',
+          endereco: item.cliente_endereco || '',
+          criado_em: ''
+        },
+        tecnico: item.tecnico_nome ? {
+          id: item.tecnico_id || '',
+          nome: item.tecnico_nome,
+          criado_em: ''
+        } : undefined,
+        itens: item.itens || [],
+        total: item.total_ordem || 0
+      })) || []
+      
+      console.log('Transformed data:', transformedData)
+      return transformedData as OrdemCompleta[]
     }
   })
 
   const filteredOrdens = ordens.filter(ordem => {
-    if (!ordem || !ordem.cliente) return false
+    if (!ordem) return false
     
-    const clienteNome = ordem.cliente.nome?.toLowerCase() || ''
+    const clienteNome = ordem.cliente?.nome?.toLowerCase() || ''
     const descricaoProblema = ordem.descricao_problema?.toLowerCase() || ''
     const searchLower = searchTerm.toLowerCase()
     
@@ -73,6 +110,8 @@ export function OrdensList() {
     setSelectedOrdem(null)
     setIsViewing(false)
   }
+
+  console.log('Filtered ordens:', filteredOrdens)
 
   return (
     <div className="space-y-6">

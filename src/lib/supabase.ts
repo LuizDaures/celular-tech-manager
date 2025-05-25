@@ -42,9 +42,14 @@ export interface ItemOrdem {
   preco_unitario: number
 }
 
-export interface OrdemCompleta extends OrdemServico {
+export interface OrdemCompleta extends Omit<OrdemServico, 'id'> {
+  id: string
+  ordem_id?: string
   cliente: Cliente
   tecnico?: Tecnico
   itens: ItemOrdem[]
   total: number
+  cliente_nome?: string
+  tecnico_nome?: string
+  total_ordem?: number
 }
