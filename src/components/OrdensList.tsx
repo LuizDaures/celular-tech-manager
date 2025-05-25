@@ -5,7 +5,7 @@ import { supabase, OrdemCompleta } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { OrdemForm } from '@/components/OrdemForm'
 import { Plus, Search, Edit, Eye } from 'lucide-react'
@@ -46,10 +46,15 @@ export function OrdensList() {
     }
   })
 
-  const filteredOrdens = ordens.filter(ordem =>
-    ordem.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ordem.descricao_problema.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredOrdens = ordens.filter(ordem => {
+    if (!ordem || !ordem.cliente) return false
+    
+    const clienteNome = ordem.cliente.nome?.toLowerCase() || ''
+    const descricaoProblema = ordem.descricao_problema?.toLowerCase() || ''
+    const searchLower = searchTerm.toLowerCase()
+    
+    return clienteNome.includes(searchLower) || descricaoProblema.includes(searchLower)
+  })
 
   const handleEdit = (ordem: OrdemCompleta) => {
     setSelectedOrdem(ordem)
@@ -85,6 +90,9 @@ export function OrdensList() {
               <DialogTitle>
                 {isViewing ? 'Visualizar Ordem' : selectedOrdem ? 'Editar Ordem' : 'Nova Ordem'}
               </DialogTitle>
+              <DialogDescription>
+                {isViewing ? 'Visualize os detalhes da ordem de serviço.' : selectedOrdem ? 'Edite os dados da ordem de serviço.' : 'Crie uma nova ordem de serviço.'}
+              </DialogDescription>
             </DialogHeader>
             <OrdemForm 
               ordem={selectedOrdem}
@@ -133,7 +141,7 @@ export function OrdensList() {
             ) : (
               filteredOrdens.map((ordem) => (
                 <TableRow key={ordem.id}>
-                  <TableCell className="font-medium">{ordem.cliente.nome}</TableCell>
+                  <TableCell className="font-medium">{ordem.cliente?.nome || 'Cliente não encontrado'}</TableCell>
                   <TableCell className="max-w-xs truncate">{ordem.descricao_problema}</TableCell>
                   <TableCell>
                     <Badge className={statusColors[ordem.status]}>
