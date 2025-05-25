@@ -1,14 +1,47 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useState } from 'react'
+import { Layout } from '@/components/Layout'
+import { Dashboard } from '@/components/Dashboard'
+import { ClientesList } from '@/components/ClientesList'
 
 const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
-};
+  const [currentView, setCurrentView] = useState('dashboard')
 
-export default Index;
+  // Listen to hash changes for navigation
+  useState(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '')
+      if (hash) {
+        setCurrentView(hash)
+      }
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    handleHashChange() // Initialize on mount
+
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  })
+
+  const renderCurrentView = () => {
+    switch (currentView) {
+      case 'clientes':
+        return <ClientesList />
+      case 'tecnicos':
+        return <div className="text-center py-8">Gestão de Técnicos (Em desenvolvimento)</div>
+      case 'ordens':
+        return <div className="text-center py-8">Ordens de Serviço (Em desenvolvimento)</div>
+      case 'configuracoes':
+        return <div className="text-center py-8">Configurações (Em desenvolvimento)</div>
+      default:
+        return <Dashboard />
+    }
+  }
+
+  return (
+    <Layout>
+      {renderCurrentView()}
+    </Layout>
+  )
+}
+
+export default Index
