@@ -3,6 +3,9 @@ import { useState } from 'react'
 import { Layout } from '@/components/Layout'
 import { Dashboard } from '@/components/Dashboard'
 import { ClientesList } from '@/components/ClientesList'
+import { TecnicosList } from '@/components/TecnicosList'
+import { OrdensList } from '@/components/OrdensList'
+import { Configuracoes } from '@/components/Configuracoes'
 
 const Index = () => {
   const [currentView, setCurrentView] = useState('dashboard')
@@ -27,11 +30,11 @@ const Index = () => {
       case 'clientes':
         return <ClientesList />
       case 'tecnicos':
-        return <div className="text-center py-8">Gestão de Técnicos (Em desenvolvimento)</div>
+        return <TecnicosList />
       case 'ordens':
-        return <div className="text-center py-8">Ordens de Serviço (Em desenvolvimento)</div>
+        return <OrdensList />
       case 'configuracoes':
-        return <div className="text-center py-8">Configurações (Em desenvolvimento)</div>
+        return <Configuracoes />
       default:
         return <Dashboard />
     }
