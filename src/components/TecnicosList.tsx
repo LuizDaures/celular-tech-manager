@@ -5,7 +5,7 @@ import { supabase, Tecnico } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog'
 import { TecnicoForm } from '@/components/TecnicoForm'
 import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
@@ -91,6 +91,12 @@ export function TecnicosList() {
               <DialogTitle>
                 {editingTecnico ? 'Editar Técnico' : 'Novo Técnico'}
               </DialogTitle>
+              <DialogDescription>
+                {editingTecnico ? 
+                  'Atualize as informações do técnico aqui.' : 
+                  'Cadastre um novo técnico no sistema.'
+                }
+              </DialogDescription>
             </DialogHeader>
             <TecnicoForm 
               tecnico={editingTecnico}

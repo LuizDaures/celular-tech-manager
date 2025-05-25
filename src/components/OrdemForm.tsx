@@ -192,7 +192,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
               <SelectValue placeholder="Selecione um técnico" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Nenhum</SelectItem>
+              <SelectItem value="none">Nenhum</SelectItem>
               {tecnicos.map((tecnico) => (
                 <SelectItem key={tecnico.id} value={tecnico.id}>
                   {tecnico.nome}
