@@ -101,7 +101,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
     const dataToSave = {
       cliente_id: clienteId,
-      tecnico_id: tecnicoId || null,
+      tecnico_id: tecnicoId === 'none' || !tecnicoId ? null : tecnicoId,
       descricao_problema: descricaoProblema.trim(),
       diagnostico: diagnostico.trim() || null,
       servico_realizado: servicoRealizado.trim() || null,
@@ -117,13 +117,17 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     setStatus(value as 'aberta' | 'em_andamento' | 'concluida' | 'cancelada')
   }
 
+  const handleTecnicoChange = (value: string) => {
+    setTecnicoId(value === 'none' ? '' : value)
+  }
+
   if (readOnly && ordem) {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label>Cliente</Label>
-            <p className="mt-1 p-2 bg-muted rounded">{ordem.cliente.nome}</p>
+            <p className="mt-1 p-2 bg-muted rounded">{ordem.cliente?.nome || 'Cliente não encontrado'}</p>
           </div>
           <div>
             <Label>Técnico</Label>
@@ -187,7 +191,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
         <div className="space-y-2">
           <Label htmlFor="tecnico">Técnico</Label>
-          <Select value={tecnicoId} onValueChange={setTecnicoId}>
+          <Select value={tecnicoId || 'none'} onValueChange={handleTecnicoChange}>
             <SelectTrigger>
               <SelectValue placeholder="Selecione um técnico" />
             </SelectTrigger>
