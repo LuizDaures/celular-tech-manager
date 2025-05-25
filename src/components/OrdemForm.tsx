@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
@@ -21,7 +20,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const [descricaoProblema, setDescricaoProblema] = useState(ordem?.descricao_problema || '')
   const [diagnostico, setDiagnostico] = useState(ordem?.diagnostico || '')
   const [servicoRealizado, setServicoRealizado] = useState(ordem?.servico_realizado || '')
-  const [status, setStatus] = useState(ordem?.status || 'aberta')
+  const [status, setStatus] = useState<'aberta' | 'em_andamento' | 'concluida' | 'cancelada'>(ordem?.status || 'aberta')
   
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -112,6 +111,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     }
 
     saveOrdem.mutate(dataToSave)
+  }
+
+  const handleStatusChange = (value: string) => {
+    setStatus(value as 'aberta' | 'em_andamento' | 'concluida' | 'cancelada')
   }
 
   if (readOnly && ordem) {
@@ -236,7 +239,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
       <div className="space-y-2">
         <Label htmlFor="status">Status</Label>
-        <Select value={status} onValueChange={setStatus}>
+        <Select value={status} onValueChange={handleStatusChange}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
