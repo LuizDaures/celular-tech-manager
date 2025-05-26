@@ -1,0 +1,203 @@
+
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { supabase, PecaManutencao } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useToast } from '@/hooks/use-toast'
+import { Plus, Edit, Trash2, Search } from 'lucide-react'
+import { PecaForm } from '@/components/PecaForm'
+
+export function PecasList() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedPeca, setSelectedPeca] = useState<PecaManutencao | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+
+  const { data: pecas = [], isLoading } = useQuery({
+    queryKey: ['pecas'],
+    queryFn: async () => {
+      console.log('Fetching pecas...')
+      const { data, error } = await supabase
+        .from('pecas_manutencao')
+        .select('*')
+        .order('nome')
+      
+      if (error) {
+        console.error('Error fetching pecas:', error)
+        throw error
+      }
+      
+      console.log('Pecas data:', data)
+      return data as PecaManutencao[]
+    }
+  })
+
+  const deletePeca = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('pecas_manutencao')
+        .delete()
+        .eq('id', id)
+      
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pecas'] })
+      toast({
+        title: "Peça excluída",
+        description: "A peça foi excluída com sucesso.",
+      })
+    },
+    onError: (error: any) => {
+      console.error('Error deleting peca:', error)
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir peça.",
+        variant: "destructive",
+      })
+    }
+  })
+
+  const filteredPecas = pecas.filter(peca =>
+    peca.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    peca.fabricante?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    peca.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    peca.codigo_fabricante?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const handleEdit = (peca: PecaManutencao) => {
+    setSelectedPeca(peca)
+    setIsDialogOpen(true)
+  }
+
+  const handleNew = () => {
+    setSelectedPeca(null)
+    setIsDialogOpen(true)
+  }
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false)
+    setSelectedPeca(null)
+  }
+
+  const handleDelete = (id: string) => {
+    if (confirm('Tem certeza que deseja excluir esta peça?')) {
+      deletePeca.mutate(id)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Peças de Manutenção</h1>
+          <p className="text-muted-foreground">Gerencie o estoque de peças</p>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={handleNew}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Peça
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedPeca ? 'Editar Peça' : 'Nova Peça'}
+              </DialogTitle>
+            </DialogHeader>
+            <PecaForm
+              peca={selectedPeca}
+              onSuccess={handleCloseDialog}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Peças</CardTitle>
+          <CardDescription>
+            Total de {filteredPecas.length} peça{filteredPecas.length !== 1 ? 's' : ''} cadastrada{filteredPecas.length !== 1 ? 's' : ''}
+          </CardDescription>
+          <div className="flex items-center space-x-2">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar peças..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-4">Carregando peças...</div>
+          ) : filteredPecas.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              {searchTerm ? 'Nenhuma peça encontrada com os filtros aplicados.' : 'Nenhuma peça cadastrada.'}
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Fabricante</TableHead>
+                    <TableHead>Modelo</TableHead>
+                    <TableHead>Código</TableHead>
+                    <TableHead>Preço</TableHead>
+                    <TableHead>Estoque</TableHead>
+                    <TableHead className="w-[100px]">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPecas.map((peca) => (
+                    <TableRow key={peca.id}>
+                      <TableCell className="font-medium">{peca.nome}</TableCell>
+                      <TableCell>{peca.fabricante || '-'}</TableCell>
+                      <TableCell>{peca.modelo || '-'}</TableCell>
+                      <TableCell>{peca.codigo_fabricante || '-'}</TableCell>
+                      <TableCell>R$ {peca.preco_unitario.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <span className={peca.estoque <= 5 ? 'text-red-600 font-medium' : ''}>
+                          {peca.estoque}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(peca)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(peca.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

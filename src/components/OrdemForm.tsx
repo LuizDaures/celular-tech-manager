@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, OrdemCompleta, Cliente, Tecnico, ItemOrdem } from '@/lib/supabase'
+import { supabase, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,7 +17,8 @@ interface OrdemFormProps {
 }
 
 interface ItemForm {
-  nome_item: string
+  peca_id?: string
+  nome_peca: string
   quantidade: number
   preco_unitario: number
 }
@@ -41,7 +42,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       const fetchItens = async () => {
         const { data, error } = await supabase
           .from('itens_ordem')
-          .select('*')
+          .select(`
+            *,
+            peca:pecas_manutencao(*)
+          `)
           .eq('ordem_id', ordem.id)
 
         if (error) {
@@ -50,7 +54,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         }
 
         setItens(data.map(item => ({
-          nome_item: item.nome_item,
+          peca_id: item.peca_id,
+          nome_peca: item.peca?.nome || 'Peça não encontrada',
           quantidade: item.quantidade,
           preco_unitario: item.preco_unitario
         })))
@@ -128,20 +133,24 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         }
 
         // Inserir novos itens
-        const itensToInsert = data.itens.map((item: ItemForm) => ({
-          ordem_id: ordemId,
-          nome_item: item.nome_item,
-          quantidade: item.quantidade,
-          preco_unitario: item.preco_unitario
-        }))
+        const itensToInsert = data.itens
+          .filter((item: ItemForm) => item.peca_id) // Só inserir itens com peca_id
+          .map((item: ItemForm) => ({
+            ordem_id: ordemId,
+            peca_id: item.peca_id,
+            quantidade: item.quantidade,
+            preco_unitario: item.preco_unitario
+          }))
 
-        const { error: itensError } = await supabase
-          .from('itens_ordem')
-          .insert(itensToInsert)
+        if (itensToInsert.length > 0) {
+          const { error: itensError } = await supabase
+            .from('itens_ordem')
+            .insert(itensToInsert)
 
-        if (itensError) {
-          console.error('Error saving itens:', itensError)
-          throw itensError
+          if (itensError) {
+            console.error('Error saving itens:', itensError)
+            throw itensError
+          }
         }
       }
     },
@@ -166,7 +175,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   })
 
   const addItem = () => {
-    setItens([...itens, { nome_item: '', quantidade: 1, preco_unitario: 0 }])
+    setItens([...itens, { nome_peca: '', quantidade: 1, preco_unitario: 0 }])
   }
 
   const addItemFromSelector = (item: ItemForm) => {
@@ -352,10 +361,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         />
       </div>
 
-      {/* Seção de Itens com novo seletor */}
+      {/* Seção de Peças com novo seletor */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <Label>Itens da Ordem</Label>
+          <Label>Peças Utilizadas</Label>
           <div className="flex gap-2">
             <ItemSelector onAddItem={addItemFromSelector} />
             <Button type="button" variant="outline" size="sm" onClick={addItem}>
@@ -368,11 +377,12 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         {itens.map((item, index) => (
           <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-3 border rounded">
             <div className="space-y-1">
-              <Label>Nome do Item</Label>
+              <Label>Nome da Peça</Label>
               <Input
-                value={item.nome_item}
-                onChange={(e) => updateItem(index, 'nome_item', e.target.value)}
+                value={item.nome_peca}
+                onChange={(e) => updateItem(index, 'nome_peca', e.target.value)}
                 placeholder="Ex: Tela LCD"
+                disabled={!!item.peca_id}
               />
             </div>
             <div className="space-y-1">

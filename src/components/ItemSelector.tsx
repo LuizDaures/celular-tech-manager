@@ -1,5 +1,7 @@
 
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { supabase, PecaManutencao } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -7,15 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Plus, Search } from 'lucide-react'
 
-interface Item {
-  id: string
-  nome: string
-  categoria: string
-  preco_padrao: number
-}
-
 interface ItemForm {
-  nome_item: string
+  peca_id: string
+  nome_peca: string
   quantidade: number
   preco_unitario: number
 }
@@ -27,46 +23,51 @@ interface ItemSelectorProps {
 export function ItemSelector({ onAddItem }: ItemSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedFabricante, setSelectedFabricante] = useState('all')
   const [quantity, setQuantity] = useState(1)
   const [customPrice, setCustomPrice] = useState('')
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null)
+  const [selectedPeca, setSelectedPeca] = useState<PecaManutencao | null>(null)
 
-  // Mock data - em produção viria do banco
-  const [items] = useState<Item[]>([
-    { id: '1', nome: 'Tela LCD', categoria: 'Display', preco_padrao: 150.00 },
-    { id: '2', nome: 'Bateria', categoria: 'Energia', preco_padrao: 80.00 },
-    { id: '3', nome: 'Placa Mãe', categoria: 'Hardware', preco_padrao: 300.00 },
-    { id: '4', nome: 'Memória RAM', categoria: 'Hardware', preco_padrao: 120.00 },
-    { id: '5', nome: 'Carregador', categoria: 'Acessórios', preco_padrao: 45.00 },
-    { id: '6', nome: 'Cabo USB', categoria: 'Acessórios', preco_padrao: 15.00 },
-    { id: '7', nome: 'Touch Screen', categoria: 'Display', preco_padrao: 200.00 },
-  ])
+  const { data: pecas = [] } = useQuery({
+    queryKey: ['pecas'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pecas_manutencao')
+        .select('*')
+        .order('nome')
+      
+      if (error) throw error
+      return data as PecaManutencao[]
+    }
+  })
 
-  const categories = ['all', ...Array.from(new Set(items.map(item => item.categoria)))]
+  const fabricantes = ['all', ...Array.from(new Set(pecas.map(peca => peca.fabricante).filter(Boolean)))]
 
-  const filteredItems = items.filter(item => {
-    const matchesSearch = item.nome.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === 'all' || item.categoria === selectedCategory
-    return matchesSearch && matchesCategory
+  const filteredPecas = pecas.filter(peca => {
+    const matchesSearch = peca.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         peca.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         peca.codigo_fabricante?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesFabricante = selectedFabricante === 'all' || peca.fabricante === selectedFabricante
+    return matchesSearch && matchesFabricante
   })
 
   const handleAddItem = () => {
-    if (!selectedItem) return
+    if (!selectedPeca) return
 
     const itemToAdd: ItemForm = {
-      nome_item: selectedItem.nome,
+      peca_id: selectedPeca.id,
+      nome_peca: selectedPeca.nome,
       quantidade: quantity,
-      preco_unitario: customPrice ? parseFloat(customPrice) : selectedItem.preco_padrao
+      preco_unitario: customPrice ? parseFloat(customPrice) : selectedPeca.preco_unitario
     }
 
     onAddItem(itemToAdd)
     setIsOpen(false)
-    setSelectedItem(null)
+    setSelectedPeca(null)
     setQuantity(1)
     setCustomPrice('')
     setSearchTerm('')
-    setSelectedCategory('all')
+    setSelectedFabricante('all')
   }
 
   return (
@@ -99,16 +100,16 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
             </div>
             
             <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <Label>Fabricante</Label>
+              <Select value={selectedFabricante} onValueChange={setSelectedFabricante}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas as Categorias</SelectItem>
-                  {categories.filter(cat => cat !== 'all').map(category => (
-                    <SelectItem key={category} value={category}>
-                      {category}
+                  <SelectItem value="all">Todos os Fabricantes</SelectItem>
+                  {fabricantes.filter(fab => fab !== 'all').map(fabricante => (
+                    <SelectItem key={fabricante} value={fabricante!}>
+                      {fabricante}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -116,29 +117,35 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
             </div>
           </div>
 
-          {/* Lista de itens */}
+          {/* Lista de peças */}
           <div className="border rounded-lg max-h-60 overflow-y-auto">
-            {filteredItems.length === 0 ? (
+            {filteredPecas.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground">
                 Nenhuma peça encontrada
               </div>
             ) : (
               <div className="divide-y">
-                {filteredItems.map(item => (
+                {filteredPecas.map(peca => (
                   <div 
-                    key={item.id}
+                    key={peca.id}
                     className={`p-3 cursor-pointer hover:bg-muted transition-colors ${
-                      selectedItem?.id === item.id ? 'bg-muted' : ''
+                      selectedPeca?.id === peca.id ? 'bg-muted' : ''
                     }`}
-                    onClick={() => setSelectedItem(item)}
+                    onClick={() => setSelectedPeca(peca)}
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <div className="font-medium">{item.nome}</div>
-                        <div className="text-sm text-muted-foreground">{item.categoria}</div>
+                        <div className="font-medium">{peca.nome}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {peca.fabricante} {peca.modelo && `- ${peca.modelo}`}
+                          {peca.codigo_fabricante && ` (${peca.codigo_fabricante})`}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Estoque: {peca.estoque}
+                        </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">R$ {item.preco_padrao.toFixed(2)}</div>
+                        <div className="font-medium">R$ {peca.preco_unitario.toFixed(2)}</div>
                       </div>
                     </div>
                   </div>
@@ -147,26 +154,30 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
             )}
           </div>
 
-          {/* Configurações do item selecionado */}
-          {selectedItem && (
+          {/* Configurações da peça selecionada */}
+          {selectedPeca && (
             <div className="border rounded-lg p-4 bg-muted/50">
-              <h4 className="font-medium mb-3">Item Selecionado: {selectedItem.nome}</h4>
+              <h4 className="font-medium mb-3">Peça Selecionada: {selectedPeca.nome}</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Quantidade</Label>
                   <Input
                     type="number"
                     min="1"
+                    max={selectedPeca.estoque}
                     value={quantity}
                     onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                   />
+                  <div className="text-xs text-muted-foreground">
+                    Disponível em estoque: {selectedPeca.estoque}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Preço Unitário (deixe vazio para usar padrão)</Label>
                   <Input
                     type="number"
                     step="0.01"
-                    placeholder={`R$ ${selectedItem.preco_padrao.toFixed(2)}`}
+                    placeholder={`R$ ${selectedPeca.preco_unitario.toFixed(2)}`}
                     value={customPrice}
                     onChange={(e) => setCustomPrice(e.target.value)}
                   />
@@ -174,9 +185,12 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
               </div>
               
               <div className="mt-4 flex justify-end">
-                <Button onClick={handleAddItem}>
+                <Button 
+                  onClick={handleAddItem}
+                  disabled={quantity > selectedPeca.estoque}
+                >
                   <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Item
+                  Adicionar Peça
                 </Button>
               </div>
             </div>
