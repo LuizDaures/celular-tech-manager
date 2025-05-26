@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta } from '@/lib/supabase'
@@ -9,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { OrdemForm } from '@/components/OrdemForm'
-import { Plus, Search, Edit, Eye, Trash } from 'lucide-react'
+import { Plus, Search, Edit, Eye, Trash, Download } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 const statusColors = {
@@ -119,6 +118,148 @@ export function OrdensList() {
     }
   })
 
+  const handleDownload = async (ordem: OrdemCompleta) => {
+    try {
+      // Buscar dados da empresa
+      const { data: empresaData } = await supabase
+        .from('dados_empresa')
+        .select('*')
+        .limit(1)
+        .single()
+
+      const empresa = empresaData || { nome: 'TechFix Pro', cnpj: '', logo_base64: '' }
+
+      // Template HTML
+      const htmlTemplate = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Ordem de Serviço</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h2 { text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #000; padding: 8px; }
+    .section { margin-top: 30px; }
+    .empresa-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .empresa-header img {
+      max-height: 80px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="empresa-header">
+    ${empresa.logo_base64 ? `<img src="data:image/png;base64,${empresa.logo_base64}" alt="Logo da Empresa">` : ''}
+    <div>
+      <h2>${empresa.nome}</h2>
+      ${empresa.cnpj ? `<strong>CNPJ:</strong> ${empresa.cnpj}` : ''}
+    </div>
+  </div>
+
+  <h2>Ordem de Serviço</h2>
+
+  <div class="section">
+    <strong>ID da Ordem:</strong> ${ordem.id}<br>
+    <strong>Data de Abertura:</strong> ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}<br>
+    ${ordem.data_conclusao ? `<strong>Data de Conclusão:</strong> ${new Date(ordem.data_conclusao).toLocaleDateString('pt-BR')}<br>` : ''}
+    <strong>Status:</strong> ${statusLabels[ordem.status]}<br>
+  </div>
+
+  <div class="section">
+    <h3>Cliente</h3>
+    <strong>Nome:</strong> ${ordem.cliente?.nome || ''}<br>
+    ${ordem.cliente_cpf ? `<strong>CPF:</strong> ${ordem.cliente_cpf}<br>` : ''}
+    ${ordem.cliente_telefone ? `<strong>Telefone:</strong> ${ordem.cliente_telefone}<br>` : ''}
+    ${ordem.cliente_email ? `<strong>Email:</strong> ${ordem.cliente_email}<br>` : ''}
+    ${ordem.cliente_endereco ? `<strong>Endereço:</strong> ${ordem.cliente_endereco}<br>` : ''}
+  </div>
+
+  <div class="section">
+    <h3>Técnico</h3>
+    <strong>Nome:</strong> ${ordem.tecnico?.nome || 'Não atribuído'}<br>
+    ${ordem.tecnico_cpf ? `<strong>CPF:</strong> ${ordem.tecnico_cpf}<br>` : ''}
+  </div>
+
+  <div class="section">
+    <h3>Descrição do Problema</h3>
+    <p>${ordem.descricao_problema}</p>
+
+    ${ordem.diagnostico ? `<h3>Diagnóstico</h3><p>${ordem.diagnostico}</p>` : ''}
+
+    ${ordem.servico_realizado ? `<h3>Serviço Realizado</h3><p>${ordem.servico_realizado}</p>` : ''}
+  </div>
+
+  ${ordem.itens && ordem.itens.length > 0 ? `
+  <div class="section">
+    <h3>Itens</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Qtd</th>
+          <th>Preço Unitário</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${ordem.itens.map(item => `
+        <tr>
+          <td>${item.nome_item}</td>
+          <td>${item.quantidade}</td>
+          <td>R$ ${item.preco_unitario.toFixed(2)}</td>
+          <td>R$ ${(item.quantidade * item.preco_unitario).toFixed(2)}</td>
+        </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  </div>
+  ` : ''}
+
+  <div class="section">
+    <h3>Resumo</h3>
+    <strong>Valor da Manutenção:</strong> R$ ${ordem.valor_manutencao?.toFixed(2) || ordem.valor?.toFixed(2) || '0,00'}<br>
+    <strong>Total dos Itens:</strong> R$ ${ordem.total_ordem?.toFixed(2) || ordem.total?.toFixed(2) || '0,00'}<br>
+    <strong>Total Geral:</strong> R$ ${((ordem.valor_manutencao || ordem.valor || 0) + (ordem.total_ordem || ordem.total || 0)).toFixed(2)}<br>
+  </div>
+
+</body>
+</html>
+      `
+
+      // Criar e baixar o arquivo
+      const blob = new Blob([htmlTemplate], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `ordem-servico-${ordem.id}.html`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      URL.revokeObjectURL(url)
+
+      toast({
+        title: "Download concluído",
+        description: "A ordem de serviço foi baixada com sucesso.",
+      })
+    } catch (error) {
+      console.error('Erro no download:', error)
+      toast({
+        title: "Erro no download",
+        description: "Não foi possível baixar a ordem de serviço.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const filteredOrdens = ordens.filter(ordem => {
     if (!ordem) return false
     
@@ -200,20 +341,21 @@ export function OrdensList() {
               <TableHead>Problema</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Data Abertura</TableHead>
-              <TableHead>Total</TableHead>
+              <TableHead>Valor Manutenção</TableHead>
+              <TableHead>Total Itens</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : filteredOrdens.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   Nenhuma ordem encontrada.
                 </TableCell>
               </TableRow>
@@ -231,10 +373,20 @@ export function OrdensList() {
                     {new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell>
-                    {ordem.total ? `R$ ${ordem.total.toFixed(2)}` : '-'}
+                    {ordem.valor_manutencao || ordem.valor ? `R$ ${(ordem.valor_manutencao || ordem.valor)?.toFixed(2)}` : '-'}
+                  </TableCell>
+                  <TableCell>
+                    {ordem.total_ordem || ordem.total ? `R$ ${(ordem.total_ordem || ordem.total)?.toFixed(2)}` : '-'}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleDownload(ordem)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="icon"

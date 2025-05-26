@@ -147,6 +147,7 @@ export function ClientesList() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>CPF</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Telefone</TableHead>
               <TableHead>Data Cadastro</TableHead>
@@ -156,13 +157,13 @@ export function ClientesList() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : filteredClientes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   Nenhum cliente encontrado.
                 </TableCell>
               </TableRow>
@@ -170,6 +171,7 @@ export function ClientesList() {
               filteredClientes.map((cliente) => (
                 <TableRow key={cliente.id}>
                   <TableCell className="font-medium">{cliente.nome}</TableCell>
+                  <TableCell>{cliente.cpf || '-'}</TableCell>
                   <TableCell>{cliente.email || '-'}</TableCell>
                   <TableCell>{cliente.telefone || '-'}</TableCell>
                   <TableCell>

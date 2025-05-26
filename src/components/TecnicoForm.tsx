@@ -5,6 +5,7 @@ import { supabase, Tecnico } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 
 interface TecnicoFormProps {
@@ -13,12 +14,18 @@ interface TecnicoFormProps {
 }
 
 export function TecnicoForm({ tecnico, onSuccess }: TecnicoFormProps) {
-  const [nome, setNome] = useState(tecnico?.nome || '')
+  const [formData, setFormData] = useState({
+    nome: tecnico?.nome || '',
+    telefone: tecnico?.telefone || '',
+    email: tecnico?.email || '',
+    endereco: tecnico?.endereco || '',
+    cpf: tecnico?.cpf || '',
+  })
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
   const saveTecnico = useMutation({
-    mutationFn: async (data: { nome: string }) => {
+    mutationFn: async (data: { nome: string; telefone?: string; email?: string; endereco?: string; cpf?: string }) => {
       if (tecnico) {
         const { error } = await supabase
           .from('tecnicos')
@@ -56,7 +63,7 @@ export function TecnicoForm({ tecnico, onSuccess }: TecnicoFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!nome.trim()) {
+    if (!formData.nome.trim()) {
       toast({
         title: "Erro",
         description: "O nome do técnico é obrigatório.",
@@ -65,7 +72,13 @@ export function TecnicoForm({ tecnico, onSuccess }: TecnicoFormProps) {
       return
     }
 
-    saveTecnico.mutate({ nome: nome.trim() })
+    saveTecnico.mutate({
+      nome: formData.nome.trim(),
+      telefone: formData.telefone.trim() || null,
+      email: formData.email.trim() || null,
+      endereco: formData.endereco.trim() || null,
+      cpf: formData.cpf.trim() || null,
+    })
   }
 
   return (
@@ -74,10 +87,54 @@ export function TecnicoForm({ tecnico, onSuccess }: TecnicoFormProps) {
         <Label htmlFor="nome">Nome *</Label>
         <Input
           id="nome"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
+          value={formData.nome}
+          onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
           placeholder="Nome do técnico"
           required
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="cpf">CPF</Label>
+          <Input
+            id="cpf"
+            value={formData.cpf}
+            onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+            placeholder="000.000.000-00"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="telefone">Telefone</Label>
+          <Input
+            id="telefone"
+            value={formData.telefone}
+            onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+            placeholder="(11) 99999-9999"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="email">E-mail</Label>
+        <Input
+          id="email"
+          type="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          placeholder="tecnico@email.com"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="endereco">Endereço</Label>
+        <Textarea
+          id="endereco"
+          value={formData.endereco}
+          onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+          placeholder="Endereço completo do técnico"
+          rows={3}
         />
       </div>
 

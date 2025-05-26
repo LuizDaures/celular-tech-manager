@@ -21,6 +21,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
     telefone: '',
     email: '',
     endereco: '',
+    cpf: '',
   })
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
@@ -32,6 +33,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
         telefone: cliente.telefone || '',
         email: cliente.email || '',
         endereco: cliente.endereco || '',
+        cpf: cliente.cpf || '',
       })
     }
   }, [cliente])
@@ -60,6 +62,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
             telefone: formData.telefone.trim() || null,
             email: formData.email.trim() || null,
             endereco: formData.endereco.trim() || null,
+            cpf: formData.cpf.trim() || null,
           })
           .eq('id', cliente.id)
 
@@ -78,6 +81,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
             telefone: formData.telefone.trim() || null,
             email: formData.email.trim() || null,
             endereco: formData.endereco.trim() || null,
+            cpf: formData.cpf.trim() || null,
           })
 
         if (error) throw error
@@ -136,6 +140,16 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label htmlFor="cpf">CPF</Label>
+                <Input
+                  id="cpf"
+                  value={formData.cpf}
+                  onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                  placeholder="000.000.000-00"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="telefone">Telefone</Label>
                 <Input
                   id="telefone"
@@ -144,17 +158,17 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
                   placeholder="(11) 99999-9999"
                 />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="cliente@email.com"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="cliente@email.com"
+              />
             </div>
 
             <div className="space-y-2">

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
@@ -21,6 +22,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const [diagnostico, setDiagnostico] = useState(ordem?.diagnostico || '')
   const [servicoRealizado, setServicoRealizado] = useState(ordem?.servico_realizado || '')
   const [status, setStatus] = useState<'aberta' | 'em_andamento' | 'concluida' | 'cancelada'>(ordem?.status || 'aberta')
+  const [valor, setValor] = useState(ordem?.valor?.toString() || '')
   
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -55,14 +57,14 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     mutationFn: async (data: any) => {
       if (ordem) {
         const { error } = await supabase
-          .from('ordens_servico')
+          .from('ordem_servico')
           .update(data)
           .eq('id', ordem.id)
         
         if (error) throw error
       } else {
         const { error } = await supabase
-          .from('ordens_servico')
+          .from('ordem_servico')
           .insert([{ ...data, data_abertura: new Date().toISOString() }])
         
         if (error) throw error
@@ -106,6 +108,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       diagnostico: diagnostico.trim() || null,
       servico_realizado: servicoRealizado.trim() || null,
       status,
+      valor: valor ? parseFloat(valor) : null,
       ...(status === 'concluida' && !ordem?.data_conclusao ? 
         { data_conclusao: new Date().toISOString() } : {})
     }
@@ -154,13 +157,19 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
           </div>
         )}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Label>Status</Label>
             <p className="mt-1 p-2 bg-muted rounded capitalize">{ordem.status.replace('_', ' ')}</p>
           </div>
           <div>
-            <Label>Total</Label>
+            <Label>Valor da Manutenção</Label>
+            <p className="mt-1 p-2 bg-muted rounded">
+              {ordem.valor ? `R$ ${ordem.valor.toFixed(2)}` : 'R$ 0,00'}
+            </p>
+          </div>
+          <div>
+            <Label>Total dos Itens</Label>
             <p className="mt-1 p-2 bg-muted rounded">
               {ordem.total ? `R$ ${ordem.total.toFixed(2)}` : 'R$ 0,00'}
             </p>
@@ -241,19 +250,33 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="status">Status</Label>
-        <Select value={status} onValueChange={handleStatusChange}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="aberta">Aberta</SelectItem>
-            <SelectItem value="em_andamento">Em Andamento</SelectItem>
-            <SelectItem value="concluida">Concluída</SelectItem>
-            <SelectItem value="cancelada">Cancelada</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="status">Status</Label>
+          <Select value={status} onValueChange={handleStatusChange}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="aberta">Aberta</SelectItem>
+              <SelectItem value="em_andamento">Em Andamento</SelectItem>
+              <SelectItem value="concluida">Concluída</SelectItem>
+              <SelectItem value="cancelada">Cancelada</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="valor">Valor da Manutenção</Label>
+          <Input
+            id="valor"
+            type="number"
+            step="0.01"
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+            placeholder="0.00"
+          />
+        </div>
       </div>
 
       <div className="flex justify-end space-x-2">

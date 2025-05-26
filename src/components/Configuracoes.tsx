@@ -1,5 +1,4 @@
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,43 +7,110 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { Download, Upload, Trash2, Database } from 'lucide-react'
+import { Download, Upload, Trash2, Database, Image } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 export function Configuracoes() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [autoBackup, setAutoBackup] = useState(false)
-  const [companyName, setCompanyName] = useState('TechFix Pro')
-  const [companyPhone, setCompanyPhone] = useState('')
-  const [companyEmail, setCompanyEmail] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [companyCnpj, setCompanyCnpj] = useState('')
+  const [companyLogo, setCompanyLogo] = useState('')
   const [isExporting, setIsExporting] = useState(false)
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
-  const { data: allData } = useQuery({
-    queryKey: ['export-data'],
+  // Buscar dados da empresa
+  const { data: dadosEmpresa } = useQuery({
+    queryKey: ['dados-empresa'],
     queryFn: async () => {
-      const [ordensResult, clientesResult, tecnicosResult] = await Promise.all([
-        supabase.from('view_ordem_servico_completa').select('*'),
-        supabase.from('clientes').select('*'),
-        supabase.from('tecnicos').select('*')
-      ])
+      const { data, error } = await supabase
+        .from('dados_empresa')
+        .select('*')
+        .limit(1)
+        .single()
 
-      return {
-        ordens: ordensResult.data || [],
-        clientes: clientesResult.data || [],
-        tecnicos: tecnicosResult.data || []
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching empresa data:', error)
+        throw error
       }
-    },
-    enabled: false
+      
+      return data
+    }
   })
 
+  // Mutation para salvar dados da empresa
+  const saveEmpresaMutation = useMutation({
+    mutationFn: async (data: { nome: string; cnpj?: string; logo_base64?: string }) => {
+      if (dadosEmpresa) {
+        const { error } = await supabase
+          .from('dados_empresa')
+          .update(data)
+          .eq('id', dadosEmpresa.id)
+        
+        if (error) throw error
+      } else {
+        const { error } = await supabase
+          .from('dados_empresa')
+          .insert([data])
+        
+        if (error) throw error
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dados-empresa'] })
+      toast({
+        title: "Configurações salvas",
+        description: "Os dados da empresa foram salvos com sucesso.",
+      })
+    },
+    onError: (error) => {
+      console.error('Error saving empresa data:', error)
+      toast({
+        title: "Erro",
+        description: "Erro ao salvar os dados da empresa.",
+        variant: "destructive",
+      })
+    }
+  })
+
+  useEffect(() => {
+    if (dadosEmpresa) {
+      setCompanyName(dadosEmpresa.nome || '')
+      setCompanyCnpj(dadosEmpresa.cnpj || '')
+      setCompanyLogo(dadosEmpresa.logo_base64 || '')
+    }
+  }, [dadosEmpresa])
+
   const handleSaveSettings = () => {
-    // Aqui você salvaria as configurações no localStorage ou no Supabase
-    toast({
-      title: "Configurações salvas",
-      description: "As configurações foram salvas com sucesso.",
+    saveEmpresaMutation.mutate({
+      nome: companyName.trim(),
+      cnpj: companyCnpj.trim() || null,
+      logo_base64: companyLogo || null,
     })
+  }
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um arquivo de imagem.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string
+      const base64Data = base64.split(',')[1] // Remove o prefixo data:image/...;base64,
+      setCompanyLogo(base64Data)
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleExportData = async () => {
@@ -52,17 +118,19 @@ export function Configuracoes() {
       setIsExporting(true)
       
       // Fetch all data from Supabase
-      const [ordensResult, clientesResult, tecnicosResult] = await Promise.all([
+      const [ordensResult, clientesResult, tecnicosResult, empresaResult] = await Promise.all([
         supabase.from('view_ordem_servico_completa').select('*'),
         supabase.from('clientes').select('*'),
-        supabase.from('tecnicos').select('*')
+        supabase.from('tecnicos').select('*'),
+        supabase.from('dados_empresa').select('*')
       ])
 
       const exportData = {
         exportDate: new Date().toISOString(),
         ordens: ordensResult.data || [],
         clientes: clientesResult.data || [],
-        tecnicos: tecnicosResult.data || []
+        tecnicos: tecnicosResult.data || [],
+        empresa: empresaResult.data || []
       }
 
       // Create and download JSON file
@@ -160,31 +228,46 @@ export function Configuracoes() {
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="company-phone">Telefone</Label>
+            <div className="space-y-2">
+              <Label htmlFor="company-cnpj">CNPJ</Label>
+              <Input
+                id="company-cnpj"
+                value={companyCnpj}
+                onChange={(e) => setCompanyCnpj(e.target.value)}
+                placeholder="00.000.000/0000-00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="company-logo">Logo da Empresa</Label>
+              <div className="flex items-center gap-4">
                 <Input
-                  id="company-phone"
-                  value={companyPhone}
-                  onChange={(e) => setCompanyPhone(e.target.value)}
-                  placeholder="(11) 99999-9999"
+                  id="company-logo"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="max-w-sm"
                 />
+                {companyLogo && (
+                  <div className="flex items-center gap-2">
+                    <Image className="h-4 w-4" />
+                    <span className="text-sm text-muted-foreground">Logo carregada</span>
+                  </div>
+                )}
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="company-email">E-mail</Label>
-                <Input
-                  id="company-email"
-                  type="email"
-                  value={companyEmail}
-                  onChange={(e) => setCompanyEmail(e.target.value)}
-                  placeholder="contato@empresa.com"
-                />
-              </div>
+              {companyLogo && (
+                <div className="mt-2">
+                  <img 
+                    src={`data:image/png;base64,${companyLogo}`} 
+                    alt="Logo da empresa"
+                    className="max-h-20 border rounded"
+                  />
+                </div>
+              )}
             </div>
             
-            <Button onClick={handleSaveSettings}>
-              Salvar Informações
+            <Button onClick={handleSaveSettings} disabled={saveEmpresaMutation.isPending}>
+              {saveEmpresaMutation.isPending ? 'Salvando...' : 'Salvar Informações'}
             </Button>
           </CardContent>
         </Card>

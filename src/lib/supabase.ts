@@ -13,12 +13,17 @@ export interface Cliente {
   telefone?: string
   email?: string
   endereco?: string
+  cpf?: string
   criado_em: string
 }
 
 export interface Tecnico {
   id: string
   nome: string
+  telefone?: string
+  email?: string
+  endereco?: string
+  cpf?: string
   criado_em: string
 }
 
@@ -32,6 +37,7 @@ export interface OrdemServico {
   status: 'aberta' | 'em_andamento' | 'concluida' | 'cancelada'
   data_abertura: string
   data_conclusao?: string
+  valor?: number
 }
 
 export interface ItemOrdem {
@@ -42,6 +48,14 @@ export interface ItemOrdem {
   preco_unitario: number
 }
 
+export interface DadosEmpresa {
+  id: number
+  created_at: string
+  nome: string
+  cnpj?: string
+  logo_base64?: string
+}
+
 export interface OrdemCompleta extends Omit<OrdemServico, 'id'> {
   id: string
   ordem_id?: string
@@ -50,6 +64,12 @@ export interface OrdemCompleta extends Omit<OrdemServico, 'id'> {
   itens: ItemOrdem[]
   total: number
   cliente_nome?: string
+  cliente_cpf?: string
+  cliente_telefone?: string
+  cliente_email?: string
+  cliente_endereco?: string
   tecnico_nome?: string
+  tecnico_cpf?: string
   total_ordem?: number
+  valor_manutencao?: number
 }

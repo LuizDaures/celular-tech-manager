@@ -142,6 +142,9 @@ export function TecnicosList() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>CPF</TableHead>
+              <TableHead>Telefone</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Data Cadastro</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -149,13 +152,13 @@ export function TecnicosList() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : filteredTecnicos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   Nenhum técnico encontrado.
                 </TableCell>
               </TableRow>
@@ -163,6 +166,9 @@ export function TecnicosList() {
               filteredTecnicos.map((tecnico) => (
                 <TableRow key={tecnico.id}>
                   <TableCell className="font-medium">{tecnico.nome}</TableCell>
+                  <TableCell>{tecnico.cpf || '-'}</TableCell>
+                  <TableCell>{tecnico.telefone || '-'}</TableCell>
+                  <TableCell>{tecnico.email || '-'}</TableCell>
                   <TableCell>
                     {new Date(tecnico.criado_em).toLocaleDateString('pt-BR')}
                   </TableCell>
