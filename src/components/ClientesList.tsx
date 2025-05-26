@@ -126,6 +126,7 @@ export function ClientesList() {
             <ClienteForm 
               cliente={selectedCliente}
               onSuccess={handleCloseDialog}
+              onCancel={handleCloseDialog}
             />
           </DialogContent>
         </Dialog>
