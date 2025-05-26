@@ -1,78 +1,102 @@
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, Tecnico } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { TecnicoForm } from '@/components/TecnicoForm'
-import { Plus, Search, Edit, Trash2 } from 'lucide-react'
+import { Plus, Search, Edit, Trash } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 export function TecnicosList() {
   const [searchTerm, setSearchTerm] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingTecnico, setEditingTecnico] = useState<Tecnico | null>(null)
+  const [selectedTecnico, setSelectedTecnico] = useState<Tecnico | null>(null)
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
   const { data: tecnicos = [], isLoading } = useQuery({
     queryKey: ['tecnicos'],
     queryFn: async () => {
+      console.log('Fetching tecnicos...')
       const { data, error } = await supabase
         .from('tecnicos')
         .select('*')
         .order('criado_em', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching tecnicos:', error)
+        throw error
+      }
       
-      if (error) throw error
-      return data as Tecnico[]
+      console.log('Tecnicos data:', data)
+      return data || []
     }
   })
 
-  const deleteTecnico = useMutation({
+  const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Primeiro verificar se há ordens vinculadas
+      const { data: ordens, error: ordensError } = await supabase
+        .from('ordem_servico')
+        .select('id')
+        .eq('tecnico_id', id)
+        .limit(1)
+
+      if (ordensError) throw ordensError
+
+      if (ordens && ordens.length > 0) {
+        throw new Error('Não é possível excluir este técnico pois existem ordens de serviço vinculadas a ele.')
+      }
+
       const { error } = await supabase
         .from('tecnicos')
         .delete()
         .eq('id', id)
-      
+
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tecnicos'] })
       toast({
-        title: "Técnico removido",
-        description: "O técnico foi removido com sucesso.",
+        title: 'Sucesso',
+        description: 'Técnico excluído com sucesso.',
       })
+      queryClient.invalidateQueries({ queryKey: ['tecnicos'] })
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error('Error deleting tecnico:', error)
       toast({
-        title: "Erro",
-        description: "Erro ao remover técnico.",
-        variant: "destructive",
+        title: 'Erro',
+        description: error.message,
+        variant: 'destructive',
       })
     }
   })
 
-  const filteredTecnicos = tecnicos.filter(tecnico =>
-    tecnico.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredTecnicos = tecnicos.filter(tecnico => {
+    if (!tecnico) return false
+    
+    const nome = tecnico.nome?.toLowerCase() || ''
+    const searchLower = searchTerm.toLowerCase()
+    
+    return nome.includes(searchLower)
+  })
 
   const handleEdit = (tecnico: Tecnico) => {
-    setEditingTecnico(tecnico)
+    setSelectedTecnico(tecnico)
     setIsDialogOpen(true)
-  }
-
-  const handleDelete = (id: string) => {
-    if (confirm('Tem certeza que deseja remover este técnico?')) {
-      deleteTecnico.mutate(id)
-    }
   }
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false)
-    setEditingTecnico(null)
+    setSelectedTecnico(null)
+  }
+
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id)
   }
 
   return (
@@ -81,25 +105,22 @@ export function TecnicosList() {
         <h1 className="text-3xl font-bold">Técnicos</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingTecnico(null)}>
+            <Button onClick={() => setSelectedTecnico(null)}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Técnico
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingTecnico ? 'Editar Técnico' : 'Novo Técnico'}
+                {selectedTecnico ? 'Editar Técnico' : 'Novo Técnico'}
               </DialogTitle>
               <DialogDescription>
-                {editingTecnico ? 
-                  'Atualize as informações do técnico aqui.' : 
-                  'Cadastre um novo técnico no sistema.'
-                }
+                {selectedTecnico ? 'Edite os dados do técnico.' : 'Crie um novo técnico.'}
               </DialogDescription>
             </DialogHeader>
             <TecnicoForm 
-              tecnico={editingTecnico}
+              tecnico={selectedTecnico}
               onSuccess={handleCloseDialog}
             />
           </DialogContent>
@@ -121,7 +142,7 @@ export function TecnicosList() {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>Data de Cadastro</TableHead>
+              <TableHead>Data Cadastro</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -154,13 +175,30 @@ export function TecnicosList() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleDelete(tecnico.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir este técnico? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(tecnico.id)}>
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>

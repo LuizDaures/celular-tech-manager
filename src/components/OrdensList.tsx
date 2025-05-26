@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { OrdemForm } from '@/components/OrdemForm'
-import { Plus, Search, Edit, Eye } from 'lucide-react'
+import { Plus, Search, Edit, Eye, Trash } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 const statusColors = {
@@ -83,6 +84,41 @@ export function OrdensList() {
     }
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Primeiro excluir os itens da ordem
+      const { error: itensError } = await supabase
+        .from('item_ordem')
+        .delete()
+        .eq('ordem_id', id)
+
+      if (itensError) throw itensError
+
+      // Depois excluir a ordem
+      const { error } = await supabase
+        .from('ordem_servico')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Sucesso',
+        description: 'Ordem de serviço excluída com sucesso.',
+      })
+      queryClient.invalidateQueries({ queryKey: ['ordens'] })
+    },
+    onError: (error: Error) => {
+      console.error('Error deleting ordem:', error)
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir a ordem de serviço.',
+        variant: 'destructive',
+      })
+    }
+  })
+
   const filteredOrdens = ordens.filter(ordem => {
     if (!ordem) return false
     
@@ -103,6 +139,10 @@ export function OrdensList() {
     setSelectedOrdem(ordem)
     setIsViewing(true)
     setIsDialogOpen(true)
+  }
+
+  const handleDelete = (id: string) => {
+    deleteMutation.mutate(id)
   }
 
   const handleCloseDialog = () => {
@@ -209,6 +249,30 @@ export function OrdensList() {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir esta ordem de serviço? Esta ação não pode ser desfeita e todos os itens relacionados também serão excluídos.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(ordem.id)}>
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>
