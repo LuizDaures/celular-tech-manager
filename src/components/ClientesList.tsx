@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, Cliente } from '@/lib/supabase'
@@ -104,17 +103,17 @@ export function ClientesList() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Clientes</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Clientes</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setSelectedCliente(null)}>
+            <Button onClick={() => setSelectedCliente(null)} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Novo Cliente
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
             <DialogHeader>
               <DialogTitle>
                 {selectedCliente ? 'Editar Cliente' : 'Novo Cliente'}
@@ -142,16 +141,16 @@ export function ClientesList() {
         />
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>CPF</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Telefone</TableHead>
-              <TableHead>Data Cadastro</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
+              <TableHead className="min-w-[150px]">Nome</TableHead>
+              <TableHead className="hidden md:table-cell">CPF</TableHead>
+              <TableHead className="hidden lg:table-cell">Email</TableHead>
+              <TableHead className="hidden sm:table-cell">Telefone</TableHead>
+              <TableHead className="hidden md:table-cell">Data Cadastro</TableHead>
+              <TableHead className="text-right min-w-[100px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -171,31 +170,33 @@ export function ClientesList() {
               filteredClientes.map((cliente) => (
                 <TableRow key={cliente.id}>
                   <TableCell className="font-medium">{cliente.nome}</TableCell>
-                  <TableCell>{cliente.cpf || '-'}</TableCell>
-                  <TableCell>{cliente.email || '-'}</TableCell>
-                  <TableCell>{cliente.telefone || '-'}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">{cliente.cpf || '-'}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{cliente.email || '-'}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{cliente.telefone || '-'}</TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {new Date(cliente.criado_em).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end space-x-2">
+                    <div className="flex justify-end space-x-1">
                       <Button
                         variant="outline"
                         size="icon"
                         onClick={() => handleEdit(cliente)}
+                        className="h-8 w-8"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3 w-3" />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="outline"
                             size="icon"
+                            className="h-8 w-8"
                           >
-                            <Trash className="h-4 w-4" />
+                            <Trash className="h-3 w-3" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent>
+                        <AlertDialogContent className="mx-4">
                           <AlertDialogHeader>
                             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
                             <AlertDialogDescription>
