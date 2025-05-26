@@ -45,12 +45,14 @@ export function Layout({ children }: LayoutProps) {
           <AppSidebar />
           <main className="flex-1 flex flex-col">
             <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              <div className="flex h-14 items-center px-4 gap-4">
+              <div className="flex h-14 items-center px-4">
                 <SidebarTrigger />
                 
-                {/* Informações da empresa */}
+                <div className="flex-1" />
+                
+                {/* Informações da empresa centralizadas */}
                 {dadosEmpresa && (
-                  <div className="flex items-center gap-3">
+                  <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-3">
                     {dadosEmpresa.logo_base64 && (
                       <img 
                         src={`data:image/png;base64,${dadosEmpresa.logo_base64}`} 
@@ -68,6 +70,7 @@ export function Layout({ children }: LayoutProps) {
                 )}
                 
                 <div className="flex-1" />
+                
                 <Button
                   variant="ghost"
                   size="icon"
