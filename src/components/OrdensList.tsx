@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta } from '@/lib/supabase'
@@ -211,7 +212,7 @@ export function OrdensList() {
       <tbody>
         ${ordem.itens.map(item => `
         <tr>
-          <td>${item.nome_item}</td>
+          <td>${item.peca?.nome || 'Item não encontrado'}</td>
           <td>${item.quantidade}</td>
           <td>R$ ${item.preco_unitario.toFixed(2)}</td>
           <td>R$ ${(item.quantidade * item.preco_unitario).toFixed(2)}</td>
