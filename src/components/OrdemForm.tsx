@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
@@ -9,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Trash2, Plus } from 'lucide-react'
+import { ItemSelector } from '@/components/ItemSelector'
 
 interface OrdemFormProps {
   ordem?: OrdemCompleta | null
@@ -155,6 +155,15 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
   const addItem = () => {
     setItens([...itens, { nome_item: '', quantidade: 1, preco_unitario: 0 }])
+  }
+
+  const addItemFromSelector = (item: any) => {
+    const newItem: ItemForm = {
+      nome_item: item.nome_peca,
+      quantidade: item.quantidade,
+      preco_unitario: item.preco_unitario
+    }
+    setItens([...itens, newItem])
   }
 
   const removeItem = (index: number) => {
@@ -332,10 +341,13 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <Label>Itens Utilizados</Label>
-          <Button type="button" variant="outline" size="sm" onClick={addItem}>
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Item
-          </Button>
+          <div className="flex gap-2">
+            <ItemSelector onAddItem={addItemFromSelector} />
+            <Button type="button" variant="outline" size="sm" onClick={addItem}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Item Manual
+            </Button>
+          </div>
         </div>
         
         {itens.map((item, index) => (

@@ -1,23 +1,21 @@
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase, DadosEmpresa } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { Download, Upload, Trash2, Database, Image } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Building, Upload, X } from 'lucide-react'
+import { DatabaseConfig } from '@/components/DatabaseConfig'
 
 export function Configuracoes() {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-  const [autoBackup, setAutoBackup] = useState(false)
-  const [companyName, setCompanyName] = useState('')
-  const [companyCnpj, setCompanyCnpj] = useState('')
-  const [companyLogo, setCompanyLogo] = useState('')
-  const [isExporting, setIsExporting] = useState(false)
+  const [nome, setNome] = useState('')
+  const [cnpj, setCnpj] = useState('')
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
@@ -77,17 +75,17 @@ export function Configuracoes() {
 
   useEffect(() => {
     if (dadosEmpresa) {
-      setCompanyName(dadosEmpresa.nome || '')
-      setCompanyCnpj(dadosEmpresa.cnpj || '')
-      setCompanyLogo(dadosEmpresa.logo_base64 || '')
+      setNome(dadosEmpresa.nome || '')
+      setCnpj(dadosEmpresa.cnpj || '')
+      setLogoPreview(dadosEmpresa.logo_base64 || '')
     }
   }, [dadosEmpresa])
 
   const handleSaveSettings = () => {
     saveEmpresaMutation.mutate({
-      nome: companyName.trim(),
-      cnpj: companyCnpj.trim() || null,
-      logo_base64: companyLogo || null,
+      nome: nome.trim(),
+      cnpj: cnpj.trim() || null,
+      logo_base64: logoPreview || null,
     })
   }
 
@@ -108,7 +106,8 @@ export function Configuracoes() {
     reader.onload = (event) => {
       const base64 = event.target?.result as string
       const base64Data = base64.split(',')[1] // Remove o prefixo data:image/...;base64,
-      setCompanyLogo(base64Data)
+      setLogoFile(file)
+      setLogoPreview(base64Data)
     }
     reader.readAsDataURL(file)
   }
@@ -206,24 +205,32 @@ export function Configuracoes() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Configurações</h1>
+      <div>
+        <h1 className="text-3xl font-bold">Configurações</h1>
+        <p className="text-muted-foreground">
+          Configure os dados da sua empresa e outras preferências do sistema.
+        </p>
+      </div>
 
       <div className="grid gap-6">
-        {/* Informações da Empresa */}
+        {/* Configurações da Empresa */}
         <Card>
           <CardHeader>
-            <CardTitle>Informações da Empresa</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5" />
+              Dados da Empresa
+            </CardTitle>
             <CardDescription>
-              Configure os dados da sua assistência técnica
+              Configure as informações que aparecerão nos relatórios e documentos.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="space-y-2">
               <Label htmlFor="company-name">Nome da Empresa</Label>
               <Input
                 id="company-name"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
                 placeholder="Nome da assistência técnica"
               />
             </div>
@@ -232,8 +239,8 @@ export function Configuracoes() {
               <Label htmlFor="company-cnpj">CNPJ</Label>
               <Input
                 id="company-cnpj"
-                value={companyCnpj}
-                onChange={(e) => setCompanyCnpj(e.target.value)}
+                value={cnpj}
+                onChange={(e) => setCnpj(e.target.value)}
                 placeholder="00.000.000/0000-00"
               />
             </div>
@@ -248,17 +255,17 @@ export function Configuracoes() {
                   onChange={handleLogoUpload}
                   className="max-w-sm"
                 />
-                {companyLogo && (
+                {logoPreview && (
                   <div className="flex items-center gap-2">
                     <Image className="h-4 w-4" />
                     <span className="text-sm text-muted-foreground">Logo carregada</span>
                   </div>
                 )}
               </div>
-              {companyLogo && (
+              {logoPreview && (
                 <div className="mt-2">
                   <img 
-                    src={`data:image/png;base64,${companyLogo}`} 
+                    src={`data:image/png;base64,${logoPreview}`} 
                     alt="Logo da empresa"
                     className="max-h-20 border rounded"
                   />
@@ -272,111 +279,10 @@ export function Configuracoes() {
           </CardContent>
         </Card>
 
-        {/* Preferências do Sistema */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Preferências do Sistema</CardTitle>
-            <CardDescription>
-              Configure como o sistema deve funcionar
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Notificações</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receber notificações sobre novas ordens e atualizações
-                </p>
-              </div>
-              <Switch
-                checked={notificationsEnabled}
-                onCheckedChange={setNotificationsEnabled}
-              />
-            </div>
-            
-            <Separator />
-            
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Backup Automático</Label>
-                <p className="text-sm text-muted-foreground">
-                  Fazer backup automático dos dados diariamente
-                </p>
-              </div>
-              <Switch
-                checked={autoBackup}
-                onCheckedChange={setAutoBackup}
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <Separator />
 
-        {/* Gerenciamento de Dados */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Gerenciamento de Dados</CardTitle>
-            <CardDescription>
-              Exportar, importar ou limpar dados do sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button 
-                variant="outline" 
-                onClick={handleExportData}
-                disabled={isExporting}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {isExporting ? 'Exportando...' : 'Exportar Dados'}
-              </Button>
-              
-              <Button variant="outline" onClick={handleImportData}>
-                <Upload className="h-4 w-4 mr-2" />
-                Importar Dados
-              </Button>
-              
-              <Button variant="destructive" onClick={handleClearData}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Limpar Dados
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Status do Sistema */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Status do Sistema</CardTitle>
-            <CardDescription>
-              Informações sobre o estado atual do sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Banco de Dados</span>
-                <Badge variant="default">
-                  <Database className="h-3 w-3 mr-1" />
-                  Conectado
-                </Badge>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Último Backup</span>
-                <Badge variant="secondary">
-                  Nunca
-                </Badge>
-              </div>
-            </div>
-            
-            <Separator />
-            
-            <div className="text-xs text-muted-foreground">
-              <p>Versão do Sistema: 1.0.0</p>
-              <p>Última Atualização: {new Date().toLocaleDateString('pt-BR')}</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Configurações do Banco de Dados */}
+        <DatabaseConfig />
       </div>
     </div>
   )

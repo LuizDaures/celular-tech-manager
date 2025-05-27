@@ -130,7 +130,7 @@ export function OrdensList() {
 
       const empresa = empresaData || { nome: 'TechFix Pro', cnpj: '', logo_base64: '' }
 
-      // Template HTML
+      // Template HTML melhorado para ficar similar à imagem
       const htmlTemplate = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -138,96 +138,260 @@ export function OrdensList() {
   <meta charset="UTF-8">
   <title>Ordem de Serviço</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    h2 { text-align: center; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #000; padding: 8px; }
-    .section { margin-top: 30px; }
-    .empresa-header {
+    body { 
+      font-family: Arial, sans-serif; 
+      padding: 20px; 
+      margin: 0;
+      font-size: 12px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .logo-section {
       display: flex;
       align-items: center;
-      gap: 20px;
-      margin-bottom: 30px;
+      gap: 10px;
     }
-    .empresa-header img {
-      max-height: 80px;
+    .logo-section img {
+      max-height: 60px;
+    }
+    .logo-placeholder {
+      width: 60px;
+      height: 60px;
+      background: #28a745;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+    .empresa-info {
+      text-align: center;
+      font-size: 10px;
+      color: #666;
+    }
+    .title {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .title h2 {
+      margin: 5px 0 0 0;
+      font-size: 16px;
+      font-weight: normal;
+    }
+    .section {
+      margin-bottom: 15px;
+    }
+    .section-header {
+      background: #666;
+      color: white;
+      padding: 5px 10px;
+      font-weight: bold;
+      margin: 0;
+    }
+    .section-content {
+      border: 1px solid #666;
+      border-top: none;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .info-item {
+      padding: 8px;
+      border-bottom: 1px solid #ccc;
+      border-right: 1px solid #ccc;
+    }
+    .info-item:nth-child(even) {
+      border-right: none;
+    }
+    .info-item:last-child,
+    .info-item:nth-last-child(2) {
+      border-bottom: none;
+    }
+    .info-label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .full-width {
+      grid-column: span 2;
+      border-right: none !important;
+    }
+    .text-content {
+      padding: 10px;
+      min-height: 60px;
+    }
+    .list-content {
+      padding: 10px;
+    }
+    .list-content ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .list-content li {
+      margin-bottom: 3px;
+    }
+    .footer-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+      font-size: 11px;
+    }
+    .footer-item {
+      display: flex;
+      justify-content: space-between;
     }
   </style>
 </head>
 <body>
-
-  <div class="empresa-header">
-    ${empresa.logo_base64 ? `<img src="data:image/png;base64,${empresa.logo_base64}" alt="Logo da Empresa">` : ''}
-    <div>
-      <h2>${empresa.nome}</h2>
-      ${empresa.cnpj ? `<strong>CNPJ:</strong> ${empresa.cnpj}` : ''}
+  <div class="header">
+    <div class="logo-section">
+      ${empresa.logo_base64 ? 
+        `<img src="data:image/png;base64,${empresa.logo_base64}" alt="Logo">` : 
+        `<div class="logo-placeholder">🔧</div>`
+      }
+      <div class="empresa-info">
+        coloque aqui a marca<br>
+        da sua empresa
+      </div>
+    </div>
+    
+    <div class="title">
+      <h1>Ordem de Serviço ${ordem.id?.slice(-4) || '0001'}</h1>
+      <h2>Manutenção Corretiva</h2>
+    </div>
+    
+    <div class="logo-section">
+      <div class="empresa-info">
+        coloque aqui a marca<br>
+        do seu cliente
+      </div>
+      <div class="logo-placeholder">🔧</div>
     </div>
   </div>
 
-  <h2>Ordem de Serviço</h2>
-
+  <!-- Seção Cliente -->
   <div class="section">
-    <strong>ID da Ordem:</strong> ${ordem.id}<br>
-    <strong>Data de Abertura:</strong> ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}<br>
-    ${ordem.data_conclusao ? `<strong>Data de Conclusão:</strong> ${new Date(ordem.data_conclusao).toLocaleDateString('pt-BR')}<br>` : ''}
-    <strong>Status:</strong> ${statusLabels[ordem.status]}<br>
+    <div class="section-header">Cliente</div>
+    <div class="section-content">
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Nome</span>
+          ${ordem.cliente?.nome || 'Não informado'}
+        </div>
+        <div class="info-item">
+          <span class="info-label">Endereço</span>
+          ${ordem.cliente?.endereco || 'Não informado'}
+        </div>
+        <div class="info-item">
+          <span class="info-label">Telefone</span>
+          ${ordem.cliente?.telefone || 'Não informado'}
+        </div>
+        <div class="info-item">
+          <span class="info-label">CNPJ</span>
+          ${ordem.cliente?.cpf || 'Não informado'}
+        </div>
+      </div>
+    </div>
   </div>
 
+  <!-- Seção Equipamento -->
   <div class="section">
-    <h3>Cliente</h3>
-    <strong>Nome:</strong> ${ordem.cliente?.nome || ''}<br>
-    ${ordem.cliente?.telefone ? `<strong>Telefone:</strong> ${ordem.cliente.telefone}<br>` : ''}
-    ${ordem.cliente?.email ? `<strong>Email:</strong> ${ordem.cliente.email}<br>` : ''}
-    ${ordem.cliente?.endereco ? `<strong>Endereço:</strong> ${ordem.cliente.endereco}<br>` : ''}
+    <div class="section-header">Equipamento ou Ativo</div>
+    <div class="section-content">
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">Nome</span>
+          Equipamento
+        </div>
+        <div class="info-item">
+          <span class="info-label">Modelo</span>
+          ${ordem.descricao_problema?.split(' ')[0] || 'Não especificado'}
+        </div>
+        <div class="info-item full-width">
+          <span class="info-label">Marca</span>
+          Não especificado
+        </div>
+      </div>
+    </div>
   </div>
 
+  <!-- Seção Diagnóstico -->
   <div class="section">
-    <h3>Técnico</h3>
-    <strong>Nome:</strong> ${ordem.tecnico?.nome || 'Não atribuído'}<br>
+    <div class="section-header">Diagnóstico</div>
+    <div class="section-content">
+      <div class="text-content">
+        <em>Diagnóstico atual</em><br><br>
+        ${ordem.diagnostico ? 
+          ordem.diagnostico.split('.').map(item => item.trim()).filter(item => item).map(item => `• ${item}`).join('<br>') :
+          `• ${ordem.descricao_problema}<br>• Necessário análise técnica`
+        }
+      </div>
+    </div>
   </div>
 
+  <!-- Seção Solução -->
+  ${ordem.servico_realizado ? `
   <div class="section">
-    <h3>Descrição do Problema</h3>
-    <p>${ordem.descricao_problema}</p>
-
-    ${ordem.diagnostico ? `<h3>Diagnóstico</h3><p>${ordem.diagnostico}</p>` : ''}
-
-    ${ordem.servico_realizado ? `<h3>Serviço Realizado</h3><p>${ordem.servico_realizado}</p>` : ''}
-  </div>
-
-  ${ordem.itens && ordem.itens.length > 0 ? `
-  <div class="section">
-    <h3>Itens</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Qtd</th>
-          <th>Preço Unitário</th>
-          <th>Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${ordem.itens.map(item => `
-        <tr>
-          <td>${item.nome_item}</td>
-          <td>${item.quantidade}</td>
-          <td>R$ ${item.preco_unitario.toFixed(2)}</td>
-          <td>R$ ${(item.quantidade * item.preco_unitario).toFixed(2)}</td>
-        </tr>
-        `).join('')}
-      </tbody>
-    </table>
+    <div class="section-header">Solução</div>
+    <div class="section-content">
+      <div class="text-content">
+        <em>Solução aplicada</em><br><br>
+        ${ordem.servico_realizado.split('.').map(item => item.trim()).filter(item => item).map(item => `• ${item}`).join('<br>')}
+      </div>
+    </div>
   </div>
   ` : ''}
 
+  <!-- Seção Peças -->
+  ${ordem.itens && ordem.itens.length > 0 ? `
   <div class="section">
-    <h3>Resumo</h3>
-    <strong>Valor da Manutenção:</strong> R$ ${ordem.valor_manutencao?.toFixed(2) || '0,00'}<br>
-    <strong>Total dos Itens:</strong> R$ ${ordem.total?.toFixed(2) || '0,00'}<br>
-    <strong>Total Geral:</strong> R$ ${((ordem.valor_manutencao || 0) + (ordem.total || 0)).toFixed(2)}<br>
+    <div class="section-header">Peças trocadas</div>
+    <div class="section-content">
+      <div class="list-content">
+        <em>Peças trocadas</em><br><br>
+        <ul>
+          ${ordem.itens.map(item => `<li>${item.nome_item}</li>`).join('')}
+        </ul>
+      </div>
+    </div>
   </div>
+  ` : ''}
 
+  <!-- Rodapé -->
+  <div class="footer-info">
+    <div>
+      <div class="footer-item">
+        <strong>Data do Serviço:</strong>
+        <span>${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')} às ${new Date(ordem.data_abertura).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}h</span>
+      </div>
+      <div class="footer-item">
+        <strong>Contatos:</strong>
+        <span>${ordem.cliente?.telefone || '(xx) xxxx-xxxx'}</span>
+      </div>
+    </div>
+    <div>
+      <div class="footer-item">
+        <strong>Técnico responsável:</strong>
+        <span>${ordem.tecnico?.nome || 'Não atribuído'}</span>
+      </div>
+      <div class="footer-item">
+        <strong>Total do Serviço:</strong>
+        <span>R$ ${((ordem.valor_manutencao || 0) + (ordem.total || 0)).toFixed(2).replace('.', ',')}</span>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
       `
