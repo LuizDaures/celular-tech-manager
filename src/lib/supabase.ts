@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = "https://mowmyemymytbjfirhlhh.supabase.co"
@@ -31,6 +30,7 @@ export interface OrdemServico {
   id: string
   cliente_id: string
   tecnico_id?: string
+  dispositivo: string
   descricao_problema: string
   diagnostico?: string
   servico_realizado?: string

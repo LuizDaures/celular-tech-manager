@@ -25,6 +25,7 @@ interface ItemForm {
 export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps) {
   const [clienteId, setClienteId] = useState(ordem?.cliente_id || '')
   const [tecnicoId, setTecnicoId] = useState(ordem?.tecnico_id || '')
+  const [dispositivo, setDispositivo] = useState(ordem?.dispositivo || '')
   const [descricaoProblema, setDescricaoProblema] = useState(ordem?.descricao_problema || '')
   const [diagnostico, setDiagnostico] = useState(ordem?.diagnostico || '')
   const [servicoRealizado, setServicoRealizado] = useState(ordem?.servico_realizado || '')
@@ -185,10 +186,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!clienteId || !descricaoProblema.trim()) {
+    if (!clienteId || !descricaoProblema.trim() || !dispositivo.trim()) {
       toast({
         title: "Erro",
-        description: "Cliente e descrição do problema são obrigatórios.",
+        description: "Cliente, dispositivo e descrição do problema são obrigatórios.",
         variant: "destructive",
       })
       return
@@ -197,6 +198,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     const ordemData = {
       cliente_id: clienteId,
       tecnico_id: tecnicoId === 'none' || !tecnicoId ? null : tecnicoId,
+      dispositivo: dispositivo.trim(),
       descricao_problema: descricaoProblema.trim(),
       diagnostico: diagnostico.trim() || null,
       servico_realizado: servicoRealizado.trim() || null,
@@ -223,6 +225,11 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             <Label>Técnico</Label>
             <p className="mt-1 p-2 bg-muted rounded">{ordem.tecnico?.nome || 'Não atribuído'}</p>
           </div>
+        </div>
+        
+        <div>
+          <Label>Dispositivo</Label>
+          <p className="mt-1 p-2 bg-muted rounded">{ordem.dispositivo || 'Não informado'}</p>
         </div>
         
         <div>
@@ -301,6 +308,17 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="dispositivo">Dispositivo *</Label>
+        <Input
+          id="dispositivo"
+          value={dispositivo}
+          onChange={(e) => setDispositivo(e.target.value)}
+          placeholder="Ex: iPhone 12, Samsung Galaxy S21, Notebook Dell"
+          required
+        />
       </div>
 
       <div className="space-y-2">

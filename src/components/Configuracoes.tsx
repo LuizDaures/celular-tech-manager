@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, DadosEmpresa } from '@/lib/supabase'
@@ -226,58 +225,67 @@ export function Configuracoes() {
               Configure as informações que aparecerão nos relatórios e documentos.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Label htmlFor="company-name">Nome da Empresa</Label>
-              <Input
-                id="company-name"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Nome da assistência técnica"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="company-cnpj">CNPJ</Label>
-              <Input
-                id="company-cnpj"
-                value={cnpj}
-                onChange={(e) => setCnpj(e.target.value)}
-                placeholder="00.000.000/0000-00"
-              />
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="company-name">Nome da Empresa</Label>
+                <Input
+                  id="company-name"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="Nome da assistência técnica"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="company-cnpj">CNPJ</Label>
+                <Input
+                  id="company-cnpj"
+                  value={cnpj}
+                  onChange={(e) => setCnpj(e.target.value)}
+                  placeholder="00.000.000/0000-00"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="company-logo">Logo da Empresa</Label>
-              <div className="flex items-center gap-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="company-logo">Logo da Empresa</Label>
                 <Input
                   id="company-logo"
                   type="file"
                   accept="image/*"
                   onChange={handleLogoUpload}
-                  className="max-w-sm"
+                  className="max-w-md"
                 />
-                {logoPreview && (
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4" />
-                    <span className="text-sm text-muted-foreground">Logo carregada</span>
-                  </div>
-                )}
               </div>
+              
               {logoPreview && (
-                <div className="mt-2">
-                  <img 
-                    src={`data:image/png;base64,${logoPreview}`} 
-                    alt="Logo da empresa"
-                    className="max-h-20 border rounded"
-                  />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4 text-green-600" />
+                    <span className="text-sm text-muted-foreground">Logo carregada com sucesso</span>
+                  </div>
+                  <div className="border rounded-lg p-4 bg-gray-50 inline-block">
+                    <img 
+                      src={`data:image/png;base64,${logoPreview}`} 
+                      alt="Logo da empresa"
+                      className="max-h-24 max-w-48 object-contain"
+                    />
+                  </div>
                 </div>
               )}
             </div>
             
-            <Button onClick={handleSaveSettings} disabled={saveEmpresaMutation.isPending}>
-              {saveEmpresaMutation.isPending ? 'Salvando...' : 'Salvar Informações'}
-            </Button>
+            <div className="pt-4">
+              <Button 
+                onClick={handleSaveSettings} 
+                disabled={saveEmpresaMutation.isPending}
+                className="w-full md:w-auto"
+              >
+                {saveEmpresaMutation.isPending ? 'Salvando...' : 'Salvar Informações'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

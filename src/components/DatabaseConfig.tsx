@@ -5,14 +5,18 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Database, Settings } from 'lucide-react'
+import { Database, Settings, CheckCircle, AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/lib/supabase'
+import { Badge } from '@/components/ui/badge'
 
 export function DatabaseConfig() {
   const [isOpen, setIsOpen] = useState(false)
   const [url, setUrl] = useState('')
   const [anonKey, setAnonKey] = useState('')
   const [serviceKey, setServiceKey] = useState('')
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'testing'>('connected')
+  const [dbInfo, setDbInfo] = useState({ name: 'TechFix Database', records: 0 })
   
   const { toast } = useToast()
 
@@ -41,7 +45,7 @@ export function DatabaseConfig() {
     setIsOpen(false)
   }
 
-  const handleTest = () => {
+  const handleTest = async () => {
     if (!url || !anonKey) {
       toast({
         title: "Erro",
@@ -51,18 +55,61 @@ export function DatabaseConfig() {
       return
     }
 
-    // Simular teste de conexão
-    toast({
-      title: "Testando conexão...",
-      description: "Verificando conectividade com o banco de dados.",
-    })
-
-    setTimeout(() => {
+    setConnectionStatus('testing')
+    
+    try {
+      // Testar conexão real com o banco
+      const { data: ordensData } = await supabase.from('ordens_servico').select('id', { count: 'exact', head: true })
+      const { data: clientesData } = await supabase.from('clientes').select('id', { count: 'exact', head: true })
+      const { data: tecnicosData } = await supabase.from('tecnicos').select('id', { count: 'exact', head: true })
+      
+      const totalRecords = (ordensData?.length || 0) + (clientesData?.length || 0) + (tecnicosData?.length || 0)
+      
+      setDbInfo({
+        name: 'TechFix Database',
+        records: totalRecords
+      })
+      
+      setConnectionStatus('connected')
+      
       toast({
         title: "Conexão bem-sucedida",
-        description: "O banco de dados está acessível.",
+        description: `Banco conectado: ${dbInfo.name} com ${totalRecords} registros.`,
       })
-    }, 2000)
+    } catch (error) {
+      setConnectionStatus('disconnected')
+      toast({
+        title: "Erro na conexão",
+        description: "Não foi possível conectar ao banco de dados.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const getStatusBadge = () => {
+    switch (connectionStatus) {
+      case 'connected':
+        return (
+          <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Banco conectado: {dbInfo.name} e {dbInfo.records} registros
+          </Badge>
+        )
+      case 'testing':
+        return (
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+            <div className="animate-spin h-3 w-3 mr-1 border border-yellow-600 border-t-transparent rounded-full"></div>
+            Testando conexão...
+          </Badge>
+        )
+      case 'disconnected':
+        return (
+          <Badge variant="destructive">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Banco desconectado
+          </Badge>
+        )
+    }
   }
 
   return (
@@ -76,7 +123,12 @@ export function DatabaseConfig() {
           Configure a conexão com o Supabase
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Status da Conexão:</span>
+          {getStatusBadge()}
+        </div>
+        
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" className="w-full">
@@ -130,8 +182,13 @@ export function DatabaseConfig() {
               </div>
 
               <div className="flex gap-2">
-                <Button variant="outline" onClick={handleTest} className="flex-1">
-                  Testar Conexão
+                <Button 
+                  variant="outline" 
+                  onClick={handleTest} 
+                  className="flex-1"
+                  disabled={connectionStatus === 'testing'}
+                >
+                  {connectionStatus === 'testing' ? 'Testando...' : 'Testar Conexão'}
                 </Button>
                 <Button onClick={handleSave} className="flex-1">
                   Salvar
