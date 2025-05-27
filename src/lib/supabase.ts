@@ -55,7 +55,7 @@ export interface PecaManutencao {
 export interface ItemOrdem {
   id: string
   ordem_id: string
-  peca_id: string
+  nome_item: string
   quantidade: number
   preco_unitario: number
 }
@@ -73,7 +73,7 @@ export interface OrdemCompleta extends Omit<OrdemServico, 'id'> {
   ordem_id?: string
   cliente: Cliente
   tecnico?: Tecnico
-  itens: (ItemOrdem & { peca: PecaManutencao })[]
+  itens: ItemOrdem[]
   total: number
   cliente_nome?: string
   cliente_cpf?: string

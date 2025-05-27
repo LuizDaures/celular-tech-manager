@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
@@ -8,7 +9,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Trash2, Plus } from 'lucide-react'
-import { ItemSelector } from '@/components/ItemSelector'
 
 interface OrdemFormProps {
   ordem?: OrdemCompleta | null
@@ -17,8 +17,7 @@ interface OrdemFormProps {
 }
 
 interface ItemForm {
-  peca_id?: string
-  nome_peca: string
+  nome_item: string
   quantidade: number
   preco_unitario: number
 }
@@ -38,32 +37,14 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
   // Carregar itens da ordem se estiver editando
   useEffect(() => {
-    if (ordem?.id) {
-      const fetchItens = async () => {
-        const { data, error } = await supabase
-          .from('itens_ordem')
-          .select(`
-            *,
-            peca:pecas_manutencao(*)
-          `)
-          .eq('ordem_id', ordem.id)
-
-        if (error) {
-          console.error('Error fetching itens:', error)
-          return
-        }
-
-        setItens(data.map(item => ({
-          peca_id: item.peca_id,
-          nome_peca: item.peca?.nome || 'Peça não encontrada',
-          quantidade: item.quantidade,
-          preco_unitario: item.preco_unitario
-        })))
-      }
-
-      fetchItens()
+    if (ordem?.itens) {
+      setItens(ordem.itens.map(item => ({
+        nome_item: item.nome_item,
+        quantidade: item.quantidade,
+        preco_unitario: item.preco_unitario
+      })))
     }
-  }, [ordem?.id])
+  }, [ordem?.itens])
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
@@ -99,7 +80,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
       if (ordem) {
         const { error } = await supabase
-          .from('ordem_servico')
+          .from('ordens_servico')
           .update(data.ordemData)
           .eq('id', ordem.id)
         
@@ -109,7 +90,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         }
       } else {
         const { data: newOrdem, error } = await supabase
-          .from('ordem_servico')
+          .from('ordens_servico')
           .insert([{ ...data.ordemData, data_abertura: new Date().toISOString() }])
           .select()
           .single()
@@ -133,14 +114,12 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         }
 
         // Inserir novos itens
-        const itensToInsert = data.itens
-          .filter((item: ItemForm) => item.peca_id) // Só inserir itens com peca_id
-          .map((item: ItemForm) => ({
-            ordem_id: ordemId,
-            peca_id: item.peca_id,
-            quantidade: item.quantidade,
-            preco_unitario: item.preco_unitario
-          }))
+        const itensToInsert = data.itens.map((item: ItemForm) => ({
+          ordem_id: ordemId,
+          nome_item: item.nome_item,
+          quantidade: item.quantidade,
+          preco_unitario: item.preco_unitario
+        }))
 
         if (itensToInsert.length > 0) {
           const { error: itensError } = await supabase
@@ -175,11 +154,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   })
 
   const addItem = () => {
-    setItens([...itens, { nome_peca: '', quantidade: 1, preco_unitario: 0 }])
-  }
-
-  const addItemFromSelector = (item: ItemForm) => {
-    setItens([...itens, item])
+    setItens([...itens, { nome_item: '', quantidade: 1, preco_unitario: 0 }])
   }
 
   const removeItem = (index: number) => {
@@ -223,14 +198,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     }
 
     saveOrdem.mutate({ ordemData, itens })
-  }
-
-  const handleStatusChange = (value: string) => {
-    setStatus(value as 'aberta' | 'em_andamento' | 'concluida' | 'cancelada')
-  }
-
-  const handleTecnicoChange = (value: string) => {
-    setTecnicoId(value === 'none' ? '' : value)
   }
 
   if (readOnly && ordem) {
@@ -361,28 +328,24 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         />
       </div>
 
-      {/* Seção de Peças com novo seletor */}
+      {/* Seção de Itens */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <Label>Peças Utilizadas</Label>
-          <div className="flex gap-2">
-            <ItemSelector onAddItem={addItemFromSelector} />
-            <Button type="button" variant="outline" size="sm" onClick={addItem}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Manualmente
-            </Button>
-          </div>
+          <Label>Itens Utilizados</Label>
+          <Button type="button" variant="outline" size="sm" onClick={addItem}>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Item
+          </Button>
         </div>
         
         {itens.map((item, index) => (
           <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-3 border rounded">
             <div className="space-y-1">
-              <Label>Nome da Peça</Label>
+              <Label>Nome do Item</Label>
               <Input
-                value={item.nome_peca}
-                onChange={(e) => updateItem(index, 'nome_peca', e.target.value)}
+                value={item.nome_item}
+                onChange={(e) => updateItem(index, 'nome_item', e.target.value)}
                 placeholder="Ex: Tela LCD"
-                disabled={!!item.peca_id}
               />
             </div>
             <div className="space-y-1">

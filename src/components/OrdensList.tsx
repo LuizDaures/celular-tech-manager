@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta } from '@/lib/supabase'
@@ -54,8 +53,8 @@ export function OrdensList() {
       const transformedData = data?.map(item => ({
         id: item.ordem_id || item.id,
         ordem_id: item.ordem_id,
-        cliente_id: item.cliente_id,
-        tecnico_id: item.tecnico_id,
+        cliente_id: '',
+        tecnico_id: '',
         descricao_problema: item.descricao_problema,
         diagnostico: item.diagnostico,
         servico_realizado: item.servico_realizado,
@@ -63,7 +62,7 @@ export function OrdensList() {
         data_abertura: item.data_abertura,
         data_conclusao: item.data_conclusao,
         cliente: {
-          id: item.cliente_id || '',
+          id: '',
           nome: item.cliente_nome || '',
           telefone: item.cliente_telefone || '',
           email: item.cliente_email || '',
@@ -71,12 +70,13 @@ export function OrdensList() {
           criado_em: ''
         },
         tecnico: item.tecnico_nome ? {
-          id: item.tecnico_id || '',
+          id: '',
           nome: item.tecnico_nome,
           criado_em: ''
         } : undefined,
         itens: item.itens || [],
-        total: item.total_ordem || 0
+        total: item.total_ordem || 0,
+        valor_manutencao: item.valor_manutencao || 0
       })) || []
       
       console.log('Transformed data:', transformedData)
@@ -88,7 +88,7 @@ export function OrdensList() {
     mutationFn: async (id: string) => {
       // Primeiro excluir os itens da ordem
       const { error: itensError } = await supabase
-        .from('item_ordem')
+        .from('itens_ordem')
         .delete()
         .eq('ordem_id', id)
 
@@ -96,7 +96,7 @@ export function OrdensList() {
 
       // Depois excluir a ordem
       const { error } = await supabase
-        .from('ordem_servico')
+        .from('ordens_servico')
         .delete()
         .eq('id', id)
 
@@ -176,16 +176,14 @@ export function OrdensList() {
   <div class="section">
     <h3>Cliente</h3>
     <strong>Nome:</strong> ${ordem.cliente?.nome || ''}<br>
-    ${ordem.cliente_cpf ? `<strong>CPF:</strong> ${ordem.cliente_cpf}<br>` : ''}
-    ${ordem.cliente_telefone ? `<strong>Telefone:</strong> ${ordem.cliente_telefone}<br>` : ''}
-    ${ordem.cliente_email ? `<strong>Email:</strong> ${ordem.cliente_email}<br>` : ''}
-    ${ordem.cliente_endereco ? `<strong>Endereço:</strong> ${ordem.cliente_endereco}<br>` : ''}
+    ${ordem.cliente?.telefone ? `<strong>Telefone:</strong> ${ordem.cliente.telefone}<br>` : ''}
+    ${ordem.cliente?.email ? `<strong>Email:</strong> ${ordem.cliente.email}<br>` : ''}
+    ${ordem.cliente?.endereco ? `<strong>Endereço:</strong> ${ordem.cliente.endereco}<br>` : ''}
   </div>
 
   <div class="section">
     <h3>Técnico</h3>
     <strong>Nome:</strong> ${ordem.tecnico?.nome || 'Não atribuído'}<br>
-    ${ordem.tecnico_cpf ? `<strong>CPF:</strong> ${ordem.tecnico_cpf}<br>` : ''}
   </div>
 
   <div class="section">
@@ -212,7 +210,7 @@ export function OrdensList() {
       <tbody>
         ${ordem.itens.map(item => `
         <tr>
-          <td>${item.peca?.nome || 'Item não encontrado'}</td>
+          <td>${item.nome_item}</td>
           <td>${item.quantidade}</td>
           <td>R$ ${item.preco_unitario.toFixed(2)}</td>
           <td>R$ ${(item.quantidade * item.preco_unitario).toFixed(2)}</td>
@@ -225,9 +223,9 @@ export function OrdensList() {
 
   <div class="section">
     <h3>Resumo</h3>
-    <strong>Valor da Manutenção:</strong> R$ ${ordem.valor_manutencao?.toFixed(2) || ordem.valor?.toFixed(2) || '0,00'}<br>
-    <strong>Total dos Itens:</strong> R$ ${ordem.total_ordem?.toFixed(2) || ordem.total?.toFixed(2) || '0,00'}<br>
-    <strong>Total Geral:</strong> R$ ${((ordem.valor_manutencao || ordem.valor || 0) + (ordem.total_ordem || ordem.total || 0)).toFixed(2)}<br>
+    <strong>Valor da Manutenção:</strong> R$ ${ordem.valor_manutencao?.toFixed(2) || '0,00'}<br>
+    <strong>Total dos Itens:</strong> R$ ${ordem.total?.toFixed(2) || '0,00'}<br>
+    <strong>Total Geral:</strong> R$ ${((ordem.valor_manutencao || 0) + (ordem.total || 0)).toFixed(2)}<br>
   </div>
 
 </body>

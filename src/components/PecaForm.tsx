@@ -118,86 +118,94 @@ export function PecaForm({ peca, onSuccess }: PecaFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="nome">Nome da Peça *</Label>
-          <Input
-            id="nome"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex: Tela LCD"
-            required
-          />
+    <div className="w-full max-w-none">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="nome">Nome da Peça *</Label>
+            <Input
+              id="nome"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex: Tela LCD"
+              required
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fabricante">Fabricante</Label>
+            <Input
+              id="fabricante"
+              value={fabricante}
+              onChange={(e) => setFabricante(e.target.value)}
+              placeholder="Ex: Samsung"
+              className="w-full"
+            />
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="fabricante">Fabricante</Label>
-          <Input
-            id="fabricante"
-            value={fabricante}
-            onChange={(e) => setFabricante(e.target.value)}
-            placeholder="Ex: Samsung"
-          />
-        </div>
-      </div>
+        <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="modelo">Modelo</Label>
+            <Input
+              id="modelo"
+              value={modelo}
+              onChange={(e) => setModelo(e.target.value)}
+              placeholder="Ex: Galaxy S21"
+              className="w-full"
+            />
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="modelo">Modelo</Label>
-          <Input
-            id="modelo"
-            value={modelo}
-            onChange={(e) => setModelo(e.target.value)}
-            placeholder="Ex: Galaxy S21"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="codigo">Código do Fabricante</Label>
-          <Input
-            id="codigo"
-            value={codigoFabricante}
-            onChange={(e) => setCodigoFabricante(e.target.value)}
-            placeholder="Ex: LCD-GS21-001"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="preco">Preço Unitário *</Label>
-          <Input
-            id="preco"
-            type="number"
-            step="0.01"
-            min="0"
-            value={precoUnitario}
-            onChange={(e) => setPrecoUnitario(e.target.value)}
-            placeholder="0.00"
-            required
-          />
+          <div className="space-y-2">
+            <Label htmlFor="codigo">Código do Fabricante</Label>
+            <Input
+              id="codigo"
+              value={codigoFabricante}
+              onChange={(e) => setCodigoFabricante(e.target.value)}
+              placeholder="Ex: LCD-GS21-001"
+              className="w-full"
+            />
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="estoque">Estoque *</Label>
-          <Input
-            id="estoque"
-            type="number"
-            min="0"
-            value={estoque}
-            onChange={(e) => setEstoque(e.target.value)}
-            placeholder="0"
-            required
-          />
-        </div>
-      </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="preco">Preço Unitário *</Label>
+            <Input
+              id="preco"
+              type="number"
+              step="0.01"
+              min="0"
+              value={precoUnitario}
+              onChange={(e) => setPrecoUnitario(e.target.value)}
+              placeholder="0.00"
+              required
+              className="w-full"
+            />
+          </div>
 
-      <div className="flex justify-end space-x-2">
-        <Button type="submit" disabled={savePeca.isPending}>
-          {savePeca.isPending ? 'Salvando...' : (peca ? 'Atualizar' : 'Criar Peça')}
-        </Button>
-      </div>
-    </form>
+          <div className="space-y-2">
+            <Label htmlFor="estoque">Estoque *</Label>
+            <Input
+              id="estoque"
+              type="number"
+              min="0"
+              value={estoque}
+              onChange={(e) => setEstoque(e.target.value)}
+              placeholder="0"
+              required
+              className="w-full"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-2 pt-4">
+          <Button type="submit" disabled={savePeca.isPending} className="w-full sm:w-auto">
+            {savePeca.isPending ? 'Salvando...' : (peca ? 'Atualizar' : 'Criar Peça')}
+          </Button>
+        </div>
+      </form>
+    </div>
   )
 }
