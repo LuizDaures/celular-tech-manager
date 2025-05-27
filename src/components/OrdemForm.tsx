@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
@@ -355,10 +356,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         />
       </div>
 
-      {/* Seção de Itens */}
+      {/* Seção de Peças */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <Label>Itens Utilizados</Label>
+          <Label>Peças Utilizadas</Label>
           <div className="flex gap-2">
             <ItemSelector onAddItem={addItemFromSelector} />
             <Button type="button" variant="outline" size="sm" onClick={addItem}>

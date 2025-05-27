@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta } from '@/lib/supabase'
@@ -56,6 +55,7 @@ export function OrdensList() {
         ordem_id: item.ordem_id,
         cliente_id: '',
         tecnico_id: '',
+        dispositivo: item.dispositivo,
         descricao_problema: item.descricao_problema,
         diagnostico: item.diagnostico,
         servico_realizado: item.servico_realizado,
@@ -68,11 +68,13 @@ export function OrdensList() {
           telefone: item.cliente_telefone || '',
           email: item.cliente_email || '',
           endereco: item.cliente_endereco || '',
+          cpf: item.cliente_cpf || '',
           criado_em: ''
         },
         tecnico: item.tecnico_nome ? {
           id: '',
           nome: item.tecnico_nome,
+          cpf: item.tecnico_cpf || '',
           criado_em: ''
         } : undefined,
         itens: item.itens || [],
@@ -131,14 +133,19 @@ export function OrdensList() {
 
       const empresa = empresaData || { nome: 'TechFix Pro', cnpj: '', logo_base64: '' }
 
-      // Template HTML melhorado com layout profissional e assinaturas
+      // Template HTML conforme a imagem fornecida
       const htmlTemplate = `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Ordem de Serviço</title>
+  <title>Registro de Ordem de Serviço</title>
   <style>
+    @page {
+      size: A4;
+      margin: 1cm;
+    }
+    
     * {
       margin: 0;
       padding: 0;
@@ -146,478 +153,288 @@ export function OrdensList() {
     }
     
     body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.6;
-      color: #333;
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      line-height: 1.3;
+      color: #000;
       max-width: 21cm;
       margin: 0 auto;
-      padding: 2cm;
       background: #fff;
     }
     
     .header {
+      text-align: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 10px;
+    }
+    
+    .header h1 {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    
+    .company-info {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 3px solid #e0e0e0;
+      margin-bottom: 15px;
     }
     
-    .logo-section {
-      display: flex;
-      align-items: center;
-      gap: 15px;
+    .company-left {
+      text-align: left;
     }
     
-    .logo-section img {
-      max-height: 80px;
-      border-radius: 8px;
-    }
-    
-    .logo-placeholder {
-      width: 80px;
-      height: 80px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: bold;
-      font-size: 24px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    
-    .empresa-info {
-      text-align: center;
-      font-size: 11px;
-      color: #666;
-      line-height: 1.4;
-    }
-    
-    .title-section {
-      text-align: center;
-      flex: 1;
-      margin: 0 20px;
-    }
-    
-    .title-section h1 {
-      font-size: 28px;
-      font-weight: 700;
-      color: #2c3e50;
-      margin-bottom: 5px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    
-    .title-section h2 {
-      font-size: 18px;
-      font-weight: 400;
-      color: #7f8c8d;
-      margin-bottom: 10px;
-    }
-    
-    .ordem-info {
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      color: #495057;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    .company-right {
+      text-align: right;
+      background: #f0f0f0;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
     }
     
     .section {
-      margin-bottom: 25px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
       overflow: hidden;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     }
     
     .section-header {
-      background: linear-gradient(135deg, #495057 0%, #6c757d 100%);
-      color: white;
-      padding: 12px 20px;
-      font-weight: 600;
-      font-size: 14px;
+      background: #f8f8f8;
+      padding: 8px 12px;
+      font-weight: bold;
+      text-align: center;
+      border-bottom: 1px solid #ccc;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-size: 10px;
     }
     
     .section-content {
-      background: #fff;
-      border: 1px solid #dee2e6;
-      border-top: none;
+      padding: 12px;
     }
     
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
+    .row {
+      display: flex;
+      margin-bottom: 8px;
     }
     
-    .info-item {
-      padding: 15px 20px;
-      border-bottom: 1px solid #f8f9fa;
-      border-right: 1px solid #f8f9fa;
+    .row:last-child {
+      margin-bottom: 0;
     }
     
-    .info-item:nth-child(even) {
-      border-right: none;
-      background: #f8f9fa;
+    .col {
+      flex: 1;
+      margin-right: 20px;
     }
     
-    .info-item:last-child,
-    .info-item:nth-last-child(2) {
-      border-bottom: none;
+    .col:last-child {
+      margin-right: 0;
     }
     
-    .info-label {
-      font-weight: 600;
-      color: #495057;
-      display: block;
-      margin-bottom: 5px;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    .label {
+      font-weight: bold;
+      margin-bottom: 2px;
     }
     
-    .info-value {
-      color: #2c3e50;
-      font-size: 14px;
-      word-wrap: break-word;
+    .value {
+      border-bottom: 1px solid #000;
+      min-height: 16px;
+      padding-bottom: 2px;
     }
     
     .full-width {
-      grid-column: span 2;
-      border-right: none !important;
-      background: #fff !important;
-    }
-    
-    .text-content {
-      padding: 20px;
-      min-height: 80px;
-      line-height: 1.8;
-    }
-    
-    .text-content em {
-      color: #6c757d;
-      font-style: normal;
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 12px;
-      letter-spacing: 0.5px;
-    }
-    
-    .pecas-list {
-      padding: 20px;
-    }
-    
-    .pecas-list ul {
-      list-style: none;
-      margin-top: 15px;
-    }
-    
-    .pecas-list li {
-      padding: 8px 0;
-      border-bottom: 1px solid #f1f3f4;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .pecas-list li:last-child {
-      border-bottom: none;
-    }
-    
-    .peca-item {
-      display: flex;
-      justify-content: space-between;
       width: 100%;
     }
     
-    .peca-nome {
-      font-weight: 500;
-      color: #2c3e50;
+    .text-area {
+      min-height: 60px;
+      border: 1px solid #ccc;
+      padding: 8px;
+      white-space: pre-wrap;
     }
     
-    .peca-detalhes {
-      color: #6c757d;
-      font-size: 12px;
+    .orcamento {
+      margin-top: 20px;
     }
     
-    .footer-section {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 2px solid #e9ecef;
-    }
-    
-    .footer-info {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 30px;
-      margin-bottom: 40px;
-      font-size: 13px;
-    }
-    
-    .footer-item {
+    .orcamento-content {
       display: flex;
       justify-content: space-between;
-      padding: 8px 0;
-      border-bottom: 1px solid #f8f9fa;
+      padding: 12px;
     }
     
-    .footer-item strong {
-      color: #495057;
+    .orcamento-left {
+      flex: 1;
+    }
+    
+    .orcamento-item {
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
     }
     
     .signatures {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
-      margin-top: 60px;
+      margin-top: 40px;
+      display: flex;
+      justify-content: space-between;
     }
     
     .signature-box {
+      width: 45%;
       text-align: center;
-      padding: 20px;
-      border: 2px solid #e9ecef;
-      border-radius: 8px;
-      background: #f8f9fa;
     }
     
     .signature-line {
-      height: 60px;
-      border-bottom: 2px solid #495057;
-      margin-bottom: 15px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      padding-bottom: 5px;
-      color: #adb5bd;
-      font-style: italic;
-      font-size: 12px;
-    }
-    
-    .signature-label {
-      font-weight: 600;
-      color: #495057;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-size: 12px;
-    }
-    
-    .total-destaque {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-      color: white;
-      font-weight: bold;
-      font-size: 16px;
-      padding: 15px 20px;
-      border-radius: 8px;
-      text-align: center;
-      margin-top: 20px;
-      box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+      border-bottom: 1px solid #000;
+      height: 40px;
+      margin-bottom: 5px;
     }
     
     @media print {
       body {
-        padding: 1cm;
-      }
-      
-      .section {
-        break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="logo-section">
-      ${empresa.logo_base64 ? 
-        `<img src="data:image/png;base64,${empresa.logo_base64}" alt="Logo da Empresa">` : 
-        `<div class="logo-placeholder">🔧</div>`
-      }
-      <div class="empresa-info">
-        ${empresa.nome}<br>
-        ${empresa.cnpj ? `CNPJ: ${empresa.cnpj}` : 'Dados da empresa'}
-      </div>
+    <h1>REGISTRO DE ORDEM DE SERVIÇO</h1>
+  </div>
+
+  <div class="company-info">
+    <div class="company-left">
+      <strong>${empresa.nome}</strong><br>
+      ${empresa.cnpj ? `CNPJ: ${empresa.cnpj}` : ''}
     </div>
-    
-    <div class="title-section">
-      <h1>Ordem de Serviço</h1>
-      <h2>Assistência Técnica Especializada</h2>
-      <div class="ordem-info">
-        Nº ${ordem.id?.slice(-6).toUpperCase() || '000001'} | ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}
-      </div>
-    </div>
-    
-    <div class="logo-section">
-      <div class="empresa-info">
-        Atendimento<br>
-        Personalizado
-      </div>
-      <div class="logo-placeholder">📱</div>
+    <div class="company-right">
+      <strong>O.S. Nº: ${ordem.id?.slice(-6).toUpperCase() || '000001'}</strong><br>
+      <strong>Data de abertura:</strong> ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}
     </div>
   </div>
 
-  <!-- Seção Cliente -->
+  <!-- Dados do Cliente -->
   <div class="section">
-    <div class="section-header">📋 Informações do Cliente</div>
+    <div class="section-header">DADOS DO CLIENTE</div>
     <div class="section-content">
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="info-label">Nome Completo</span>
-          <div class="info-value">${ordem.cliente?.nome || 'Não informado'}</div>
+      <div class="row">
+        <div class="col">
+          <div class="label">Nome:</div>
+          <div class="value">${ordem.cliente?.nome || ''}</div>
         </div>
-        <div class="info-item">
-          <span class="info-label">Telefone</span>
-          <div class="info-value">${ordem.cliente?.telefone || 'Não informado'}</div>
+        <div class="col">
+          <div class="label">CPF/CNPJ:</div>
+          <div class="value">${ordem.cliente?.cpf || ''}</div>
         </div>
-        <div class="info-item">
-          <span class="info-label">E-mail</span>
-          <div class="info-value">${ordem.cliente?.email || 'Não informado'}</div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="label">Endereço:</div>
+          <div class="value">${ordem.cliente?.endereco || ''}</div>
         </div>
-        <div class="info-item">
-          <span class="info-label">Documento</span>
-          <div class="info-value">${ordem.cliente?.cpf || 'Não informado'}</div>
+        <div class="col">
+          <div class="label">Bairro:</div>
+          <div class="value"></div>
         </div>
-        <div class="info-item full-width">
-          <span class="info-label">Endereço</span>
-          <div class="info-value">${ordem.cliente?.endereco || 'Não informado'}</div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="label">Cidade:</div>
+          <div class="value"></div>
+        </div>
+        <div class="col">
+          <div class="label">CEP:</div>
+          <div class="value"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div class="label">Telefone:</div>
+          <div class="value">${ordem.cliente?.telefone || ''}</div>
+        </div>
+        <div class="col">
+          <div class="label">E-mail:</div>
+          <div class="value">${ordem.cliente?.email || ''}</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Seção Equipamento -->
+  <!-- Informações do Produto -->
   <div class="section">
-    <div class="section-header">📱 Equipamento</div>
+    <div class="section-header">INFORMAÇÕES DO PRODUTO</div>
     <div class="section-content">
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="info-label">Dispositivo</span>
-          <div class="info-value">${ordem.dispositivo || 'Não especificado'}</div>
+      <div class="row">
+        <div class="col">
+          <div class="label">Modelo:</div>
+          <div class="value">${ordem.dispositivo || ''}</div>
         </div>
-        <div class="info-item">
-          <span class="info-label">Status do Serviço</span>
-          <div class="info-value">${statusLabels[ordem.status]}</div>
+      </div>
+      <div class="row">
+        <div class="col full-width">
+          <div class="label">Detalhes:</div>
+          <div class="value"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Seção Diagnóstico -->
+  <!-- Relato do Cliente -->
   <div class="section">
-    <div class="section-header">🔍 Diagnóstico e Problema Relatado</div>
+    <div class="section-header">RELATO DO CLIENTE</div>
     <div class="section-content">
-      <div class="text-content">
-        <em>Problema Relatado pelo Cliente</em><br><br>
-        ${ordem.descricao_problema}
-        ${ordem.diagnostico ? `<br><br><em>Diagnóstico Técnico</em><br><br>${ordem.diagnostico}` : ''}
-      </div>
+      <div class="text-area">${ordem.descricao_problema || ''}</div>
     </div>
   </div>
 
-  <!-- Seção Solução -->
-  ${ordem.servico_realizado ? `
+  <!-- Diagnóstico e Serviço -->
   <div class="section">
-    <div class="section-header">🔧 Serviço Realizado</div>
+    <div class="section-header">DIAGNÓSTICO E SERVIÇO A SER PRESTADO</div>
     <div class="section-content">
-      <div class="text-content">
-        <em>Solução Aplicada</em><br><br>
-        ${ordem.servico_realizado}
-      </div>
+      <div class="text-area">${ordem.diagnostico || ''}</div>
     </div>
   </div>
-  ` : ''}
 
-  <!-- Seção Peças -->
-  ${ordem.itens && ordem.itens.length > 0 ? `
+  <!-- Garantia e Observações -->
   <div class="section">
-    <div class="section-header">🔩 Peças e Componentes Utilizados</div>
+    <div class="section-header">GARANTIA E OBSERVAÇÕES</div>
     <div class="section-content">
-      <div class="pecas-list">
-        <em>Relação de Peças Substituídas</em>
-        <ul>
-          ${ordem.itens.map(item => `
-            <li>
-              <div class="peca-item">
-                <div>
-                  <div class="peca-nome">${item.nome_item}</div>
-                  <div class="peca-detalhes">Qtd: ${item.quantidade} | Valor unit.: R$ ${item.preco_unitario.toFixed(2).replace('.', ',')}</div>
-                </div>
-                <div style="font-weight: 600; color: #28a745;">
-                  R$ ${(item.quantidade * item.preco_unitario).toFixed(2).replace('.', ',')}
-                </div>
-              </div>
-            </li>
-          `).join('')}
-        </ul>
-      </div>
+      <div class="text-area">${ordem.servico_realizado || ''}</div>
     </div>
   </div>
-  ` : ''}
 
-  <!-- Seção Financeiro -->
-  <div class="section">
-    <div class="section-header">💰 Resumo Financeiro</div>
-    <div class="section-content">
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="info-label">Valor da Mão de Obra</span>
-          <div class="info-value">R$ ${(ordem.valor_manutencao || ordem.valor || 0).toFixed(2).replace('.', ',')}</div>
+  <!-- Orçamento -->
+  <div class="section orcamento">
+    <div class="section-header">ORÇAMENTO</div>
+    <div class="orcamento-content">
+      <div class="orcamento-left">
+        <div class="orcamento-item">
+          <span>Valor dos serviços:</span>
+          <span>R$ ${(ordem.valor_manutencao || 0).toFixed(2).replace('.', ',')}</span>
         </div>
-        <div class="info-item">
-          <span class="info-label">Valor das Peças</span>
-          <div class="info-value">R$ ${(ordem.total_ordem || ordem.total || 0).toFixed(2).replace('.', ',')}</div>
+        <div class="orcamento-item">
+          <span>Valor de peças/produtos:</span>
+          <span>R$ ${(ordem.total || 0).toFixed(2).replace('.', ',')}</span>
         </div>
-      </div>
-      <div class="total-destaque">
-        VALOR TOTAL DO SERVIÇO: R$ ${((ordem.valor_manutencao || ordem.valor || 0) + (ordem.total_ordem || ordem.total || 0)).toFixed(2).replace('.', ',')}
+        <div class="orcamento-item" style="font-weight: bold; border-top: 1px solid #000; padding-top: 8px;">
+          <span>Valor total:</span>
+          <span>R$ ${((ordem.valor_manutencao || 0) + (ordem.total || 0)).toFixed(2).replace('.', ',')}</span>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Rodapé e Assinaturas -->
-  <div class="footer-section">
-    <div class="footer-info">
-      <div>
-        <div class="footer-item">
-          <strong>Data de Abertura:</strong>
-          <span>${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')} às ${new Date(ordem.data_abertura).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}h</span>
-        </div>
-        <div class="footer-item">
-          <strong>Previsão de Entrega:</strong>
-          <span>${ordem.data_conclusao ? new Date(ordem.data_conclusao).toLocaleDateString('pt-BR') : 'A definir'}</span>
-        </div>
-      </div>
-      <div>
-        <div class="footer-item">
-          <strong>Técnico Responsável:</strong>
-          <span>${ordem.tecnico?.nome || 'A designar'}</span>
-        </div>
-        <div class="footer-item">
-          <strong>Contato para Dúvidas:</strong>
-          <span>${ordem.cliente?.telefone || '(xx) xxxx-xxxx'}</span>
-        </div>
-      </div>
+  <!-- Assinaturas -->
+  <div class="signatures">
+    <div class="signature-box">
+      <div class="signature-line"></div>
+      <div>Assinatura Cliente</div>
     </div>
-
-    <div class="signatures">
-      <div class="signature-box">
-        <div class="signature-line">Assinatura do Cliente</div>
-        <div class="signature-label">
-          ${ordem.cliente?.nome || 'Cliente'}<br>
-          Data: ___/___/_____
-        </div>
-      </div>
-      <div class="signature-box">
-        <div class="signature-line">Assinatura do Técnico</div>
-        <div class="signature-label">
-          ${ordem.tecnico?.nome || 'Técnico Responsável'}<br>
-          Data: ___/___/_____
-        </div>
-      </div>
+    <div class="signature-box">
+      <div class="signature-line"></div>
+      <div>Assinatura Responsável Técnico</div>
     </div>
   </div>
 </body>
@@ -766,10 +583,10 @@ export function OrdensList() {
                     {new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell>
-                    {ordem.valor_manutencao || ordem.valor ? `R$ ${(ordem.valor_manutencao || ordem.valor)?.toFixed(2)}` : '-'}
+                    {ordem.valor_manutencao ? `R$ ${ordem.valor_manutencao?.toFixed(2)}` : '-'}
                   </TableCell>
                   <TableCell>
-                    {ordem.total_ordem || ordem.total ? `R$ ${(ordem.total_ordem || ordem.total)?.toFixed(2)}` : '-'}
+                    {ordem.total ? `R$ ${ordem.total?.toFixed(2)}` : '-'}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end space-x-2">

@@ -16,7 +16,7 @@ export function DatabaseConfig() {
   const [anonKey, setAnonKey] = useState('')
   const [serviceKey, setServiceKey] = useState('')
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'testing'>('connected')
-  const [dbInfo, setDbInfo] = useState({ name: 'TechFix Database', records: 0 })
+  const [dbInfo, setDbInfo] = useState({ name: 'TechFix Database' })
   
   const { toast } = useToast()
 
@@ -63,18 +63,15 @@ export function DatabaseConfig() {
       const { data: clientesData } = await supabase.from('clientes').select('id', { count: 'exact', head: true })
       const { data: tecnicosData } = await supabase.from('tecnicos').select('id', { count: 'exact', head: true })
       
-      const totalRecords = (ordensData?.length || 0) + (clientesData?.length || 0) + (tecnicosData?.length || 0)
-      
       setDbInfo({
-        name: 'TechFix Database',
-        records: totalRecords
+        name: 'TechFix Database'
       })
       
       setConnectionStatus('connected')
       
       toast({
         title: "Conexão bem-sucedida",
-        description: `Banco conectado: ${dbInfo.name} com ${totalRecords} registros.`,
+        description: `Banco conectado: ${dbInfo.name}`,
       })
     } catch (error) {
       setConnectionStatus('disconnected')
@@ -92,7 +89,7 @@ export function DatabaseConfig() {
         return (
           <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
             <CheckCircle className="h-3 w-3 mr-1" />
-            Banco conectado: {dbInfo.name} e {dbInfo.records} registros
+            Banco conectado: {dbInfo.name}
           </Badge>
         )
       case 'testing':
