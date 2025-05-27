@@ -1,4 +1,5 @@
-import { useState } from 'react'
+
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, DadosEmpresa } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
-import { Building, Upload, X } from 'lucide-react'
+import { Building, Upload, X, ImageIcon } from 'lucide-react'
 import { DatabaseConfig } from '@/components/DatabaseConfig'
 
 export function Configuracoes() {
@@ -15,6 +16,7 @@ export function Configuracoes() {
   const [cnpj, setCnpj] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
   
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -257,7 +259,7 @@ export function Configuracoes() {
                 />
                 {logoPreview && (
                   <div className="flex items-center gap-2">
-                    <Image className="h-4 w-4" />
+                    <ImageIcon className="h-4 w-4" />
                     <span className="text-sm text-muted-foreground">Logo carregada</span>
                   </div>
                 )}
