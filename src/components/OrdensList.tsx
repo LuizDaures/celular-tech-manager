@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta } from '@/lib/supabase'
@@ -7,8 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { OrdemForm } from '@/components/OrdemForm'
-import { Plus, Search, Edit, Eye, Trash, Download } from 'lucide-react'
+import { Plus, Search, Edit, Eye, Trash, Download, Filter } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 const statusColors = {
@@ -27,6 +30,7 @@ const statusLabels = {
 
 export function OrdensList() {
   const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedOrdem, setSelectedOrdem] = useState<OrdemCompleta | null>(null)
   const [isViewing, setIsViewing] = useState(false)
@@ -170,7 +174,7 @@ export function OrdensList() {
 
       const empresa = empresaData || { nome: 'TechFix Pro', cnpj: '', logo_base64: '' }
 
-      // Template HTML completamente novo e melhorado
+      // Template HTML com margens adicionadas
       const htmlTemplate = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -181,7 +185,7 @@ export function OrdensList() {
   <style>
     @page {
       size: A4;
-      margin: 1.5cm;
+      margin: 2cm 1.5cm;
     }
     
     * {
@@ -196,11 +200,14 @@ export function OrdensList() {
       line-height: 1.4;
       color: #333;
       background: #fff;
+      margin: 20px;
+      padding: 20px;
     }
     
     .container {
       max-width: 100%;
       margin: 0 auto;
+      padding: 0 15px;
     }
     
     .header {
@@ -426,6 +433,12 @@ export function OrdensList() {
       body {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        margin: 0;
+        padding: 0;
+      }
+      
+      .container {
+        padding: 0;
       }
     }
   </style>
@@ -678,7 +691,10 @@ export function OrdensList() {
     const descricaoProblema = ordem.descricao_problema?.toLowerCase() || ''
     const searchLower = searchTerm.toLowerCase()
     
-    return clienteNome.includes(searchLower) || descricaoProblema.includes(searchLower)
+    const matchesSearch = clienteNome.includes(searchLower) || descricaoProblema.includes(searchLower)
+    const matchesStatus = statusFilter === 'all' || ordem.status === statusFilter
+    
+    return matchesSearch && matchesStatus
   })
 
   const handleEdit = (ordem: OrdemCompleta) => {
@@ -706,17 +722,20 @@ export function OrdensList() {
   console.log('Filtered ordens:', filteredOrdens)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-3xl font-bold">Ordens de Serviço</h1>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Ordens de Serviço</h1>
+          <p className="text-muted-foreground">Gerencie as ordens de serviço da assistência</p>
+        </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setSelectedOrdem(null)}>
+            <Button onClick={() => setSelectedOrdem(null)} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Nova Ordem
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
             <DialogHeader>
               <DialogTitle>
                 {isViewing ? 'Visualizar Ordem' : selectedOrdem ? 'Editar Ordem' : 'Nova Ordem'}
@@ -734,118 +753,142 @@ export function OrdensList() {
         </Dialog>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar ordens..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
-
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Dispositivo</TableHead>
-              <TableHead>Problema</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Data Abertura</TableHead>
-              <TableHead>Valor Manutenção</TableHead>
-              <TableHead>Total Itens</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
-                  Carregando...
-                </TableCell>
-              </TableRow>
-            ) : filteredOrdens.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
-                  Nenhuma ordem encontrada.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredOrdens.map((ordem) => (
-                <TableRow key={ordem.id}>
-                  <TableCell className="font-medium">{ordem.cliente?.nome || 'Cliente não encontrado'}</TableCell>
-                  <TableCell>{ordem.dispositivo || '-'}</TableCell>
-                  <TableCell className="max-w-xs truncate">{ordem.descricao_problema}</TableCell>
-                  <TableCell>
-                    <Badge className={statusColors[ordem.status]}>
-                      {statusLabels[ordem.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell>
-                    {ordem.valor_manutencao ? `R$ ${ordem.valor_manutencao?.toFixed(2)}` : '-'}
-                  </TableCell>
-                  <TableCell>
-                    {ordem.total ? `R$ ${ordem.total?.toFixed(2)}` : '-'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleDownload(ordem)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleView(ordem)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleEdit(ordem)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Ordens</CardTitle>
+          <CardDescription>
+            Total de {filteredOrdens.length} ordem{filteredOrdens.length !== 1 ? 'ns' : ''} {statusFilter !== 'all' ? `com status "${statusLabels[statusFilter as keyof typeof statusLabels]}"` : 'cadastrada' + (filteredOrdens.length !== 1 ? 's' : '')}
+          </CardDescription>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar ordens..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="aberta">Aberta</SelectItem>
+                  <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                  <SelectItem value="concluida">Concluída</SelectItem>
+                  <SelectItem value="cancelada">Cancelada</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-4">Carregando ordens...</div>
+          ) : filteredOrdens.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              {searchTerm || statusFilter !== 'all' ? 'Nenhuma ordem encontrada com os filtros aplicados.' : 'Nenhuma ordem cadastrada.'}
+            </div>
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[150px]">Cliente</TableHead>
+                    <TableHead className="hidden sm:table-cell">Dispositivo</TableHead>
+                    <TableHead className="hidden md:table-cell">Problema</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden lg:table-cell">Data Abertura</TableHead>
+                    <TableHead className="hidden md:table-cell">Valor Manutenção</TableHead>
+                    <TableHead className="hidden lg:table-cell">Total Itens</TableHead>
+                    <TableHead className="text-right min-w-[120px]">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrdens.map((ordem) => (
+                    <TableRow key={ordem.id}>
+                      <TableCell className="font-medium">{ordem.cliente?.nome || 'Cliente não encontrado'}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{ordem.dispositivo || '-'}</TableCell>
+                      <TableCell className="hidden md:table-cell max-w-xs truncate">{ordem.descricao_problema}</TableCell>
+                      <TableCell>
+                        <Badge className={statusColors[ordem.status]}>
+                          {statusLabels[ordem.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {ordem.valor_manutencao ? `R$ ${ordem.valor_manutencao?.toFixed(2)}` : '-'}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {ordem.total ? `R$ ${ordem.total?.toFixed(2)}` : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-1">
                           <Button
                             variant="outline"
                             size="icon"
+                            onClick={() => handleDownload(ordem)}
+                            className="h-8 w-8"
                           >
-                            <Trash className="h-4 w-4" />
+                            <Download className="h-3 w-3" />
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja excluir esta ordem de serviço? Esta ação não pode ser desfeita e todos os itens relacionados também serão excluídos.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(ordem.id)}>
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleView(ordem)}
+                            className="h-8 w-8"
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleEdit(ordem)}
+                            className="h-8 w-8"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
+                                <Trash className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="mx-4">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir esta ordem de serviço? Esta ação não pode ser desfeita e todos os itens relacionados também serão excluídos.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(ordem.id)}>
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

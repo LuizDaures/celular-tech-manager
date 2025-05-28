@@ -2,9 +2,17 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Users, Wrench, TrendingUp } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { FileText, Users, Wrench, TrendingUp, Filter } from 'lucide-react'
 import { supabase, OrdemServico, Cliente, Tecnico } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
+
+const statusLabels = {
+  'aberta': 'Aberta',
+  'em_andamento': 'Em Andamento',
+  'concluida': 'Concluída',
+  'cancelada': 'Cancelada'
+}
 
 export function Dashboard() {
   const [stats, setStats] = useState({
@@ -16,12 +24,22 @@ export function Dashboard() {
     totalTecnicos: 0,
   })
   const [recentOrders, setRecentOrders] = useState<any[]>([])
+  const [filteredOrders, setFilteredOrders] = useState<any[]>([])
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
     loadDashboardData()
   }, [])
+
+  useEffect(() => {
+    if (statusFilter === 'all') {
+      setFilteredOrders(recentOrders)
+    } else {
+      setFilteredOrders(recentOrders.filter(order => order.status === statusFilter))
+    }
+  }, [statusFilter, recentOrders])
 
   const loadDashboardData = async () => {
     try {
@@ -57,7 +75,7 @@ export function Dashboard() {
           tecnicos:tecnico_id (nome)
         `)
         .order('data_abertura', { ascending: false })
-        .limit(5)
+        .limit(10)
 
       if (recentError) throw recentError
 
@@ -73,6 +91,7 @@ export function Dashboard() {
 
       setStats(statsData)
       setRecentOrders(recentOrdersData || [])
+      setFilteredOrders(recentOrdersData || [])
     } catch (error) {
       console.error('Error loading dashboard data:', error)
       toast({
@@ -173,11 +192,31 @@ export function Dashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Ordens Recentes</CardTitle>
-          <CardDescription>Últimas ordens de serviço criadas</CardDescription>
+          <CardDescription>
+            {statusFilter === 'all' 
+              ? `Últimas ${recentOrders.length} ordens de serviço criadas` 
+              : `Ordens com status "${statusLabels[statusFilter as keyof typeof statusLabels]}" - Total: ${filteredOrders.length}`
+            }
+          </CardDescription>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="aberta">Aberta</SelectItem>
+                <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                <SelectItem value="concluida">Concluída</SelectItem>
+                <SelectItem value="cancelada">Cancelada</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {recentOrders.map((order) => (
+            {filteredOrders.map((order) => (
               <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="space-y-1">
                   <p className="font-medium">{order.clientes?.nome}</p>
@@ -194,9 +233,12 @@ export function Dashboard() {
                 </div>
               </div>
             ))}
-            {recentOrders.length === 0 && (
+            {filteredOrders.length === 0 && (
               <p className="text-center text-muted-foreground py-4">
-                Nenhuma ordem de serviço encontrada
+                {statusFilter === 'all' 
+                  ? 'Nenhuma ordem de serviço encontrada' 
+                  : `Nenhuma ordem com status "${statusLabels[statusFilter as keyof typeof statusLabels]}" encontrada`
+                }
               </p>
             )}
           </div>

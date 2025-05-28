@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, Cliente } from '@/lib/supabase'
@@ -6,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ClienteForm } from '@/components/ClienteForm'
 import { Plus, Search, Edit, Trash } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
@@ -38,9 +40,9 @@ export function ClientesList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Primeiro verificar se há ordens vinculadas
+      // Primeiro verificar se há ordens vinculadas - usando o nome correto da tabela
       const { data: ordens, error: ordensError } = await supabase
-        .from('ordem_servico')
+        .from('ordens_servico')
         .select('id')
         .eq('cliente_id', id)
         .limit(1)
@@ -105,7 +107,10 @@ export function ClientesList() {
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold">Clientes</h1>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">Clientes</h1>
+          <p className="text-muted-foreground">Gerencie os clientes da assistência</p>
+        </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => setSelectedCliente(null)} className="w-full sm:w-auto">
@@ -131,94 +136,99 @@ export function ClientesList() {
         </Dialog>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar clientes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
-
-      <div className="rounded-md border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-[150px]">Nome</TableHead>
-              <TableHead className="hidden md:table-cell">CPF</TableHead>
-              <TableHead className="hidden lg:table-cell">Email</TableHead>
-              <TableHead className="hidden sm:table-cell">Telefone</TableHead>
-              <TableHead className="hidden md:table-cell">Data Cadastro</TableHead>
-              <TableHead className="text-right min-w-[100px]">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  Carregando...
-                </TableCell>
-              </TableRow>
-            ) : filteredClientes.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  Nenhum cliente encontrado.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredClientes.map((cliente) => (
-                <TableRow key={cliente.id}>
-                  <TableCell className="font-medium">{cliente.nome}</TableCell>
-                  <TableCell className="hidden md:table-cell">{cliente.cpf || '-'}</TableCell>
-                  <TableCell className="hidden lg:table-cell">{cliente.email || '-'}</TableCell>
-                  <TableCell className="hidden sm:table-cell">{cliente.telefone || '-'}</TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {new Date(cliente.criado_em).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end space-x-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleEdit(cliente)}
-                        className="h-8 w-8"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
+      <Card>
+        <CardHeader>
+          <CardTitle>Lista de Clientes</CardTitle>
+          <CardDescription>
+            Total de {filteredClientes.length} cliente{filteredClientes.length !== 1 ? 's' : ''} cadastrado{filteredClientes.length !== 1 ? 's' : ''}
+          </CardDescription>
+          <div className="flex items-center space-x-2">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar clientes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="text-center py-4">Carregando clientes...</div>
+          ) : filteredClientes.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              {searchTerm ? 'Nenhum cliente encontrado com os filtros aplicados.' : 'Nenhum cliente cadastrado.'}
+            </div>
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[150px]">Nome</TableHead>
+                    <TableHead className="hidden md:table-cell">CPF</TableHead>
+                    <TableHead className="hidden lg:table-cell">Email</TableHead>
+                    <TableHead className="hidden sm:table-cell">Telefone</TableHead>
+                    <TableHead className="hidden md:table-cell">Data Cadastro</TableHead>
+                    <TableHead className="text-right min-w-[100px]">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredClientes.map((cliente) => (
+                    <TableRow key={cliente.id}>
+                      <TableCell className="font-medium">{cliente.nome}</TableCell>
+                      <TableCell className="hidden md:table-cell">{cliente.cpf || '-'}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{cliente.email || '-'}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{cliente.telefone || '-'}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {new Date(cliente.criado_em).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-1">
                           <Button
                             variant="outline"
                             size="icon"
+                            onClick={() => handleEdit(cliente)}
                             className="h-8 w-8"
                           >
-                            <Trash className="h-3 w-3" />
+                            <Edit className="h-3 w-3" />
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="mx-4">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(cliente.id)}>
-                              Excluir
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
+                                <Trash className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="mx-4">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(cliente.id)}>
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
