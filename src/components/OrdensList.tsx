@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta } from '@/lib/supabase'
@@ -613,22 +614,26 @@ export function OrdensList() {
 </html>
       `
 
-      // Abrir em nova janela para evitar duplicação
-      const newWindow = window.open('', '_blank')
-      if (newWindow) {
-        newWindow.document.open()
-        newWindow.document.write(htmlTemplate)
-        newWindow.document.close()
-        
-        // Aguardar carregamento e imprimir
-        setTimeout(() => {
-          newWindow.print()
-        }, 500)
-      }
+      // Criar um blob com o conteúdo HTML
+      const blob = new Blob([htmlTemplate], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      
+      // Criar um link temporário para download
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `OS-${ordem.id?.slice(-6).toUpperCase() || '000001'}.html`
+      
+      // Adicionar ao DOM, clicar e remover
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // Limpar o URL do blob
+      URL.revokeObjectURL(url)
 
       toast({
         title: "PDF Gerado",
-        description: "O PDF foi aberto em uma nova janela.",
+        description: "O arquivo HTML foi baixado com sucesso.",
       })
     } catch (error) {
       console.error('Erro ao gerar PDF:', error)

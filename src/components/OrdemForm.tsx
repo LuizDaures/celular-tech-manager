@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
@@ -249,6 +248,28 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
           <div>
             <Label>Serviço Realizado</Label>
             <p className="mt-1 p-2 bg-muted rounded">{ordem.servico_realizado}</p>
+          </div>
+        )}
+
+        {/* Exibir Peças na Visualização */}
+        {ordem.itens && ordem.itens.length > 0 && (
+          <div>
+            <Label>Peças Utilizadas</Label>
+            <div className="mt-1 space-y-2">
+              {ordem.itens.map((item, index) => (
+                <div key={index} className="p-3 bg-muted rounded flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">{item.nome_item}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Quantidade: {item.quantidade} | Preço unitário: R$ {item.preco_unitario.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">R$ {(item.quantidade * item.preco_unitario).toFixed(2)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         
