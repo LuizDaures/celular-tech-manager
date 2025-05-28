@@ -174,7 +174,7 @@ export function OrdensList() {
 
       const empresa = empresaData || { nome: 'TechFix Pro', cnpj: '', logo_base64: '' }
 
-      // Template HTML com margens adicionadas
+      // Template HTML otimizado com fonte maior e layout melhorado
       const htmlTemplate = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -185,7 +185,7 @@ export function OrdensList() {
   <style>
     @page {
       size: A4;
-      margin: 2cm 1.5cm;
+      margin: 1.5cm;
     }
     
     * {
@@ -196,31 +196,28 @@ export function OrdensList() {
     
     body { 
       font-family: 'Arial', sans-serif;
-      font-size: 11px;
+      font-size: 13px;
       line-height: 1.4;
       color: #333;
       background: #fff;
-      margin: 20px;
-      padding: 20px;
     }
     
     .container {
       max-width: 100%;
       margin: 0 auto;
-      padding: 0 15px;
     }
     
     .header {
       text-align: center;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
       border-bottom: 2px solid #2563eb;
-      padding-bottom: 15px;
+      padding-bottom: 12px;
     }
     
     .header h1 {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: bold;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       color: #2563eb;
       text-transform: uppercase;
       letter-spacing: 1px;
@@ -229,16 +226,12 @@ export function OrdensList() {
     .header-info {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-top: 15px;
-    }
-    
-    .company-info {
-      text-align: left;
+      align-items: flex-start;
+      margin-top: 12px;
     }
     
     .company-info h2 {
-      font-size: 14px;
+      font-size: 16px;
       color: #1f2937;
       margin-bottom: 4px;
     }
@@ -246,22 +239,22 @@ export function OrdensList() {
     .ordem-info {
       text-align: right;
       background: #f3f4f6;
-      padding: 10px 15px;
-      border-radius: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
       border-left: 4px solid #2563eb;
     }
     
     .ordem-info .numero {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: bold;
       color: #2563eb;
       margin-bottom: 4px;
     }
     
     .section {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       border: 1px solid #d1d5db;
-      border-radius: 8px;
+      border-radius: 6px;
       overflow: hidden;
       background: #fff;
     }
@@ -269,21 +262,22 @@ export function OrdensList() {
     .section-header {
       background: linear-gradient(135deg, #2563eb, #3b82f6);
       color: white;
-      padding: 10px 15px;
+      padding: 8px 12px;
       font-weight: bold;
-      font-size: 12px;
+      font-size: 13px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     
     .section-content {
-      padding: 15px;
+      padding: 12px;
     }
     
     .row {
       display: flex;
-      margin-bottom: 12px;
-      gap: 20px;
+      margin-bottom: 10px;
+      gap: 15px;
+      align-items: flex-start;
     }
     
     .row:last-child {
@@ -302,15 +296,19 @@ export function OrdensList() {
       flex: 3;
     }
     
+    .col-auto {
+      flex: 0 0 auto;
+    }
+    
     .field {
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     
     .label {
       font-weight: bold;
       color: #374151;
-      margin-bottom: 3px;
-      font-size: 10px;
+      margin-bottom: 2px;
+      font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.3px;
     }
@@ -318,29 +316,31 @@ export function OrdensList() {
     .value {
       border-bottom: 1px solid #d1d5db;
       min-height: 18px;
-      padding: 3px 0;
+      padding: 2px 0;
       color: #1f2937;
-      font-size: 11px;
+      font-size: 13px;
     }
     
     .text-area {
-      min-height: 80px;
+      min-height: 60px;
       border: 1px solid #d1d5db;
-      padding: 10px;
+      padding: 8px;
       border-radius: 4px;
       background: #f9fafb;
       white-space: pre-wrap;
       color: #1f2937;
+      font-size: 13px;
     }
     
     .status-badge {
       display: inline-block;
-      padding: 4px 8px;
+      padding: 3px 8px;
       border-radius: 12px;
       font-size: 10px;
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      white-space: nowrap;
     }
     
     .status-aberta { background: #dbeafe; color: #1d4ed8; }
@@ -348,24 +348,38 @@ export function OrdensList() {
     .status-concluida { background: #d1fae5; color: #059669; }
     .status-cancelada { background: #fee2e2; color: #dc2626; }
     
+    .compact-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .compact-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
     .pecas-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
+      margin-top: 8px;
+      font-size: 12px;
     }
     
     .pecas-table th,
     .pecas-table td {
       border: 1px solid #d1d5db;
-      padding: 8px;
+      padding: 6px 8px;
       text-align: left;
-      font-size: 10px;
     }
     
     .pecas-table th {
       background: #f3f4f6;
       font-weight: bold;
       color: #374151;
+      font-size: 11px;
     }
     
     .pecas-table .text-right {
@@ -374,29 +388,30 @@ export function OrdensList() {
     
     .totals {
       background: #f8fafc;
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 15px;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 12px;
     }
     
     .totals-row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 8px;
-      padding: 4px 0;
+      margin-bottom: 6px;
+      padding: 2px 0;
+      font-size: 13px;
     }
     
     .totals-row:last-child {
       margin-bottom: 0;
       border-top: 2px solid #2563eb;
-      padding-top: 8px;
+      padding-top: 6px;
       font-weight: bold;
-      font-size: 12px;
+      font-size: 14px;
       color: #2563eb;
     }
     
     .signatures {
-      margin-top: 40px;
+      margin-top: 30px;
       display: flex;
       justify-content: space-between;
       gap: 30px;
@@ -409,36 +424,39 @@ export function OrdensList() {
     
     .signature-line {
       border-bottom: 1px solid #374151;
-      height: 50px;
-      margin-bottom: 8px;
+      height: 40px;
+      margin-bottom: 6px;
     }
     
     .signature-label {
-      font-size: 10px;
+      font-size: 11px;
       color: #6b7280;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     
     .footer {
-      margin-top: 30px;
+      margin-top: 20px;
       text-align: center;
-      font-size: 9px;
+      font-size: 10px;
       color: #6b7280;
       border-top: 1px solid #e5e7eb;
-      padding-top: 15px;
+      padding-top: 12px;
+    }
+    
+    .two-column {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .two-column > div {
+      flex: 1;
     }
     
     @media print {
       body {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
-        margin: 0;
-        padding: 0;
-      }
-      
-      .container {
-        padding: 0;
       }
     }
   </style>
@@ -456,97 +474,110 @@ export function OrdensList() {
         <div class="ordem-info">
           <div class="numero">Nº ${ordem.id?.slice(-6).toUpperCase() || '000001'}</div>
           <div>Data: ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</div>
-          <div class="status-badge status-${ordem.status}">${statusLabels[ordem.status]}</div>
+          <div style="margin-top: 4px;">
+            <span class="status-badge status-${ordem.status}">${statusLabels[ordem.status]}</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Dados do Cliente -->
-    <div class="section">
-      <div class="section-header">Dados do Cliente</div>
-      <div class="section-content">
-        <div class="row">
-          <div class="col-2">
+    <!-- Layout de duas colunas para economizar espaço -->
+    <div class="two-column">
+      <div>
+        <!-- Dados do Cliente -->
+        <div class="section">
+          <div class="section-header">Dados do Cliente</div>
+          <div class="section-content">
             <div class="field">
-              <div class="label">Nome Completo</div>
+              <div class="label">Nome</div>
               <div class="value">${ordem.cliente?.nome || ''}</div>
             </div>
-          </div>
-          <div class="col">
-            <div class="field">
-              <div class="label">CPF/CNPJ</div>
-              <div class="value">${ordem.cliente?.cpf || ''}</div>
+            <div class="row">
+              <div class="col">
+                <div class="field">
+                  <div class="label">CPF/CNPJ</div>
+                  <div class="value">${ordem.cliente?.cpf || ''}</div>
+                </div>
+              </div>
+              <div class="col">
+                <div class="field">
+                  <div class="label">Telefone</div>
+                  <div class="value">${ordem.cliente?.telefone || ''}</div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
-            <div class="field">
-              <div class="label">Telefone</div>
-              <div class="value">${ordem.cliente?.telefone || ''}</div>
-            </div>
-          </div>
-          <div class="col-2">
             <div class="field">
               <div class="label">E-mail</div>
               <div class="value">${ordem.cliente?.email || ''}</div>
             </div>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col">
             <div class="field">
-              <div class="label">Endereço Completo</div>
+              <div class="label">Endereço</div>
               <div class="value">${ordem.cliente?.endereco || ''}</div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Informações do Equipamento -->
-    <div class="section">
-      <div class="section-header">Informações do Equipamento</div>
-      <div class="section-content">
-        <div class="row">
-          <div class="col">
+      <div>
+        <!-- Informações do Equipamento e Técnico -->
+        <div class="section">
+          <div class="section-header">Equipamento e Técnico</div>
+          <div class="section-content">
             <div class="field">
               <div class="label">Dispositivo/Modelo</div>
               <div class="value">${ordem.dispositivo || ''}</div>
             </div>
-          </div>
-          ${ordem.tecnico ? `
-          <div class="col">
+            ${ordem.tecnico ? `
             <div class="field">
               <div class="label">Técnico Responsável</div>
               <div class="value">${ordem.tecnico.nome}</div>
             </div>
+            ` : ''}
+            <div class="compact-row">
+              <div class="compact-field">
+                <div class="label">Data Abertura:</div>
+                <span>${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</span>
+              </div>
+              ${ordem.data_conclusao ? `
+              <div class="compact-field">
+                <div class="label">Data Conclusão:</div>
+                <span>${new Date(ordem.data_conclusao).toLocaleDateString('pt-BR')}</span>
+              </div>
+              ` : ''}
+            </div>
           </div>
-          ` : ''}
         </div>
       </div>
     </div>
 
     <!-- Descrição do Problema -->
     <div class="section">
-      <div class="section-header">Descrição do Problema Relatado</div>
+      <div class="section-header">Problema Relatado</div>
       <div class="section-content">
         <div class="text-area">${ordem.descricao_problema || ''}</div>
       </div>
     </div>
 
-    <!-- Diagnóstico Técnico -->
     ${ordem.diagnostico ? `
-    <div class="section">
-      <div class="section-header">Diagnóstico Técnico</div>
-      <div class="section-content">
-        <div class="text-area">${ordem.diagnostico}</div>
+    <!-- Diagnóstico e Serviços em duas colunas se ambos existirem -->
+    <div class="${ordem.servico_realizado ? 'two-column' : ''}">
+      <div class="section">
+        <div class="section-header">Diagnóstico Técnico</div>
+        <div class="section-content">
+          <div class="text-area">${ordem.diagnostico}</div>
+        </div>
       </div>
+      
+      ${ordem.servico_realizado ? `
+      <div class="section">
+        <div class="section-header">Serviços Realizados</div>
+        <div class="section-content">
+          <div class="text-area">${ordem.servico_realizado}</div>
+        </div>
+      </div>
+      ` : ''}
     </div>
-    ` : ''}
-
-    <!-- Serviços Realizados -->
-    ${ordem.servico_realizado ? `
+    ` : ordem.servico_realizado ? `
     <div class="section">
       <div class="section-header">Serviços Realizados</div>
       <div class="section-content">
@@ -555,18 +586,18 @@ export function OrdensList() {
     </div>
     ` : ''}
 
-    <!-- Peças Utilizadas -->
     ${ordem.itens && ordem.itens.length > 0 ? `
+    <!-- Peças Utilizadas -->
     <div class="section">
-      <div class="section-header">Peças e Componentes Utilizados</div>
+      <div class="section-header">Peças e Componentes</div>
       <div class="section-content">
         <table class="pecas-table">
           <thead>
             <tr>
               <th>Descrição</th>
-              <th class="text-right">Qtd</th>
-              <th class="text-right">Valor Unit.</th>
-              <th class="text-right">Total</th>
+              <th style="width: 60px;">Qtd</th>
+              <th style="width: 80px;">Valor Unit.</th>
+              <th style="width: 80px;">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -605,37 +636,6 @@ export function OrdensList() {
       </div>
     </div>
 
-    <!-- Informações Adicionais -->
-    <div class="section">
-      <div class="section-header">Informações Adicionais</div>
-      <div class="section-content">
-        <div class="row">
-          <div class="col">
-            <div class="field">
-              <div class="label">Data de Abertura</div>
-              <div class="value">${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</div>
-            </div>
-          </div>
-          ${ordem.data_conclusao ? `
-          <div class="col">
-            <div class="field">
-              <div class="label">Data de Conclusão</div>
-              <div class="value">${new Date(ordem.data_conclusao).toLocaleDateString('pt-BR')}</div>
-            </div>
-          </div>
-          ` : ''}
-          <div class="col">
-            <div class="field">
-              <div class="label">Status</div>
-              <div class="value">
-                <span class="status-badge status-${ordem.status}">${statusLabels[ordem.status]}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Assinaturas -->
     <div class="signatures">
       <div class="signature-box">
@@ -650,35 +650,53 @@ export function OrdensList() {
 
     <!-- Rodapé -->
     <div class="footer">
-      <p>Este documento foi gerado automaticamente pelo sistema ${empresa.nome} em ${new Date().toLocaleString('pt-BR')}</p>
+      <p>Documento gerado em ${new Date().toLocaleString('pt-BR')} - ${empresa.nome}</p>
     </div>
   </div>
+
+  <script>
+    // Converter para PDF usando a API do navegador
+    window.onload = function() {
+      setTimeout(() => {
+        window.print();
+      }, 500);
+    }
+  </script>
 </body>
 </html>
       `
 
-      // Criar e baixar o arquivo
-      const blob = new Blob([htmlTemplate], { type: 'text/html' })
-      const url = URL.createObjectURL(blob)
+      // Criar um iframe oculto para gerar o PDF
+      const iframe = document.createElement('iframe')
+      iframe.style.display = 'none'
+      document.body.appendChild(iframe)
       
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `ordem-servico-${ordem.id?.slice(-6).toUpperCase()}-${new Date().toISOString().slice(0, 10)}.html`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
-      URL.revokeObjectURL(url)
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document
+      if (iframeDoc) {
+        iframeDoc.open()
+        iframeDoc.write(htmlTemplate)
+        iframeDoc.close()
+        
+        // Aguardar o carregamento e imprimir
+        setTimeout(() => {
+          iframe.contentWindow?.print()
+          
+          // Remover o iframe após uso
+          setTimeout(() => {
+            document.body.removeChild(iframe)
+          }, 1000)
+        }, 1000)
+      }
 
       toast({
-        title: "Download concluído",
-        description: "A ordem de serviço foi baixada com sucesso.",
+        title: "Gerando PDF",
+        description: "O PDF será aberto na janela de impressão do navegador.",
       })
     } catch (error) {
-      console.error('Erro no download:', error)
+      console.error('Erro ao gerar PDF:', error)
       toast({
-        title: "Erro no download",
-        description: "Não foi possível baixar a ordem de serviço.",
+        title: "Erro ao gerar PDF",
+        description: "Não foi possível gerar o PDF da ordem de serviço.",
         variant: "destructive",
       })
     }
