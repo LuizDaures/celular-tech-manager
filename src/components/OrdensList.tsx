@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta } from '@/lib/supabase'
@@ -174,7 +173,7 @@ export function OrdensList() {
 
       const empresa = empresaData || { nome: 'TechFix Pro', cnpj: '', logo_base64: '' }
 
-      // Template HTML otimizado com fonte maior e layout melhorado
+      // Template HTML otimizado com melhor quebra de linha e espaçamento
       const htmlTemplate = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -286,14 +285,17 @@ export function OrdensList() {
     
     .col {
       flex: 1;
+      min-width: 0; /* Permite quebra de linha quando necessário */
     }
     
     .col-2 {
       flex: 2;
+      min-width: 0;
     }
     
     .col-3 {
       flex: 3;
+      min-width: 0;
     }
     
     .col-auto {
@@ -319,6 +321,9 @@ export function OrdensList() {
       padding: 2px 0;
       color: #1f2937;
       font-size: 13px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
     }
     
     .text-area {
@@ -330,6 +335,8 @@ export function OrdensList() {
       white-space: pre-wrap;
       color: #1f2937;
       font-size: 13px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     
     .status-badge {
@@ -351,14 +358,23 @@ export function OrdensList() {
     .compact-row {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 10px;
     }
     
     .compact-field {
       display: flex;
       align-items: center;
       gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+    
+    .compact-field span {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     
     .pecas-table {
@@ -366,6 +382,7 @@ export function OrdensList() {
       border-collapse: collapse;
       margin-top: 8px;
       font-size: 12px;
+      table-layout: fixed;
     }
     
     .pecas-table th,
@@ -373,6 +390,8 @@ export function OrdensList() {
       border: 1px solid #d1d5db;
       padding: 6px 8px;
       text-align: left;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     
     .pecas-table th {
@@ -380,6 +399,22 @@ export function OrdensList() {
       font-weight: bold;
       color: #374151;
       font-size: 11px;
+    }
+    
+    .pecas-table .col-desc {
+      width: 50%;
+    }
+    
+    .pecas-table .col-qty {
+      width: 15%;
+    }
+    
+    .pecas-table .col-price {
+      width: 17.5%;
+    }
+    
+    .pecas-table .col-total {
+      width: 17.5%;
     }
     
     .pecas-table .text-right {
@@ -451,12 +486,26 @@ export function OrdensList() {
     
     .two-column > div {
       flex: 1;
+      min-width: 0;
+    }
+    
+    /* Responsividade para campos de data */
+    .date-container {
+      min-width: 120px;
     }
     
     @media print {
       body {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+      }
+      
+      .compact-row {
+        flex-wrap: nowrap;
+      }
+      
+      .compact-field {
+        min-width: 100px;
       }
     }
   </style>
@@ -473,7 +522,7 @@ export function OrdensList() {
         </div>
         <div class="ordem-info">
           <div class="numero">Nº ${ordem.id?.slice(-6).toUpperCase() || '000001'}</div>
-          <div>Data: ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</div>
+          <div class="date-container">Data: ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</div>
           <div style="margin-top: 4px;">
             <span class="status-badge status-${ordem.status}">${statusLabels[ordem.status]}</span>
           </div>
@@ -536,12 +585,12 @@ export function OrdensList() {
             <div class="compact-row">
               <div class="compact-field">
                 <div class="label">Data Abertura:</div>
-                <span>${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</span>
+                <span class="date-container">${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</span>
               </div>
               ${ordem.data_conclusao ? `
               <div class="compact-field">
                 <div class="label">Data Conclusão:</div>
-                <span>${new Date(ordem.data_conclusao).toLocaleDateString('pt-BR')}</span>
+                <span class="date-container">${new Date(ordem.data_conclusao).toLocaleDateString('pt-BR')}</span>
               </div>
               ` : ''}
             </div>
@@ -594,19 +643,19 @@ export function OrdensList() {
         <table class="pecas-table">
           <thead>
             <tr>
-              <th>Descrição</th>
-              <th style="width: 60px;">Qtd</th>
-              <th style="width: 80px;">Valor Unit.</th>
-              <th style="width: 80px;">Total</th>
+              <th class="col-desc">Descrição</th>
+              <th class="col-qty">Qtd</th>
+              <th class="col-price">Valor Unit.</th>
+              <th class="col-total">Total</th>
             </tr>
           </thead>
           <tbody>
             ${ordem.itens.map(item => `
             <tr>
-              <td>${item.nome_item}</td>
-              <td class="text-right">${item.quantidade}</td>
-              <td class="text-right">R$ ${item.preco_unitario.toFixed(2).replace('.', ',')}</td>
-              <td class="text-right">R$ ${(item.quantidade * item.preco_unitario).toFixed(2).replace('.', ',')}</td>
+              <td class="col-desc">${item.nome_item}</td>
+              <td class="col-qty text-right">${item.quantidade}</td>
+              <td class="col-price text-right">R$ ${item.preco_unitario.toFixed(2).replace('.', ',')}</td>
+              <td class="col-total text-right">R$ ${(item.quantidade * item.preco_unitario).toFixed(2).replace('.', ',')}</td>
             </tr>
             `).join('')}
           </tbody>
