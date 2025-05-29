@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta } from '@/lib/supabase'
@@ -172,7 +171,7 @@ export function OrdensList() {
         .limit(1)
         .single()
 
-      const empresa = empresaData || { nome: 'TechFix Pro', cnpj: '', logo_base64: '' }
+      const empresa = empresaData || { nome: 'Sistema de Gestão', cnpj: '', logo_base64: '' }
 
       // Template HTML otimizado com layout mais compacto e margens
       const htmlTemplate = `
@@ -803,14 +802,14 @@ export function OrdensList() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[150px]">Cliente</TableHead>
+                    <TableHead>Cliente</TableHead>
                     <TableHead className="hidden sm:table-cell">Dispositivo</TableHead>
                     <TableHead className="hidden md:table-cell">Problema</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden lg:table-cell">Data Abertura</TableHead>
                     <TableHead className="hidden md:table-cell">Valor Manutenção</TableHead>
                     <TableHead className="hidden lg:table-cell">Total Itens</TableHead>
-                    <TableHead className="text-right min-w-[120px]">Ações</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
