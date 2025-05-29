@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,103 +9,6 @@ import { Database, Settings, CheckCircle, AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { recreateSupabaseClient } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
-
-const databaseSchema = `
--- Habilita RLS e políticas para todas as tabelas
--- ==============================================
-
--- Tabela: dados_empresa
-create table if not exists public.dados_empresa (
-  id uuid primary key default gen_random_uuid(),
-  created_at timestamp default current_timestamp,
-  nome text,
-  cnpj text,
-  logo_base64 text
-);
-
-alter table public.dados_empresa enable row level security;
-drop policy if exists "dados_empresa_policy" on public.dados_empresa;
-create policy "dados_empresa_policy" on public.dados_empresa for all to public using (true) with check (true);
-
--- Tabela: pecas_manutencao
-create table if not exists public.pecas_manutencao (
-  id uuid primary key default gen_random_uuid(),
-  nome text,
-  fabricante text,
-  modelo text,
-  codigo_fabricante text,
-  preco_unitario numeric,
-  estoque int4,
-  criado_em timestamp default current_timestamp,
-  atualizado_em timestamp
-);
-
-alter table public.pecas_manutencao enable row level security;
-drop policy if exists "pecas_policy" on public.pecas_manutencao;
-create policy "pecas_policy" on public.pecas_manutencao for all to public using (true) with check (true);
-
--- Tabela: clientes
-create table if not exists public.clientes (
-  id uuid primary key default gen_random_uuid(),
-  nome text,
-  telefone text,
-  email text,
-  endereco text,
-  criado_em timestamp default current_timestamp,
-  cpf text
-);
-
-alter table public.clientes enable row level security;
-drop policy if exists "clientes_policy" on public.clientes;
-create policy "clientes_policy" on public.clientes for all to public using (true) with check (true);
-
--- Tabela: tecnicos
-create table if not exists public.tecnicos (
-  id uuid primary key default gen_random_uuid(),
-  nome text,
-  criado_em timestamp default current_timestamp,
-  telefone text,
-  email text,
-  endereco text,
-  cpf text
-);
-
-alter table public.tecnicos enable row level security;
-drop policy if exists "tecnicos_policy" on public.tecnicos;
-create policy "tecnicos_policy" on public.tecnicos for all to public using (true) with check (true);
-
--- Tabela: ordens_servico
-create table if not exists public.ordens_servico (
-  id uuid primary key default gen_random_uuid(),
-  cliente_id uuid references public.clientes(id) on delete cascade,
-  tecnico_id uuid references public.tecnicos(id) on delete cascade,
-  descricao_problema text,
-  diagnostico text,
-  servico_realizado text,
-  status text,
-  data_abertura timestamp,
-  data_conclusao timestamp,
-  valor float,
-  dispositivo text
-);
-
-alter table public.ordens_servico enable row level security;
-drop policy if exists "ordens_servico_policy" on public.ordens_servico;
-create policy "ordens_servico_policy" on public.ordens_servico for all to public using (true) with check (true);
-
--- Tabela: itens_ordem
-create table if not exists public.itens_ordem (
-  id uuid primary key default gen_random_uuid(),
-  ordem_id uuid references public.ordens_servico(id) on delete cascade,
-  nome_item text,
-  quantidade int4,
-  preco_unitario numeric
-);
-
-alter table public.itens_ordem enable row level security;
-drop policy if exists "itens_ordem_policy" on public.itens_ordem;
-create policy "itens_ordem_policy" on public.itens_ordem for all to public using (true) with check (true);
-`
 
 export function DatabaseConfig() {
   const [isOpen, setIsOpen] = useState(false)
@@ -125,35 +29,185 @@ export function DatabaseConfig() {
       setConnectionStatus('connected')
       setDbInfo({ name: 'Sistema de Gestão Database' })
     } else {
-      // Mostrar modal inicial se nunca foi configurado
       setShowInitialModal(true)
     }
   }, [])
 
   const createDatabaseStructure = async (client: any) => {
     try {
-      console.log('Creating database structure...')
+      console.log('Verificando e criando estrutura do banco...')
       
-      // Executar o script SQL dividido em comandos individuais
-      const commands = databaseSchema.split(';').filter(cmd => cmd.trim().length > 0)
+      // Lista de comandos SQL para criar a estrutura
+      const sqlCommands = [
+        // Tabela dados_empresa
+        `CREATE TABLE IF NOT EXISTS public.dados_empresa (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          created_at timestamp DEFAULT current_timestamp,
+          nome text,
+          cnpj text,
+          logo_base64 text
+        );`,
+        
+        `ALTER TABLE public.dados_empresa ENABLE ROW LEVEL SECURITY;`,
+        
+        `DROP POLICY IF EXISTS "dados_empresa_policy" ON public.dados_empresa;`,
+        
+        `CREATE POLICY "dados_empresa_policy" ON public.dados_empresa 
+         FOR ALL TO public USING (true) WITH CHECK (true);`,
+
+        // Tabela pecas_manutencao
+        `CREATE TABLE IF NOT EXISTS public.pecas_manutencao (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          nome text,
+          fabricante text,
+          modelo text,
+          codigo_fabricante text,
+          preco_unitario numeric,
+          estoque int4,
+          criado_em timestamp DEFAULT current_timestamp,
+          atualizado_em timestamp
+        );`,
+        
+        `ALTER TABLE public.pecas_manutencao ENABLE ROW LEVEL SECURITY;`,
+        
+        `DROP POLICY IF EXISTS "pecas_policy" ON public.pecas_manutencao;`,
+        
+        `CREATE POLICY "pecas_policy" ON public.pecas_manutencao 
+         FOR ALL TO public USING (true) WITH CHECK (true);`,
+
+        // Tabela clientes
+        `CREATE TABLE IF NOT EXISTS public.clientes (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          nome text,
+          telefone text,
+          email text,
+          endereco text,
+          criado_em timestamp DEFAULT current_timestamp,
+          cpf text
+        );`,
+        
+        `ALTER TABLE public.clientes ENABLE ROW LEVEL SECURITY;`,
+        
+        `DROP POLICY IF EXISTS "clientes_policy" ON public.clientes;`,
+        
+        `CREATE POLICY "clientes_policy" ON public.clientes 
+         FOR ALL TO public USING (true) WITH CHECK (true);`,
+
+        // Tabela tecnicos
+        `CREATE TABLE IF NOT EXISTS public.tecnicos (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          nome text,
+          criado_em timestamp DEFAULT current_timestamp,
+          telefone text,
+          email text,
+          endereco text,
+          cpf text
+        );`,
+        
+        `ALTER TABLE public.tecnicos ENABLE ROW LEVEL SECURITY;`,
+        
+        `DROP POLICY IF EXISTS "tecnicos_policy" ON public.tecnicos;`,
+        
+        `CREATE POLICY "tecnicos_policy" ON public.tecnicos 
+         FOR ALL TO public USING (true) WITH CHECK (true);`,
+
+        // Tabela ordens_servico
+        `CREATE TABLE IF NOT EXISTS public.ordens_servico (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          cliente_id uuid REFERENCES public.clientes(id) ON DELETE CASCADE,
+          tecnico_id uuid REFERENCES public.tecnicos(id) ON DELETE CASCADE,
+          descricao_problema text,
+          diagnostico text,
+          servico_realizado text,
+          status text,
+          data_abertura timestamp,
+          data_conclusao timestamp,
+          valor float,
+          dispositivo text
+        );`,
+        
+        `ALTER TABLE public.ordens_servico ENABLE ROW LEVEL SECURITY;`,
+        
+        `DROP POLICY IF EXISTS "ordens_servico_policy" ON public.ordens_servico;`,
+        
+        `CREATE POLICY "ordens_servico_policy" ON public.ordens_servico 
+         FOR ALL TO public USING (true) WITH CHECK (true);`,
+
+        // Tabela itens_ordem
+        `CREATE TABLE IF NOT EXISTS public.itens_ordem (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          ordem_id uuid REFERENCES public.ordens_servico(id) ON DELETE CASCADE,
+          nome_item text,
+          quantidade int4,
+          preco_unitario numeric
+        );`,
+        
+        `ALTER TABLE public.itens_ordem ENABLE ROW LEVEL SECURITY;`,
+        
+        `DROP POLICY IF EXISTS "itens_ordem_policy" ON public.itens_ordem;`,
+        
+        `CREATE POLICY "itens_ordem_policy" ON public.itens_ordem 
+         FOR ALL TO public USING (true) WITH CHECK (true);`
+      ]
       
-      for (const command of commands) {
-        const trimmedCommand = command.trim()
-        if (trimmedCommand) {
-          console.log('Executing command:', trimmedCommand)
-          const { error } = await client.rpc('exec_sql', { sql: trimmedCommand })
+      // Executar cada comando individualmente
+      for (const [index, command] of sqlCommands.entries()) {
+        try {
+          console.log(`Executando comando ${index + 1}/${sqlCommands.length}:`, command.substring(0, 50) + '...')
+          
+          const { error } = await client.rpc('query', { 
+            query_text: command 
+          })
+          
           if (error) {
-            console.warn('Command failed (might be expected):', error.message)
+            console.warn(`Aviso no comando ${index + 1}:`, error.message)
+            // Continua mesmo com avisos - podem ser esperados (ex: política já existe)
+          } else {
+            console.log(`Comando ${index + 1} executado com sucesso`)
           }
+        } catch (cmdError) {
+          console.warn(`Erro no comando ${index + 1}:`, cmdError)
+          // Continua mesmo com erros - tabelas podem já existir
         }
       }
       
-      console.log('Database structure created successfully')
+      console.log('Estrutura do banco verificada/criada com sucesso')
       return true
     } catch (error) {
-      console.error('Error creating database structure:', error)
-      // Não falhar se houver erro na criação - pode ser que as tabelas já existam
+      console.error('Erro ao criar estrutura do banco:', error)
+      // Tentar método alternativo usando consultas diretas
+      return await createTablesDirectly(client)
+    }
+  }
+
+  const createTablesDirectly = async (client: any) => {
+    try {
+      console.log('Tentando método alternativo para criar tabelas...')
+      
+      // Verificar se as tabelas principais existem
+      const { data: tables, error: tablesError } = await client
+        .from('information_schema.tables')
+        .select('table_name')
+        .eq('table_schema', 'public')
+        .in('table_name', ['clientes', 'tecnicos', 'ordens_servico', 'pecas_manutencao', 'dados_empresa'])
+
+      if (tablesError) {
+        console.log('Não foi possível verificar tabelas existentes:', tablesError)
+      }
+
+      const existingTables = tables?.map(t => t.table_name) || []
+      console.log('Tabelas existentes:', existingTables)
+
+      if (existingTables.length < 5) {
+        console.log('Algumas tabelas estão faltando. Estrutura pode precisar ser criada manualmente.')
+        return false
+      }
+
+      console.log('Todas as tabelas principais estão presentes')
       return true
+    } catch (error) {
+      console.error('Erro no método alternativo:', error)
+      return false
     }
   }
 
@@ -183,17 +237,29 @@ export function DatabaseConfig() {
     try {
       const testClient = recreateSupabaseClient()
       if (testClient) {
-        await createDatabaseStructure(testClient)
+        const structureCreated = await createDatabaseStructure(testClient)
+        if (structureCreated) {
+          toast({
+            title: "Configuração salva",
+            description: "Configurações salvas e estrutura do banco verificada com sucesso.",
+          })
+        } else {
+          toast({
+            title: "Configuração salva",
+            description: "Configurações salvas. Algumas tabelas podem precisar ser criadas manualmente no Supabase.",
+            variant: "destructive",
+          })
+        }
       }
     } catch (error) {
-      console.log('Database structure creation skipped:', error)
+      console.log('Erro ao criar estrutura:', error)
+      toast({
+        title: "Configuração salva",
+        description: "Configurações salvas, mas houve um problema ao criar a estrutura do banco. Verifique as permissões no Supabase.",
+        variant: "destructive",
+      })
     }
 
-    toast({
-      title: "Configuração salva",
-      description: "As configurações do banco de dados foram salvas com sucesso.",
-    })
-    
     setIsOpen(false)
     setShowInitialModal(false)
     
@@ -225,32 +291,47 @@ export function DatabaseConfig() {
       const testClient = recreateSupabaseClient()
       if (testClient) {
         // Primeiro testar se consegue conectar
-        const { data, error } = await testClient.from('clientes').select('id', { count: 'exact', head: true })
+        const { error } = await testClient.from('clientes').select('id', { count: 'exact', head: true })
         
-        if (!error || error.code === 'PGRST116') { // PGRST116 = tabela não existe
+        if (!error) {
           setConnectionStatus('connected')
           setDbInfo({ name: 'Sistema de Gestão Database' })
           
-          // Se tabela não existe, tentar criar estrutura
-          if (error?.code === 'PGRST116') {
-            console.log('Tables do not exist, creating database structure...')
-            await createDatabaseStructure(testClient)
-          }
-          
           toast({
             title: "Conexão bem-sucedida",
-            description: "Banco conectado com sucesso! Estrutura do banco verificada.",
+            description: "Banco conectado com sucesso! Estrutura verificada.",
           })
+        } else if (error.code === 'PGRST116') {
+          // Tabela não existe - tentar criar estrutura
+          console.log('Tabelas não existem, criando estrutura do banco...')
+          const structureCreated = await createDatabaseStructure(testClient)
+          
+          if (structureCreated) {
+            setConnectionStatus('connected')
+            setDbInfo({ name: 'Sistema de Gestão Database' })
+            
+            toast({
+              title: "Conexão bem-sucedida",
+              description: "Banco conectado e estrutura criada com sucesso!",
+            })
+          } else {
+            setConnectionStatus('disconnected')
+            toast({
+              title: "Atenção",
+              description: "Conexão estabelecida, mas não foi possível criar todas as tabelas automaticamente. Verifique as permissões.",
+              variant: "destructive",
+            })
+          }
         } else {
           throw error
         }
       }
     } catch (error) {
       setConnectionStatus('disconnected')
-      console.error('Connection error:', error)
+      console.error('Erro na conexão:', error)
       toast({
         title: "Erro na conexão",
-        description: "Não foi possível conectar ao banco de dados.",
+        description: "Não foi possível conectar ao banco de dados. Verifique as credenciais.",
         variant: "destructive",
       })
     }
@@ -396,10 +477,11 @@ export function DatabaseConfig() {
                   </Button>
                 </div>
 
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground space-y-1">
                   <p>* Campos obrigatórios</p>
                   <p>As configurações são salvas localmente no navegador.</p>
-                  <p>O sistema criará automaticamente as tabelas necessárias.</p>
+                  <p>O sistema tentará criar automaticamente as tabelas necessárias.</p>
+                  <p><strong>Nota:</strong> Se as tabelas não forem criadas automaticamente, você pode criá-las manualmente no painel do Supabase usando o SQL Editor.</p>
                 </div>
               </div>
             </DialogContent>
