@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,8 +34,8 @@ export function DatabaseConfig() {
   useEffect(() => {
     const getProjectName = async () => {
       try {
-        // Extrair nome do projeto da URL
-        const projectUrl = supabase.supabaseUrl
+        // Usar a URL diretamente do arquivo de configuração
+        const projectUrl = "https://mowmyemymytbjfirhlhh.supabase.co"
         if (projectUrl) {
           const urlParts = projectUrl.split('.')
           if (urlParts.length > 0) {
@@ -95,8 +94,8 @@ export function DatabaseConfig() {
       const { data: clientesData } = await supabase.from('clientes').select('id', { count: 'exact', head: true })
       const { data: tecnicosData } = await supabase.from('tecnicos').select('id', { count: 'exact', head: true })
       
-      // Extrair nome do projeto da URL atual
-      const projectUrl = supabase.supabaseUrl
+      // Usar a URL diretamente do arquivo de configuração
+      const projectUrl = "https://mowmyemymytbjfirhlhh.supabase.co"
       if (projectUrl) {
         const urlParts = projectUrl.split('.')
         if (urlParts.length > 0) {
