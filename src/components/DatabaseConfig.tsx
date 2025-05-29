@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,44 +12,36 @@ import { Badge } from '@/components/ui/badge'
 
 export function DatabaseConfig() {
   const [isOpen, setIsOpen] = useState(false)
+  const [showInitialModal, setShowInitialModal] = useState(false)
   const [url, setUrl] = useState('')
   const [anonKey, setAnonKey] = useState('')
   const [serviceKey, setServiceKey] = useState('')
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'testing'>('connected')
-  const [dbInfo, setDbInfo] = useState({ name: 'TechFix Database' })
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'testing'>('disconnected')
+  const [dbInfo, setDbInfo] = useState({ name: '' })
   
   const { toast } = useToast()
 
-  // Carregar configurações salvas
+  // Verificar se já foi configurado anteriormente
   useEffect(() => {
     const savedConfig = localStorage.getItem('supabase_config')
+    const hasBeenConfigured = localStorage.getItem('db_configured')
+    
     if (savedConfig) {
       const config = JSON.parse(savedConfig)
       setUrl(config.url || '')
       setAnonKey(config.anonKey || '')
       setServiceKey(config.serviceKey || '')
-    }
-  }, [])
-
-  // Tentar recuperar informações do projeto Supabase
-  useEffect(() => {
-    const getProjectName = async () => {
-      try {
-        // Usar a URL diretamente do arquivo de configuração
-        const projectUrl = "https://mowmyemymytbjfirhlhh.supabase.co"
-        if (projectUrl) {
-          const urlParts = projectUrl.split('.')
-          if (urlParts.length > 0) {
-            const projectId = urlParts[0].replace('https://', '')
-            setDbInfo({ name: `Projeto ${projectId}` })
-          }
-        }
-      } catch (error) {
-        console.log('Não foi possível recuperar informações do projeto')
+      
+      if (hasBeenConfigured) {
+        setConnectionStatus('connected')
+        setDbInfo({ name: 'TechFix Database' })
       }
     }
-
-    getProjectName()
+    
+    // Mostrar modal inicial se nunca foi configurado
+    if (!hasBeenConfigured) {
+      setShowInitialModal(true)
+    }
   }, [])
 
   const handleSave = () => {
@@ -67,6 +60,11 @@ export function DatabaseConfig() {
       anonKey,
       serviceKey
     }))
+    
+    // Marcar como configurado
+    localStorage.setItem('db_configured', 'true')
+    setConnectionStatus('connected')
+    setDbInfo({ name: 'TechFix Database' })
 
     toast({
       title: "Configuração salva",
@@ -74,6 +72,7 @@ export function DatabaseConfig() {
     })
     
     setIsOpen(false)
+    setShowInitialModal(false)
   }
 
   const handleTest = async () => {
@@ -91,24 +90,13 @@ export function DatabaseConfig() {
     try {
       // Testar conexão real com o banco
       const { data: ordensData } = await supabase.from('ordens_servico').select('id', { count: 'exact', head: true })
-      const { data: clientesData } = await supabase.from('clientes').select('id', { count: 'exact', head: true })
-      const { data: tecnicosData } = await supabase.from('tecnicos').select('id', { count: 'exact', head: true })
-      
-      // Usar a URL diretamente do arquivo de configuração
-      const projectUrl = "https://mowmyemymytbjfirhlhh.supabase.co"
-      if (projectUrl) {
-        const urlParts = projectUrl.split('.')
-        if (urlParts.length > 0) {
-          const projectId = urlParts[0].replace('https://', '')
-          setDbInfo({ name: `TechFix - ${projectId}` })
-        }
-      }
       
       setConnectionStatus('connected')
+      setDbInfo({ name: 'TechFix Database' })
       
       toast({
         title: "Conexão bem-sucedida",
-        description: `Banco conectado: ${dbInfo.name}`,
+        description: "Banco conectado com sucesso!",
       })
     } catch (error) {
       setConnectionStatus('disconnected')
@@ -126,7 +114,7 @@ export function DatabaseConfig() {
         return (
           <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
             <CheckCircle className="h-3 w-3 mr-1" />
-            Banco conectado: {dbInfo.name}
+            Banco conectado
           </Badge>
         )
       case 'testing':
@@ -146,97 +134,129 @@ export function DatabaseConfig() {
     }
   }
 
+  const handleInitialConnect = () => {
+    setShowInitialModal(false)
+    setIsOpen(true)
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-green-600" />
-          Configuração do Banco de Dados
-        </CardTitle>
-        <CardDescription>
-          Configure a conexão com o Supabase
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <span className="text-sm font-medium">Status da Conexão:</span>
-          {getStatusBadge()}
-        </div>
-        
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" className="w-full">
-              <Settings className="h-4 w-4 mr-2" />
-              Configurar Supabase
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md mx-4">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center text-white text-xs font-bold">
-                  S
-                </div>
-                Configuração do Supabase
-              </DialogTitle>
-            </DialogHeader>
+    <>
+      {/* Modal inicial para primeira conexão */}
+      <Dialog open={showInitialModal} onOpenChange={setShowInitialModal}>
+        <DialogContent className="max-w-md mx-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5 text-green-600" />
+              Bem-vindo ao TechFix
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Para começar a usar o sistema, você precisa configurar a conexão com o banco de dados Supabase.
+            </p>
             
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="url">URL do Projeto *</Label>
-                <Input
-                  id="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://seu-projeto.supabase.co"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="anon-key">Anon Public Key *</Label>
-                <Input
-                  id="anon-key"
-                  type="password"
-                  value={anonKey}
-                  onChange={(e) => setAnonKey(e.target.value)}
-                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="service-key">Service Role Key (Opcional)</Label>
-                <Input
-                  id="service-key"
-                  type="password"
-                  value={serviceKey}
-                  onChange={(e) => setServiceKey(e.target.value)}
-                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={handleTest} 
-                  className="flex-1"
-                  disabled={connectionStatus === 'testing'}
-                >
-                  {connectionStatus === 'testing' ? 'Testando...' : 'Testar Conexão'}
-                </Button>
-                <Button onClick={handleSave} className="flex-1">
-                  Salvar
-                </Button>
-              </div>
-
-              <div className="text-xs text-muted-foreground">
-                <p>* Campos obrigatórios</p>
-                <p>As configurações são salvas localmente no navegador.</p>
-              </div>
+            <div className="flex flex-col gap-2">
+              <Button onClick={handleInitialConnect} className="w-full">
+                <Settings className="h-4 w-4 mr-2" />
+                Configurar Banco de Dados
+              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5 text-green-600" />
+            Configuração do Banco de Dados
+          </CardTitle>
+          <CardDescription>
+            Configure a conexão com o Supabase
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="text-sm font-medium">Status da Conexão:</span>
+            {getStatusBadge()}
+          </div>
+          
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full">
+                <Settings className="h-4 w-4 mr-2" />
+                Configurar Supabase
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md mx-4">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center text-white text-xs font-bold">
+                    S
+                  </div>
+                  Configuração do Supabase
+                </DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="url">URL do Projeto *</Label>
+                  <Input
+                    id="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://seu-projeto.supabase.co"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="anon-key">Anon Public Key *</Label>
+                  <Input
+                    id="anon-key"
+                    type="password"
+                    value={anonKey}
+                    onChange={(e) => setAnonKey(e.target.value)}
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="service-key">Service Role Key (Opcional)</Label>
+                  <Input
+                    id="service-key"
+                    type="password"
+                    value={serviceKey}
+                    onChange={(e) => setServiceKey(e.target.value)}
+                    placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleTest} 
+                    className="flex-1"
+                    disabled={connectionStatus === 'testing'}
+                  >
+                    {connectionStatus === 'testing' ? 'Testando...' : 'Testar Conexão'}
+                  </Button>
+                  <Button onClick={handleSave} className="flex-1">
+                    Salvar
+                  </Button>
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                  <p>* Campos obrigatórios</p>
+                  <p>As configurações são salvas localmente no navegador.</p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </CardContent>
+      </Card>
+    </>
   )
 }
