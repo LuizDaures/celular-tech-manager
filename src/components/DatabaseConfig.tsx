@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Database, Settings, CheckCircle, AlertCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { supabase } from '@/lib/supabase'
+import { recreateSupabaseClient } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
 
 export function DatabaseConfig() {
@@ -23,23 +23,13 @@ export function DatabaseConfig() {
 
   // Verificar se já foi configurado anteriormente
   useEffect(() => {
-    const savedConfig = localStorage.getItem('supabase_config')
     const hasBeenConfigured = localStorage.getItem('db_configured')
     
-    if (savedConfig) {
-      const config = JSON.parse(savedConfig)
-      setUrl(config.url || '')
-      setAnonKey(config.anonKey || '')
-      setServiceKey(config.serviceKey || '')
-      
-      if (hasBeenConfigured) {
-        setConnectionStatus('connected')
-        setDbInfo({ name: 'TechFix Database' })
-      }
-    }
-    
-    // Mostrar modal inicial se nunca foi configurado
-    if (!hasBeenConfigured) {
+    if (hasBeenConfigured) {
+      setConnectionStatus('connected')
+      setDbInfo({ name: 'Sistema de Gestão Database' })
+    } else {
+      // Mostrar modal inicial se nunca foi configurado
       setShowInitialModal(true)
     }
   }, [])
@@ -64,7 +54,7 @@ export function DatabaseConfig() {
     // Marcar como configurado
     localStorage.setItem('db_configured', 'true')
     setConnectionStatus('connected')
-    setDbInfo({ name: 'TechFix Database' })
+    setDbInfo({ name: 'Sistema de Gestão Database' })
 
     toast({
       title: "Configuração salva",
@@ -73,6 +63,9 @@ export function DatabaseConfig() {
     
     setIsOpen(false)
     setShowInitialModal(false)
+    
+    // Recarregar a página para aplicar nova configuração
+    window.location.reload()
   }
 
   const handleTest = async () => {
@@ -89,15 +82,22 @@ export function DatabaseConfig() {
     
     try {
       // Testar conexão real com o banco
-      const { data: ordensData } = await supabase.from('ordens_servico').select('id', { count: 'exact', head: true })
-      
-      setConnectionStatus('connected')
-      setDbInfo({ name: 'TechFix Database' })
-      
-      toast({
-        title: "Conexão bem-sucedida",
-        description: "Banco conectado com sucesso!",
-      })
+      const testClient = recreateSupabaseClient()
+      if (testClient) {
+        const { data, error } = await testClient.from('ordens_servico').select('id', { count: 'exact', head: true })
+        
+        if (!error) {
+          setConnectionStatus('connected')
+          setDbInfo({ name: 'Sistema de Gestão Database' })
+          
+          toast({
+            title: "Conexão bem-sucedida",
+            description: "Banco conectado com sucesso!",
+          })
+        } else {
+          throw error
+        }
+      }
     } catch (error) {
       setConnectionStatus('disconnected')
       toast({
@@ -147,7 +147,7 @@ export function DatabaseConfig() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Database className="h-5 w-5 text-green-600" />
-              Bem-vindo ao TechFix
+              Bem-vindo ao Sistema de Gestão
             </DialogTitle>
           </DialogHeader>
           
@@ -177,7 +177,7 @@ export function DatabaseConfig() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Status da Conexão:</span>
             {getStatusBadge()}
           </div>

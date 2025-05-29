@@ -1,9 +1,26 @@
+
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = "https://mowmyemymytbjfirhlhh.supabase.co"
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vd215ZW15bXl0YmpmaXJobGhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxOTc4MjUsImV4cCI6MjA2Mzc3MzgyNX0.0UZbgc8FNc9B5xUu8uEcj88PDNEPFkBhAV4NlCMtyKI"
+// Função para obter configuração do localStorage
+const getSupabaseConfig = () => {
+  const config = localStorage.getItem('supabase_config')
+  if (config) {
+    return JSON.parse(config)
+  }
+  return { url: '', anonKey: '' }
+}
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+// Criar cliente Supabase com configuração dinâmica
+const createSupabaseClient = () => {
+  const config = getSupabaseConfig()
+  if (!config.url || !config.anonKey) {
+    // Retorna um cliente mock se não configurado
+    return null
+  }
+  return createClient(config.url, config.anonKey)
+}
+
+export const supabase = createSupabaseClient()
 
 // Types for our database tables
 export interface Cliente {
@@ -84,4 +101,13 @@ export interface OrdemCompleta extends Omit<OrdemServico, 'id'> {
   tecnico_cpf?: string
   total_ordem?: number
   valor_manutencao?: number
+}
+
+// Função para recriar o cliente quando a configuração mudar
+export const recreateSupabaseClient = () => {
+  const config = getSupabaseConfig()
+  if (config.url && config.anonKey) {
+    return createClient(config.url, config.anonKey)
+  }
+  return null
 }

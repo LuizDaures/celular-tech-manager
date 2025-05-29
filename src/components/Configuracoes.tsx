@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, DadosEmpresa } from '@/lib/supabase'
@@ -24,6 +25,10 @@ export function Configuracoes() {
   const { data: dadosEmpresa } = useQuery({
     queryKey: ['dados-empresa'],
     queryFn: async () => {
+      if (!supabase) {
+        return null
+      }
+      
       const { data, error } = await supabase
         .from('dados_empresa')
         .select('*')
@@ -42,6 +47,10 @@ export function Configuracoes() {
   // Mutation para salvar dados da empresa
   const saveEmpresaMutation = useMutation({
     mutationFn: async (data: { nome: string; cnpj?: string; logo_base64?: string }) => {
+      if (!supabase) {
+        throw new Error('Banco não configurado')
+      }
+      
       if (dadosEmpresa) {
         const { error } = await supabase
           .from('dados_empresa')
@@ -117,6 +126,10 @@ export function Configuracoes() {
     try {
       setIsExporting(true)
       
+      if (!supabase) {
+        throw new Error('Banco não configurado')
+      }
+      
       // Fetch all data from Supabase
       const [ordensResult, clientesResult, tecnicosResult, empresaResult] = await Promise.all([
         supabase.from('view_ordem_servico_completa').select('*'),
@@ -140,7 +153,7 @@ export function Configuracoes() {
       
       const link = document.createElement('a')
       link.href = url
-      link.download = `techfix-backup-${new Date().toISOString().split('T')[0]}.json`
+      link.download = `sistema-gestao-backup-${new Date().toISOString().split('T')[0]}.json`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
