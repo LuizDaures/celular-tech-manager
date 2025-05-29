@@ -174,7 +174,7 @@ export function OrdensList() {
 
       const empresa = empresaData || { nome: 'TechFix Pro', cnpj: '', logo_base64: '' }
 
-      // Template HTML otimizado com layout mais compacto
+      // Template HTML otimizado com layout mais compacto e margens
       const htmlTemplate = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -185,7 +185,7 @@ export function OrdensList() {
   <style>
     @page {
       size: A4;
-      margin: 1.2cm;
+      margin: 2cm 1.5cm;
     }
     
     * {
@@ -197,10 +197,12 @@ export function OrdensList() {
     body { 
       font-family: 'Arial', sans-serif;
       font-size: 12px;
-      line-height: 1.3;
+      line-height: 1.4;
       color: #333;
       background: #fff;
-      height: 100vh;
+      margin: 20px;
+      padding: 20px;
+      min-height: calc(100vh - 40px);
       display: flex;
       flex-direction: column;
     }
@@ -209,19 +211,20 @@ export function OrdensList() {
       flex: 1;
       display: flex;
       flex-direction: column;
+      max-width: 100%;
     }
     
     .header {
       text-align: center;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       border-bottom: 2px solid #2563eb;
-      padding-bottom: 10px;
+      padding-bottom: 15px;
     }
     
     .header h1 {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: bold;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       color: #2563eb;
       text-transform: uppercase;
       letter-spacing: 1px;
@@ -231,77 +234,82 @@ export function OrdensList() {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      gap: 15px;
     }
     
     .company-info h2 {
-      font-size: 14px;
+      font-size: 16px;
       color: #1f2937;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
     
     .ordem-info {
       text-align: right;
       background: #f3f4f6;
-      padding: 6px 10px;
-      border-radius: 4px;
-      border-left: 3px solid #2563eb;
-      min-width: 200px;
+      padding: 10px 15px;
+      border-radius: 6px;
+      border-left: 4px solid #2563eb;
+      min-width: 220px;
     }
     
     .ordem-info .numero {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: bold;
       color: #2563eb;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
     
     .date-info {
       display: flex;
       justify-content: space-between;
-      font-size: 10px;
-      gap: 8px;
+      font-size: 11px;
+      gap: 10px;
+      flex-wrap: wrap;
     }
     
     .content {
       flex: 1;
       display: flex;
       flex-direction: column;
+      margin: 10px 0;
     }
     
     .section {
-      margin-bottom: 12px;
+      margin-bottom: 15px;
       border: 1px solid #d1d5db;
-      border-radius: 4px;
+      border-radius: 6px;
       overflow: hidden;
       background: #fff;
+      page-break-inside: avoid;
     }
     
     .section-header {
       background: linear-gradient(135deg, #2563eb, #3b82f6);
       color: white;
-      padding: 6px 10px;
+      padding: 8px 12px;
       font-weight: bold;
-      font-size: 11px;
+      font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     
     .section-content {
-      padding: 8px;
+      padding: 12px;
     }
     
     .compact-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
+      gap: 15px;
+      margin-bottom: 15px;
     }
     
     .field-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
     }
     
     .field {
@@ -312,37 +320,39 @@ export function OrdensList() {
     .label {
       font-weight: bold;
       color: #374151;
-      font-size: 10px;
+      font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.3px;
+      margin-bottom: 2px;
     }
     
     .value {
       border-bottom: 1px solid #d1d5db;
-      min-height: 16px;
-      padding: 1px 0;
+      min-height: 18px;
+      padding: 2px 0;
       color: #1f2937;
-      font-size: 11px;
+      font-size: 12px;
       word-wrap: break-word;
     }
     
     .text-area {
-      min-height: 40px;
+      min-height: 50px;
       border: 1px solid #d1d5db;
-      padding: 6px;
-      border-radius: 3px;
+      padding: 8px;
+      border-radius: 4px;
       background: #f9fafb;
       white-space: pre-wrap;
       color: #1f2937;
-      font-size: 11px;
+      font-size: 12px;
       word-wrap: break-word;
+      line-height: 1.5;
     }
     
     .status-badge {
       display: inline-block;
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-size: 9px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 10px;
       font-weight: bold;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -357,14 +367,14 @@ export function OrdensList() {
     .pecas-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 6px;
-      font-size: 10px;
+      margin-top: 8px;
+      font-size: 11px;
     }
     
     .pecas-table th,
     .pecas-table td {
       border: 1px solid #d1d5db;
-      padding: 4px 6px;
+      padding: 6px 8px;
       text-align: left;
       word-wrap: break-word;
     }
@@ -373,7 +383,7 @@ export function OrdensList() {
       background: #f3f4f6;
       font-weight: bold;
       color: #374151;
-      font-size: 9px;
+      font-size: 10px;
     }
     
     .pecas-table .text-right {
@@ -382,33 +392,34 @@ export function OrdensList() {
     
     .totals {
       background: #f8fafc;
-      border-radius: 4px;
-      padding: 8px;
-      margin-top: 8px;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 10px;
     }
     
     .totals-row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 4px;
-      padding: 1px 0;
-      font-size: 11px;
+      margin-bottom: 6px;
+      padding: 2px 0;
+      font-size: 12px;
     }
     
     .totals-row:last-child {
       margin-bottom: 0;
-      border-top: 1px solid #2563eb;
-      padding-top: 4px;
+      border-top: 2px solid #2563eb;
+      padding-top: 6px;
       font-weight: bold;
       color: #2563eb;
+      font-size: 14px;
     }
     
     .signatures {
       margin-top: auto;
-      padding-top: 16px;
+      padding-top: 20px;
       display: flex;
       justify-content: space-between;
-      gap: 20px;
+      gap: 30px;
     }
     
     .signature-box {
@@ -418,12 +429,12 @@ export function OrdensList() {
     
     .signature-line {
       border-bottom: 1px solid #374151;
-      height: 30px;
-      margin-bottom: 4px;
+      height: 40px;
+      margin-bottom: 6px;
     }
     
     .signature-label {
-      font-size: 9px;
+      font-size: 10px;
       color: #6b7280;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -431,30 +442,63 @@ export function OrdensList() {
     
     .footer {
       text-align: center;
-      font-size: 8px;
+      font-size: 9px;
       color: #6b7280;
       border-top: 1px solid #e5e7eb;
-      padding-top: 8px;
-      margin-top: 8px;
+      padding-top: 12px;
+      margin-top: 15px;
     }
     
     @media print {
       body {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        margin: 1.5cm;
+        padding: 0;
+      }
+      
+      .container {
+        margin: 0;
+        padding: 0;
+      }
+    }
+    
+    @media screen and (max-width: 768px) {
+      .compact-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .header-info {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .ordem-info {
+        text-align: center;
+        min-width: auto;
+      }
+      
+      .signatures {
+        flex-direction: column;
+        gap: 20px;
+      }
+      
+      .date-info {
+        flex-direction: column;
+        gap: 4px;
       }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Cabeçalho Refatorado -->
+    <!-- Cabeçalho -->
     <div class="header">
       <h1>Ordem de Serviço</h1>
       <div class="header-info">
         <div class="company-info">
           <h2>${empresa.nome}</h2>
-          ${empresa.cnpj ? `<div style="font-size: 11px;">CNPJ: ${empresa.cnpj}</div>` : ''}
+          ${empresa.cnpj ? `<div style="font-size: 12px; margin-top: 4px;">CNPJ: ${empresa.cnpj}</div>` : ''}
         </div>
         <div class="ordem-info">
           <div class="numero">Nº ${ordem.id?.slice(-6).toUpperCase() || '000001'}</div>
@@ -462,7 +506,7 @@ export function OrdensList() {
             <span><strong>Abertura:</strong> ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</span>
             ${ordem.data_conclusao ? `<span><strong>Conclusão:</strong> ${new Date(ordem.data_conclusao).toLocaleDateString('pt-BR')}</span>` : ''}
           </div>
-          <div style="margin-top: 4px;">
+          <div style="margin-top: 6px;">
             <span class="status-badge status-${ordem.status}">${statusLabels[ordem.status]}</span>
           </div>
         </div>

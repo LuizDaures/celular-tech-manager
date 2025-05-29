@@ -73,19 +73,19 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm">
+        <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto">
           <Search className="h-4 w-4 mr-2" />
           Buscar Peça
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
         <DialogHeader>
           <DialogTitle>Buscar e Adicionar Peça</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
           {/* Filtros */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Buscar</Label>
               <div className="relative">
@@ -118,7 +118,7 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
           </div>
 
           {/* Lista de peças */}
-          <div className="border rounded-lg max-h-60 overflow-y-auto">
+          <div className="border rounded-lg max-h-64 overflow-y-auto">
             {filteredPecas.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground">
                 Nenhuma peça encontrada
@@ -133,10 +133,10 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
                     }`}
                     onClick={() => setSelectedPeca(peca)}
                   >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="font-medium">{peca.nome}</div>
-                        <div className="text-sm text-muted-foreground">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                      <div className="flex-1">
+                        <div className="font-medium break-words">{peca.nome}</div>
+                        <div className="text-sm text-muted-foreground break-words">
                           {peca.fabricante} {peca.modelo && `- ${peca.modelo}`}
                           {peca.codigo_fabricante && ` (${peca.codigo_fabricante})`}
                         </div>
@@ -144,7 +144,7 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
                           Estoque: {peca.estoque}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right sm:text-left">
                         <div className="font-medium">R$ {peca.preco_unitario.toFixed(2)}</div>
                       </div>
                     </div>
@@ -157,8 +157,8 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
           {/* Configurações da peça selecionada */}
           {selectedPeca && (
             <div className="border rounded-lg p-4 bg-muted/50">
-              <h4 className="font-medium mb-3">Peça Selecionada: {selectedPeca.nome}</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <h4 className="font-medium mb-3 break-words">Peça Selecionada: {selectedPeca.nome}</h4>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Quantidade</Label>
                   <Input
@@ -188,6 +188,7 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
                 <Button 
                   onClick={handleAddItem}
                   disabled={quantity > selectedPeca.estoque}
+                  className="w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Peça

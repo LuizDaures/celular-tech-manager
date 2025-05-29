@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,6 +20,38 @@ export function DatabaseConfig() {
   
   const { toast } = useToast()
 
+  // Carregar configurações salvas
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('supabase_config')
+    if (savedConfig) {
+      const config = JSON.parse(savedConfig)
+      setUrl(config.url || '')
+      setAnonKey(config.anonKey || '')
+      setServiceKey(config.serviceKey || '')
+    }
+  }, [])
+
+  // Tentar recuperar informações do projeto Supabase
+  useEffect(() => {
+    const getProjectName = async () => {
+      try {
+        // Extrair nome do projeto da URL
+        const projectUrl = supabase.supabaseUrl
+        if (projectUrl) {
+          const urlParts = projectUrl.split('.')
+          if (urlParts.length > 0) {
+            const projectId = urlParts[0].replace('https://', '')
+            setDbInfo({ name: `Projeto ${projectId}` })
+          }
+        }
+      } catch (error) {
+        console.log('Não foi possível recuperar informações do projeto')
+      }
+    }
+
+    getProjectName()
+  }, [])
+
   const handleSave = () => {
     if (!url || !anonKey) {
       toast({
@@ -30,7 +62,7 @@ export function DatabaseConfig() {
       return
     }
 
-    // Salvar no localStorage para demonstração
+    // Salvar no localStorage
     localStorage.setItem('supabase_config', JSON.stringify({
       url,
       anonKey,
@@ -63,9 +95,15 @@ export function DatabaseConfig() {
       const { data: clientesData } = await supabase.from('clientes').select('id', { count: 'exact', head: true })
       const { data: tecnicosData } = await supabase.from('tecnicos').select('id', { count: 'exact', head: true })
       
-      setDbInfo({
-        name: 'TechFix Database'
-      })
+      // Extrair nome do projeto da URL atual
+      const projectUrl = supabase.supabaseUrl
+      if (projectUrl) {
+        const urlParts = projectUrl.split('.')
+        if (urlParts.length > 0) {
+          const projectId = urlParts[0].replace('https://', '')
+          setDbInfo({ name: `TechFix - ${projectId}` })
+        }
+      }
       
       setConnectionStatus('connected')
       
@@ -121,7 +159,7 @@ export function DatabaseConfig() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <span className="text-sm font-medium">Status da Conexão:</span>
           {getStatusBadge()}
         </div>
@@ -133,10 +171,10 @@ export function DatabaseConfig() {
               Configurar Supabase
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md mx-4">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-content text-white text-xs font-bold">
+                <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center text-white text-xs font-bold">
                   S
                 </div>
                 Configuração do Supabase
@@ -178,7 +216,7 @@ export function DatabaseConfig() {
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
                   variant="outline" 
                   onClick={handleTest} 
