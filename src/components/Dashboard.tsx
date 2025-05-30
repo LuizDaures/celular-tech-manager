@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FileText, Users, Wrench, TrendingUp, Filter } from 'lucide-react'
-import { supabase, OrdemServico, Cliente, Tecnico } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 
 const statusLabels = {

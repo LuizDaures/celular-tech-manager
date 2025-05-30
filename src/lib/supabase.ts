@@ -104,10 +104,10 @@ export interface OrdemCompleta extends Omit<OrdemServico, 'id'> {
 }
 
 // Função para recriar o cliente quando a configuração mudar
-export const recreateSupabaseClient = () => {
-  const config = getSupabaseConfig()
-  if (config.url && config.anonKey) {
-    return createClient(config.url, config.anonKey)
+export const recreateSupabaseClient = ({ url, anonKey }: { url: string; anonKey: string }) => {
+  if (url && anonKey) {
+    return createClient(url, anonKey)
   }
   return null
 }
+

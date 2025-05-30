@@ -148,9 +148,9 @@ export function PecasList() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8">Carregando peças...</div>
+            <div className="text-center py-4">Carregando peças...</div>
           ) : filteredPecas.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-4 text-muted-foreground">
               {searchTerm ? 'Nenhuma peça encontrada com os filtros aplicados.' : 'Nenhuma peça cadastrada.'}
             </div>
           ) : (

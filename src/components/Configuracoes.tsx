@@ -1,14 +1,14 @@
 
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase, DadosEmpresa } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
-import { Building, Upload, X, ImageIcon } from 'lucide-react'
+import { Building, ImageIcon } from 'lucide-react'
 import { DatabaseConfig } from '@/components/DatabaseConfig'
 
 export function Configuracoes() {
@@ -16,7 +16,6 @@ export function Configuracoes() {
   const [cnpj, setCnpj] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
-  const [isExporting, setIsExporting] = useState(false)
   
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -120,101 +119,6 @@ export function Configuracoes() {
       setLogoPreview(base64Data)
     }
     reader.readAsDataURL(file)
-  }
-
-  const handleExportData = async () => {
-    try {
-      setIsExporting(true)
-      
-      if (!supabase) {
-        throw new Error('Banco não configurado')
-      }
-      
-      // Fetch all data from Supabase
-      const [ordensResult, clientesResult, tecnicosResult, empresaResult] = await Promise.all([
-        supabase.from('view_ordem_servico_completa').select('*'),
-        supabase.from('clientes').select('*'),
-        supabase.from('tecnicos').select('*'),
-        supabase.from('dados_empresa').select('*')
-      ])
-
-      const exportData = {
-        exportDate: new Date().toISOString(),
-        ordens: ordensResult.data || [],
-        clientes: clientesResult.data || [],
-        tecnicos: tecnicosResult.data || [],
-        empresa: empresaResult.data || []
-      }
-
-      // Create and download JSON file
-      const dataStr = JSON.stringify(exportData, null, 2)
-      const dataBlob = new Blob([dataStr], { type: 'application/json' })
-      const url = URL.createObjectURL(dataBlob)
-      
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `sistema-gestao-backup-${new Date().toISOString().split('T')[0]}.json`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
-      URL.revokeObjectURL(url)
-
-      toast({
-        title: "Exportação concluída",
-        description: "Os dados foram exportados com sucesso.",
-      })
-    } catch (error) {
-      console.error('Erro na exportação:', error)
-      toast({
-        title: "Erro na exportação",
-        description: "Ocorreu um erro ao exportar os dados.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
-  const handleImportData = () => {
-    // Create file input
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) return
-
-      try {
-        const text = await file.text()
-        const data = JSON.parse(text)
-        
-        // Here you would implement the import logic
-        console.log('Dados para importar:', data)
-        
-        toast({
-          title: "Importação",
-          description: "Funcionalidade de importação em desenvolvimento.",
-        })
-      } catch (error) {
-        toast({
-          title: "Erro na importação",
-          description: "Arquivo inválido ou corrompido.",
-          variant: "destructive",
-        })
-      }
-    }
-    input.click()
-  }
-
-  const handleClearData = () => {
-    if (confirm('Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.')) {
-      toast({
-        title: "Dados limpos",
-        description: "Todos os dados foram removidos.",
-        variant: "destructive",
-      })
-    }
   }
 
   return (

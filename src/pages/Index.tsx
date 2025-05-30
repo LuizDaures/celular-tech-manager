@@ -1,5 +1,4 @@
-
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Layout } from '@/components/Layout'
 import { Dashboard } from '@/components/Dashboard'
 import { ClientesList } from '@/components/ClientesList'
@@ -9,22 +8,24 @@ import { OrdensList } from '@/components/OrdensList'
 import { Configuracoes } from '@/components/Configuracoes'
 
 const Index = () => {
-  const [currentView, setCurrentView] = useState('dashboard')
+  const [currentView, setCurrentView] = useState('')
 
-  // Listen to hash changes for navigation
-  useState(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '')
-      if (hash) {
-        setCurrentView(hash)
-      }
+  useEffect(() => {
+    const config = localStorage.getItem('supabase_config')
+    if (!config) {
+      window.location.hash = '#configuracoes'
     }
 
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '')
+      setCurrentView(hash || 'dashboard')
+    }
+
+    handleHashChange()
     window.addEventListener('hashchange', handleHashChange)
-    handleHashChange() // Initialize on mount
 
     return () => window.removeEventListener('hashchange', handleHashChange)
-  })
+  }, [])
 
   const renderCurrentView = () => {
     switch (currentView) {
@@ -43,8 +44,10 @@ const Index = () => {
     }
   }
 
+  const isConnected = !!localStorage.getItem('supabase_config')
+
   return (
-    <Layout>
+    <Layout hideNavigation={!isConnected}>
       {renderCurrentView()}
     </Layout>
   )
