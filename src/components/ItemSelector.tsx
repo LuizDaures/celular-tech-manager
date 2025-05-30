@@ -48,11 +48,15 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
                          peca.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          peca.codigo_fabricante?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFabricante = selectedFabricante === 'all' || peca.fabricante === selectedFabricante
-    return matchesSearch && matchesFabricante
+    return matchesSearch && matchesFabricante && peca.estoque > 0
   })
 
   const handleAddItem = () => {
     if (!selectedPeca) return
+
+    if (quantity > selectedPeca.estoque) {
+      return // Não permite adicionar se quantidade for maior que estoque
+    }
 
     const itemToAdd: ItemForm = {
       peca_id: selectedPeca.id,
@@ -121,7 +125,10 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
           <div className="border rounded-lg max-h-64 overflow-y-auto">
             {filteredPecas.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground">
-                Nenhuma peça encontrada
+                {pecas.filter(p => p.estoque > 0).length === 0 ? 
+                  'Nenhuma peça com estoque disponível' : 
+                  'Nenhuma peça encontrada'
+                }
               </div>
             ) : (
               <div className="divide-y">
@@ -166,7 +173,10 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
                     min="1"
                     max={selectedPeca.estoque}
                     value={quantity}
-                    onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                    onChange={(e) => {
+                      const newQty = parseInt(e.target.value) || 1
+                      setQuantity(Math.min(newQty, selectedPeca.estoque))
+                    }}
                   />
                   <div className="text-xs text-muted-foreground">
                     Disponível em estoque: {selectedPeca.estoque}
@@ -187,7 +197,7 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
               <div className="mt-4 flex justify-end">
                 <Button 
                   onClick={handleAddItem}
-                  disabled={quantity > selectedPeca.estoque}
+                  disabled={quantity > selectedPeca.estoque || quantity <= 0}
                   className="w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4 mr-2" />
