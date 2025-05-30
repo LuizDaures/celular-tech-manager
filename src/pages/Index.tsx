@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { Layout } from '@/components/Layout'
 import { Dashboard } from '@/components/Dashboard'
@@ -6,14 +7,18 @@ import { TecnicosList } from '@/components/TecnicosList'
 import { PecasList } from '@/components/PecasList'
 import { OrdensList } from '@/components/OrdensList'
 import { Configuracoes } from '@/components/Configuracoes'
+import { DatabaseSetupModal } from '@/components/DatabaseSetupModal'
 
 const Index = () => {
   const [currentView, setCurrentView] = useState('')
+  const [showDatabaseSetup, setShowDatabaseSetup] = useState(false)
 
   useEffect(() => {
     const config = localStorage.getItem('supabase_config')
+    
     if (!config) {
-      window.location.hash = '#configuracoes'
+      setShowDatabaseSetup(true)
+      return
     }
 
     const handleHashChange = () => {
@@ -26,6 +31,12 @@ const Index = () => {
 
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
+
+  const handleConnectionSuccess = () => {
+    setShowDatabaseSetup(false)
+    setCurrentView('dashboard')
+    window.location.reload()
+  }
 
   const renderCurrentView = () => {
     switch (currentView) {
@@ -47,9 +58,15 @@ const Index = () => {
   const isConnected = !!localStorage.getItem('supabase_config')
 
   return (
-    <Layout hideNavigation={!isConnected}>
-      {renderCurrentView()}
-    </Layout>
+    <>
+      <DatabaseSetupModal 
+        isOpen={showDatabaseSetup} 
+        onConnectionSuccess={handleConnectionSuccess}
+      />
+      <Layout hideNavigation={!isConnected}>
+        {renderCurrentView()}
+      </Layout>
+    </>
   )
 }
 
