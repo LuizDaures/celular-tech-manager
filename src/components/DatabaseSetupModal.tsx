@@ -106,6 +106,15 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
   const [copied, setCopied] = useState(false)
   const { toast } = useToast()
 
+  // Limpar status quando o modal é aberto/fechado
+  useEffect(() => {
+    if (isOpen) {
+      setStatus('idle')
+      setUrl('')
+      setAnonKey('')
+    }
+  }, [isOpen])
+
   const toggleTheme = () => {
     document.documentElement.classList.toggle('dark')
     setDarkMode((d) => !d)
@@ -193,7 +202,7 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
 
   return (
     <Dialog open={isOpen} modal>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto [&>button]:hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button]:hidden">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">

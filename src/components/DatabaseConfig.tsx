@@ -20,13 +20,24 @@ export function DatabaseConfig() {
   }, [])
 
   const handleReset = () => {
+    // Limpar completamente o localStorage
     localStorage.removeItem('supabase_config')
     localStorage.removeItem('db_configured')
+    
+    // Limpar estados locais
+    setUrl('')
+    setAnonKey('')
+    
     toast({ 
       title: 'Desconectado', 
       description: 'Recarregando aplicação...' 
     })
-    setTimeout(() => window.location.reload(), 1000)
+    
+    // Recarregar a página após um breve delay
+    setTimeout(() => {
+      window.location.href = '/'
+      window.location.reload()
+    }, 1000)
   }
 
   if (!url || !anonKey) {
