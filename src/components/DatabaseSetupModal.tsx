@@ -193,7 +193,7 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
 
   return (
     <Dialog open={isOpen} modal>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto" hideCloseButton>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto [&>button]:hidden">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
