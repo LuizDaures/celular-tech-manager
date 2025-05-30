@@ -208,6 +208,21 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   }
 
   const addItemFromSelector = (item: any) => {
+    // Verificar se o item já existe na lista
+    const itemExistente = itens.find(existingItem => 
+      existingItem.peca_id === item.peca_id || 
+      (existingItem.nome_item.toLowerCase() === item.nome_peca.toLowerCase() && !existingItem.peca_id && !item.peca_id)
+    )
+
+    if (itemExistente) {
+      toast({
+        title: "Item já adicionado",
+        description: `A peça "${item.nome_peca}" já está na lista. Para alterar a quantidade, edite o item existente.`,
+        variant: "destructive",
+      })
+      return
+    }
+
     const peca = pecas.find(p => p.id === item.peca_id)
     const newItem: ItemForm = {
       nome_item: item.nome_peca,
@@ -234,6 +249,24 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         toast({
           title: "Erro",
           description: `Quantidade não pode ser maior que o estoque disponível (${item.estoque_disponivel})`,
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
+    // Validar duplicatas ao alterar o nome do item
+    if (field === 'nome_item') {
+      const nomeLowerCase = value.toString().toLowerCase()
+      const itemDuplicado = updatedItens.find((existingItem, existingIndex) => 
+        existingIndex !== index && 
+        existingItem.nome_item.toLowerCase() === nomeLowerCase
+      )
+
+      if (itemDuplicado) {
+        toast({
+          title: "Item duplicado",
+          description: `Já existe um item com o nome "${value}" na lista.`,
           variant: "destructive",
         })
         return

@@ -13,6 +13,7 @@ const Index = () => {
   const [currentView, setCurrentView] = useState('')
   const [showDatabaseSetup, setShowDatabaseSetup] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const config = localStorage.getItem('supabase_config')
@@ -20,6 +21,7 @@ const Index = () => {
     if (!config) {
       setShowDatabaseSetup(true)
       setIsConnected(false)
+      setIsLoading(false)
       // Limpar qualquer hash da URL quando não conectado
       if (window.location.hash) {
         window.history.replaceState(null, '', window.location.pathname)
@@ -27,8 +29,10 @@ const Index = () => {
       return
     }
 
+    // Se há configuração, definir como conectado mas manter loading
     setIsConnected(true)
     setShowDatabaseSetup(false)
+    // O loading será removido quando o Dashboard carregar os dados
 
     const handleHashChange = () => {
       // Só permitir navegação se estiver conectado
@@ -64,9 +68,15 @@ const Index = () => {
   const handleConnectionSuccess = () => {
     setShowDatabaseSetup(false)
     setIsConnected(true)
+    setIsLoading(true) // Manter loading até os dados carregarem
     setCurrentView('dashboard')
     window.location.hash = '#dashboard'
     window.location.reload()
+  }
+
+  // Função para ser chamada quando o Dashboard terminar de carregar
+  const handleDashboardLoaded = () => {
+    setIsLoading(false)
   }
 
   const renderCurrentView = () => {
@@ -87,7 +97,7 @@ const Index = () => {
       case 'configuracoes':
         return <Configuracoes />
       default:
-        return <Dashboard />
+        return <Dashboard onLoadingComplete={handleDashboardLoaded} />
     }
   }
 
@@ -97,16 +107,23 @@ const Index = () => {
         isOpen={showDatabaseSetup} 
         onConnectionSuccess={handleConnectionSuccess}
       />
-      {isConnected && (
+      {isConnected && !isLoading && (
         <Layout hideNavigation={false}>
           {renderCurrentView()}
         </Layout>
       )}
-      {!isConnected && !showDatabaseSetup && (
+      {((!isConnected && !showDatabaseSetup) || (isConnected && isLoading)) && (
         <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-2">Configurando conexão...</h1>
-            <p className="text-muted-foreground">Por favor, aguarde.</p>
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <div>
+              <h1 className="text-2xl font-bold mb-2">
+                {!isConnected ? 'Configurando conexão...' : 'Carregando dados...'}
+              </h1>
+              <p className="text-muted-foreground">
+                {!isConnected ? 'Por favor, aguarde.' : 'Buscando informações do sistema...'}
+              </p>
+            </div>
           </div>
         </div>
       )}

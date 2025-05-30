@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/AppSidebar'
 import { Button } from '@/components/ui/button'
@@ -9,12 +9,40 @@ interface LayoutProps {
   children: React.ReactNode
   hideNavigation?: boolean
 }
+
 export function Layout({ children, hideNavigation = false }: LayoutProps) {
-  const [isDark, setIsDark] = useState(false)
+  const [isDark, setIsDark] = useState(() => {
+    // Verificar se há preferência salva no localStorage
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme) {
+      return savedTheme === 'dark'
+    }
+    // Se não há preferência salva, verificar se o sistema está em dark mode
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
+
+  // Aplicar tema quando o componente monta
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [isDark])
 
   const toggleTheme = () => {
-    setIsDark(!isDark)
-    document.documentElement.classList.toggle('dark')
+    const newTheme = !isDark
+    setIsDark(newTheme)
+    
+    // Salvar preferência no localStorage
+    localStorage.setItem('theme', newTheme ? 'dark' : 'light')
+    
+    // Aplicar tema imediatamente
+    if (newTheme) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
   }
 
   return (
@@ -48,4 +76,3 @@ export function Layout({ children, hideNavigation = false }: LayoutProps) {
     </div>
   )
 }
-
