@@ -3,9 +3,13 @@ import { createClient } from '@supabase/supabase-js'
 
 // Função para obter configuração do localStorage
 const getSupabaseConfig = () => {
-  const config = localStorage.getItem('supabase_config')
-  if (config) {
-    return JSON.parse(config)
+  try {
+    const config = localStorage.getItem('supabase_config')
+    if (config) {
+      return JSON.parse(config)
+    }
+  } catch (error) {
+    console.error('Erro ao ler configuração do localStorage:', error)
   }
   return { url: '', anonKey: '' }
 }
@@ -14,10 +18,16 @@ const getSupabaseConfig = () => {
 const createSupabaseClient = () => {
   const config = getSupabaseConfig()
   if (!config.url || !config.anonKey) {
-    // Retorna um cliente mock se não configurado
+    console.log('Configuração Supabase não encontrada ou inválida')
     return null
   }
-  return createClient(config.url, config.anonKey)
+  
+  try {
+    return createClient(config.url, config.anonKey)
+  } catch (error) {
+    console.error('Erro ao criar cliente Supabase:', error)
+    return null
+  }
 }
 
 export const supabase = createSupabaseClient()
@@ -106,8 +116,12 @@ export interface OrdemCompleta extends Omit<OrdemServico, 'id'> {
 // Função para recriar o cliente quando a configuração mudar
 export const recreateSupabaseClient = ({ url, anonKey }: { url: string; anonKey: string }) => {
   if (url && anonKey) {
-    return createClient(url, anonKey)
+    try {
+      return createClient(url, anonKey)
+    } catch (error) {
+      console.error('Erro ao recriar cliente Supabase:', error)
+      return null
+    }
   }
   return null
 }
-

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +29,21 @@ export function Dashboard() {
   const { toast } = useToast()
 
   useEffect(() => {
+    // Verificar se o cliente Supabase está disponível antes de carregar dados
+    if (!supabase) {
+      console.log('Cliente Supabase não disponível, não carregando dados do dashboard')
+      setLoading(false)
+      return
+    }
+    
+    // Verificar se há configuração válida no localStorage
+    const config = localStorage.getItem('supabase_config')
+    if (!config) {
+      console.log('Configuração Supabase não encontrada')
+      setLoading(false)
+      return
+    }
+
     loadDashboardData()
   }, [])
 
@@ -42,8 +56,19 @@ export function Dashboard() {
   }, [statusFilter, recentOrders])
 
   const loadDashboardData = async () => {
+    if (!supabase) {
+      toast({
+        title: 'Erro',
+        description: 'Conexão com banco de dados não estabelecida.',
+        variant: 'destructive',
+      })
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
+      console.log('Carregando dados do dashboard...')
 
       // Get orders statistics
       const { data: ordens, error: ordensError } = await supabase

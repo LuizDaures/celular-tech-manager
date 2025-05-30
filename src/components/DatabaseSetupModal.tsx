@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { CheckCircle, Eye, EyeOff, Moon, Sun, XCircle, Database, ClipboardCopy } from 'lucide-react'
-import { recreateSupabaseClient } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
@@ -106,12 +106,20 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
   const [copied, setCopied] = useState(false)
   const { toast } = useToast()
 
-  // Limpar status quando o modal é aberto/fechado
+  // Limpar status e campos quando o modal é aberto
   useEffect(() => {
     if (isOpen) {
+      console.log('Modal aberto - limpando estados e localStorage')
+      
+      // Limpar completamente o localStorage
+      localStorage.clear()
+      
+      // Resetar todos os estados
       setStatus('idle')
       setUrl('')
       setAnonKey('')
+      setShowKey(false)
+      setCopied(false)
     }
   }, [isOpen])
 
@@ -137,51 +145,91 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
       return
     }
 
+    console.log('Iniciando teste de conexão com URL:', url)
     setStatus('testing')
-    let timeoutId: NodeJS.Timeout
-
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutId = setTimeout(() => reject(new Error('timeout')), 10000)
-    })
 
     try {
-      const client = recreateSupabaseClient({ url, anonKey })
-      if (!client) {
+      // Criar um cliente Supabase temporário apenas para teste
+      let testClient
+      try {
+        testClient = createClient(url, anonKey)
+      } catch (clientError) {
+        console.error('Erro ao criar cliente Supabase:', clientError)
+        throw new Error('Credenciais inválidas - não foi possível criar cliente')
+      }
+
+      if (!testClient) {
         throw new Error('Não foi possível criar cliente Supabase')
       }
 
-      // Primeiro testa uma query simples para verificar se as credenciais são válidas
-      const authTest = client.from('_').select('*').limit(1)
-      const authResult = await Promise.race([authTest, timeoutPromise])
-      
-      // Se chegou até aqui, as credenciais são válidas, agora vamos testar se as tabelas existem
-      const tablesTest = client.from('clientes').select('id', { count: 'exact', head: true })
-      const tablesResult = await Promise.race([tablesTest, timeoutPromise])
-      
-      clearTimeout(timeoutId)
+      console.log('Cliente criado, testando conexão básica...')
 
-      if (
-        typeof tablesResult === 'object' &&
-        tablesResult !== null &&
-        'error' in tablesResult &&
-        (tablesResult as any).error?.code === 'PGRST116'
-      ) {
-        throw new Error('Estrutura de banco não criada')
+      // Teste 1: Verificar se as credenciais são válidas fazendo uma query básica
+      const authTestPromise = testClient.auth.getSession()
+      const authResult = await Promise.race([
+        authTestPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout na autenticação')), 8000)
+        )
+      ])
+
+      console.log('Teste de autenticação concluído, testando tabelas...')
+
+      // Teste 2: Verificar se consegue acessar as tabelas (estrutura existe)
+      const tablesTestPromise = testClient
+        .from('clientes')
+        .select('id', { count: 'exact', head: true })
+
+      const tablesResult = await Promise.race([
+        tablesTestPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout ao testar tabelas')), 8000)
+        )
+      ]) as any
+
+      console.log('Resultado do teste de tabelas:', tablesResult)
+
+      // Verificar se houve erro específico de tabela não encontrada
+      if (tablesResult?.error) {
+        if (tablesResult.error.code === 'PGRST116' || 
+            tablesResult.error.message?.includes('does not exist') ||
+            tablesResult.error.message?.includes('relation') ||
+            tablesResult.error.message?.includes('table')) {
+          throw new Error('Estrutura de banco não criada')
+        }
+        
+        // Outros erros de permissão ou configuração
+        if (tablesResult.error.code === '42501' || 
+            tablesResult.error.message?.includes('permission') ||
+            tablesResult.error.message?.includes('policy')) {
+          throw new Error('Problema de permissões - verifique as políticas RLS')
+        }
+
+        throw new Error(`Erro no banco: ${tablesResult.error.message}`)
       }
 
+      console.log('Conexão validada com sucesso!')
       toast({ title: 'Sucesso', description: 'Conexão validada e estrutura detectada.' })
       setStatus('success')
+
     } catch (error: any) {
-      clearTimeout(timeoutId)
+      console.error('Erro no teste de conexão:', error)
       setStatus('error')
       
-      let errorMessage = 'Falha na conexão ou estrutura inválida.'
-      if (error.message?.includes('timeout')) {
+      let errorMessage = 'Falha na conexão.'
+      
+      if (error.message?.includes('Timeout')) {
         errorMessage = 'Timeout na conexão. Verifique a URL e tente novamente.'
-      } else if (error.message?.includes('não foi possível criar cliente')) {
-        errorMessage = 'Credenciais inválidas. Verifique a URL e chave.'
+      } else if (error.message?.includes('não foi possível criar cliente') || 
+                 error.message?.includes('Credenciais inválidas')) {
+        errorMessage = 'URL ou chave inválida. Verifique os dados inseridos.'
       } else if (error.message?.includes('Estrutura de banco não criada')) {
-        errorMessage = 'Conexão válida, mas estrutura do banco não encontrada. Execute o script SQL.'
+        errorMessage = 'Conexão válida, mas estrutura do banco não encontrada. Execute o script SQL no Supabase.'
+      } else if (error.message?.includes('permissões')) {
+        errorMessage = 'Problema nas permissões do banco. Verifique as políticas RLS.'
+      } else if (error.message?.includes('Failed to fetch') || 
+                 error.message?.includes('NetworkError')) {
+        errorMessage = 'Erro de rede. Verifique a URL do projeto.'
       }
       
       toast({ title: 'Erro', description: errorMessage, variant: 'destructive' })
@@ -194,8 +242,12 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
       return
     }
 
+    console.log('Salvando configuração validada')
+    
+    // Salvar apenas após validação bem-sucedida
     localStorage.setItem('supabase_config', JSON.stringify({ url, anonKey }))
     localStorage.setItem('db_configured', 'true')
+    
     toast({ title: 'Credenciais salvas', description: 'Conexão configurada com sucesso!' })
     onConnectionSuccess()
   }
