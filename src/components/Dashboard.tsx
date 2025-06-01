@@ -13,11 +13,7 @@ const statusLabels = {
   'cancelada': 'Cancelada'
 }
 
-interface DashboardProps {
-  onLoadingComplete?: () => void
-}
-
-export function Dashboard({ onLoadingComplete }: DashboardProps) {
+export function Dashboard() {
   const [stats, setStats] = useState({
     totalOrdens: 0,
     ordensAbertas: 0,
@@ -37,7 +33,6 @@ export function Dashboard({ onLoadingComplete }: DashboardProps) {
     if (!supabase) {
       console.log('Cliente Supabase não disponível, não carregando dados do dashboard')
       setLoading(false)
-      onLoadingComplete?.()
       return
     }
     
@@ -46,12 +41,11 @@ export function Dashboard({ onLoadingComplete }: DashboardProps) {
     if (!config) {
       console.log('Configuração Supabase não encontrada')
       setLoading(false)
-      onLoadingComplete?.()
       return
     }
 
     loadDashboardData()
-  }, [onLoadingComplete])
+  }, [])
 
   useEffect(() => {
     if (statusFilter === 'all') {
@@ -69,7 +63,6 @@ export function Dashboard({ onLoadingComplete }: DashboardProps) {
         variant: 'destructive',
       })
       setLoading(false)
-      onLoadingComplete?.()
       return
     }
 
@@ -133,7 +126,6 @@ export function Dashboard({ onLoadingComplete }: DashboardProps) {
       })
     } finally {
       setLoading(false)
-      onLoadingComplete?.()
     }
   }
 

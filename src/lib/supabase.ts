@@ -84,6 +84,7 @@ export interface ItemOrdem {
   ordem_id: string
   nome_item: string
   quantidade: number
+  peca_id: string,
   preco_unitario: number
 }
 

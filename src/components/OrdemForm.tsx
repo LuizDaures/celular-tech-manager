@@ -20,8 +20,6 @@ interface ItemForm {
   nome_item: string
   quantidade: number
   preco_unitario: number
-  peca_id?: string
-  estoque_disponivel?: number
 }
 
 export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps) {
@@ -38,19 +36,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
-  // Buscar dados de peças para validação de estoque
-  const { data: pecas = [] } = useQuery({
-    queryKey: ['pecas'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pecas_manutencao')
-        .select('*')
-      
-      if (error) throw error
-      return data
-    }
-  })
-
   // Carregar itens da ordem se estiver editando
   useEffect(() => {
     if (ordem?.itens) {
@@ -61,8 +46,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       })))
     }
   }, [ordem?.itens])
-
-  // ... keep existing code (clientes and tecnicos queries)
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
@@ -94,16 +77,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     mutationFn: async (data: any) => {
       console.log('Saving ordem with data:', data)
       
-      // Validar estoque antes de salvar
-      for (const item of data.itens) {
-        if (item.peca_id) {
-          const peca = pecas.find(p => p.id === item.peca_id)
-          if (peca && item.quantidade > peca.estoque) {
-            throw new Error(`Estoque insuficiente para ${item.nome_item}. Disponível: ${peca.estoque}, Solicitado: ${item.quantidade}`)
-          }
-        }
-      }
-
       let ordemId = ordem?.id
 
       if (ordem) {
@@ -159,32 +132,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             throw itensError
           }
         }
-
-        // Debitar estoque apenas se a ordem for concluída
-        if (data.ordemData.status === 'concluida') {
-          for (const item of data.itens) {
-            if (item.peca_id) {
-              const peca = pecas.find(p => p.id === item.peca_id)
-              if (peca) {
-                const novoEstoque = peca.estoque - item.quantidade
-                await supabase
-                  .from('pecas_manutencao')
-                  .update({ 
-                    estoque: novoEstoque,
-                    atualizado_em: new Date().toISOString()
-                  })
-                  .eq('id', item.peca_id)
-                
-                console.log(`Estoque atualizado para ${item.nome_item}: ${peca.estoque} -> ${novoEstoque}`)
-              }
-            }
-          }
-        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ordens'] })
-      queryClient.invalidateQueries({ queryKey: ['pecas'] })
       toast({
         title: ordem ? "Ordem atualizada" : "Ordem criada",
         description: ordem ? 
@@ -197,7 +148,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       console.error('Error saving ordem:', error)
       toast({
         title: "Erro",
-        description: error.message || "Erro ao salvar ordem.",
+        description: "Erro ao salvar ordem.",
         variant: "destructive",
       })
     }
@@ -208,28 +159,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   }
 
   const addItemFromSelector = (item: any) => {
-    // Verificar se o item já existe na lista
-    const itemExistente = itens.find(existingItem => 
-      existingItem.peca_id === item.peca_id || 
-      (existingItem.nome_item.toLowerCase() === item.nome_peca.toLowerCase() && !existingItem.peca_id && !item.peca_id)
-    )
-
-    if (itemExistente) {
-      toast({
-        title: "Item já adicionado",
-        description: `A peça "${item.nome_peca}" já está na lista. Para alterar a quantidade, edite o item existente.`,
-        variant: "destructive",
-      })
-      return
-    }
-
-    const peca = pecas.find(p => p.id === item.peca_id)
     const newItem: ItemForm = {
       nome_item: item.nome_peca,
       quantidade: item.quantidade,
-      preco_unitario: item.preco_unitario,
-      peca_id: item.peca_id,
-      estoque_disponivel: peca?.estoque || 0
+      preco_unitario: item.preco_unitario
     }
     setItens([...itens, newItem])
   }
@@ -240,39 +173,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
   const updateItem = (index: number, field: keyof ItemForm, value: string | number) => {
     const updatedItens = [...itens]
-    const item = updatedItens[index]
-    
-    // Validar quantidade máxima se for alteração de quantidade e item tiver controle de estoque
-    if (field === 'quantidade' && item.peca_id && item.estoque_disponivel !== undefined) {
-      const novaQuantidade = typeof value === 'number' ? value : parseInt(value.toString()) || 0
-      if (novaQuantidade > item.estoque_disponivel) {
-        toast({
-          title: "Erro",
-          description: `Quantidade não pode ser maior que o estoque disponível (${item.estoque_disponivel})`,
-          variant: "destructive",
-        })
-        return
-      }
-    }
-
-    // Validar duplicatas ao alterar o nome do item
-    if (field === 'nome_item') {
-      const nomeLowerCase = value.toString().toLowerCase()
-      const itemDuplicado = updatedItens.find((existingItem, existingIndex) => 
-        existingIndex !== index && 
-        existingItem.nome_item.toLowerCase() === nomeLowerCase
-      )
-
-      if (itemDuplicado) {
-        toast({
-          title: "Item duplicado",
-          description: `Já existe um item com o nome "${value}" na lista.`,
-          variant: "destructive",
-        })
-        return
-      }
-    }
-    
     updatedItens[index] = { ...updatedItens[index], [field]: value }
     setItens(updatedItens)
   }
@@ -293,20 +193,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         variant: "destructive",
       })
       return
-    }
-
-    // Validar estoque de todos os itens antes de enviar
-    for (const item of itens) {
-      if (item.peca_id && item.estoque_disponivel !== undefined) {
-        if (item.quantidade > item.estoque_disponivel) {
-          toast({
-            title: "Erro",
-            description: `Estoque insuficiente para ${item.nome_item}. Disponível: ${item.estoque_disponivel}`,
-            variant: "destructive",
-          })
-          return
-        }
-      }
     }
 
     const ordemData = {
@@ -365,6 +251,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
           </div>
         )}
 
+        {/* Exibir Peças na Visualização */}
         {ordem.itens && ordem.itens.length > 0 && (
           <div>
             <Label>Peças Utilizadas</Label>
@@ -490,7 +377,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         />
       </div>
 
-      {/* Seção de Peças com validação melhorada */}
+      {/* Seção de Peças */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <Label>Peças Utilizadas</Label>
@@ -518,15 +405,9 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
               <Input
                 type="number"
                 min="1"
-                max={item.estoque_disponivel || undefined}
                 value={item.quantidade}
                 onChange={(e) => updateItem(index, 'quantidade', parseInt(e.target.value) || 1)}
               />
-              {item.estoque_disponivel !== undefined && (
-                <p className="text-xs text-muted-foreground">
-                  Disponível: {item.estoque_disponivel}
-                </p>
-              )}
             </div>
             <div className="space-y-1">
               <Label>Preço Unitário</Label>

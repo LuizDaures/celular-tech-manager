@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -86,6 +87,7 @@ CREATE TABLE IF NOT EXISTS public.itens_ordem (
   ordem_id uuid REFERENCES public.ordens_servico(id) ON DELETE CASCADE,
   nome_item text,
   quantidade int4,
+  peca_id uuid,
   preco_unitario numeric
 );
 ALTER TABLE public.itens_ordem ENABLE ROW LEVEL SECURITY;
@@ -101,29 +103,17 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
   const [anonKey, setAnonKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
+  const [darkMode, setDarkMode] = useState(false)
   const [copied, setCopied] = useState(false)
   const { toast } = useToast()
-
-  // Gerenciar tema independentemente, preservando a configuração atual
-  const [darkMode, setDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme')
-    if (savedTheme) {
-      return savedTheme === 'dark'
-    }
-    return document.documentElement.classList.contains('dark')
-  })
 
   // Limpar status e campos quando o modal é aberto
   useEffect(() => {
     if (isOpen) {
       console.log('Modal aberto - limpando estados e localStorage')
       
-      // Limpar completamente o localStorage, exceto o tema
-      const savedTheme = localStorage.getItem('theme')
+      // Limpar completamente o localStorage
       localStorage.clear()
-      if (savedTheme) {
-        localStorage.setItem('theme', savedTheme)
-      }
       
       // Resetar todos os estados
       setStatus('idle')
@@ -135,18 +125,8 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
   }, [isOpen])
 
   const toggleTheme = () => {
-    const newTheme = !darkMode
-    setDarkMode(newTheme)
-    
-    // Salvar no localStorage
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light')
-    
-    // Aplicar ao documento
-    if (newTheme) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
+    document.documentElement.classList.toggle('dark')
+    setDarkMode((d) => !d)
   }
 
   const handleCopySQL = async () => {
