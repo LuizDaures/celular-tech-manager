@@ -82,11 +82,23 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const updateEstoque = async (pecaId: string, quantidadeAlterada: number) => {
     if (!pecaId) return
     
+    // Get current stock
+    const { data: peca, error: fetchError } = await supabase
+      .from('pecas_manutencao')
+      .select('estoque')
+      .eq('id', pecaId)
+      .single()
+    
+    if (fetchError) {
+      console.error('Erro ao buscar estoque atual:', fetchError)
+      throw fetchError
+    }
+    
+    const novoEstoque = peca.estoque + quantidadeAlterada
+    
     const { error } = await supabase
       .from('pecas_manutencao')
-      .update({ 
-        estoque: supabase.raw(`estoque + ${quantidadeAlterada}`)
-      })
+      .update({ estoque: novoEstoque })
       .eq('id', pecaId)
     
     if (error) {
