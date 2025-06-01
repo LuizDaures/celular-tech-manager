@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { FileText, Users, Wrench, TrendingUp, Filter, CalendarIcon, Download, DollarSign } from 'lucide-react'
+import { FileText, Users, Wrench, TrendingUp, Filter, CalendarIcon, Download, DollarSign, Activity, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
@@ -21,14 +21,30 @@ const statusLabels = {
   'cancelada': 'Cancelada'
 }
 
+const statusIcons = {
+  'aberta': Clock,
+  'em_andamento': Activity,
+  'concluida': CheckCircle,
+  'cancelada': XCircle
+}
+
+const statusColors = {
+  'aberta': 'text-yellow-600 bg-yellow-50 border-yellow-200',
+  'em_andamento': 'text-blue-600 bg-blue-50 border-blue-200',
+  'concluida': 'text-green-600 bg-green-50 border-green-200',
+  'cancelada': 'text-red-600 bg-red-50 border-red-200'
+}
+
 export function Dashboard() {
   const [stats, setStats] = useState({
     totalOrdens: 0,
     ordensAbertas: 0,
     ordensAndamento: 0,
     ordensConcluidas: 0,
+    ordensHoje: 0,
     totalClientes: 0,
     totalTecnicos: 0,
+    faturamentoMes: 0
   })
   const [recentOrders, setRecentOrders] = useState<any[]>([])
   const [filteredOrders, setFilteredOrders] = useState<any[]>([])
@@ -39,7 +55,7 @@ export function Dashboard() {
 
   useEffect(() => {
     if (!supabase) {
-      console.log('Cliente Supabase não disponível, não carregando dados do dashboard')
+      console.log('Cliente Supabase não disponível')
       setLoading(false)
       return
     }
@@ -61,12 +77,10 @@ export function Dashboard() {
   const applyFilters = () => {
     let filtered = [...recentOrders]
     
-    // Filtro por status
     if (statusFilter !== 'all') {
       filtered = filtered.filter(order => order.status === statusFilter)
     }
     
-    // Filtro por data
     if (dateFilter.from) {
       const fromDate = new Date(dateFilter.from)
       fromDate.setHours(0, 0, 0, 0)
@@ -165,7 +179,7 @@ export function Dashboard() {
       // Get orders statistics
       const { data: ordens, error: ordensError } = await supabase
         .from('ordens_servico')
-        .select('status')
+        .select('status, data_abertura, valor, itens:itens_ordem(quantidade, preco_unitario)')
 
       if (ordensError) throw ordensError
 
@@ -197,13 +211,39 @@ export function Dashboard() {
       if (recentError) throw recentError
 
       // Calculate statistics
+      const hoje = new Date()
+      hoje.setHours(0, 0, 0, 0)
+      
+      const ordensHoje = ordens?.filter(o => {
+        const dataOrdem = new Date(o.data_abertura)
+        dataOrdem.setHours(0, 0, 0, 0)
+        return dataOrdem.getTime() === hoje.getTime()
+      }).length || 0
+
+      const mesAtual = new Date().getMonth()
+      const anoAtual = new Date().getFullYear()
+      
+      const faturamentoMes = ordens?.filter(o => {
+        const dataOrdem = new Date(o.data_abertura)
+        return dataOrdem.getMonth() === mesAtual && 
+               dataOrdem.getFullYear() === anoAtual &&
+               o.status === 'concluida'
+      }).reduce((total, ordem) => {
+        const valorOrdem = ordem.valor || 0
+        const valorItens = ordem.itens?.reduce((sum: number, item: any) => 
+          sum + (item.quantidade * item.preco_unitario), 0) || 0
+        return total + valorOrdem + valorItens
+      }, 0) || 0
+
       const statsData = {
         totalOrdens: ordens?.length || 0,
         ordensAbertas: ordens?.filter(o => o.status === 'aberta').length || 0,
         ordensAndamento: ordens?.filter(o => o.status === 'em_andamento').length || 0,
         ordensConcluidas: ordens?.filter(o => o.status === 'concluida').length || 0,
+        ordensHoje,
         totalClientes: clientesCount || 0,
         totalTecnicos: tecnicosCount || 0,
+        faturamentoMes
       }
 
       setStats(statsData)
@@ -222,214 +262,281 @@ export function Dashboard() {
   }
 
   const getStatusBadge = (status: string) => {
-    const variants = {
-      aberta: 'destructive',
-      em_andamento: 'default',
-      concluida: 'default',
-      cancelada: 'secondary',
-    } as const
-
-    const labels = {
-      aberta: 'Aberta',
-      em_andamento: 'Em Andamento',
-      concluida: 'Concluída',
-      cancelada: 'Cancelada',
-    }
-
+    const StatusIcon = statusIcons[status as keyof typeof statusIcons] || Activity
+    
     return (
-      <Badge variant={variants[status as keyof typeof variants] || 'secondary'}>
-        {labels[status as keyof typeof labels] || status}
-      </Badge>
+      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${statusColors[status as keyof typeof statusColors] || 'text-gray-600 bg-gray-50 border-gray-200'}`}>
+        <StatusIcon className="h-3 w-3" />
+        {statusLabels[status as keyof typeof statusLabels] || status}
+      </div>
     )
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Visão geral da assistência técnica</p>
+    <div className="space-y-6 p-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">Visão geral da assistência técnica</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={loadDashboardData} disabled={loading}>
+            {loading ? 'Carregando...' : 'Atualizar'}
+          </Button>
+        </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+      {/* Statistics Cards - Grid melhorado */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
+        <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Ordens</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-blue-600" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalOrdens}</div>
-            <p className="text-xs text-muted-foreground">Todas as ordens de serviço</p>
+            <p className="text-xs text-muted-foreground">
+              {stats.ordensHoje} abertas hoje
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ordens Abertas</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
+              <Activity className="h-4 w-4 text-yellow-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.ordensAbertas}</div>
-            <p className="text-xs text-muted-foreground">Aguardando atendimento</p>
+            <div className="text-2xl font-bold">{stats.ordensAbertas + stats.ordensAndamento}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.ordensAbertas} abertas, {stats.ordensAndamento} em progresso
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalClientes}</div>
-            <p className="text-xs text-muted-foreground">Clientes cadastrados</p>
+            <div className="text-2xl font-bold">{stats.ordensConcluidas}</div>
+            <p className="text-xs text-muted-foreground">
+              {((stats.ordensConcluidas / stats.totalOrdens) * 100 || 0).toFixed(1)}% do total
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Técnicos</CardTitle>
-            <Wrench className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Faturamento do Mês</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-green-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTecnicos}</div>
-            <p className="text-xs text-muted-foreground">Técnicos disponíveis</p>
+            <div className="text-2xl font-bold">R$ {stats.faturamentoMes.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              Apenas ordens concluídas
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Valor Total das Ordens Filtradas */}
+      {/* Recursos - Grid melhorado */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Clientes Cadastrados</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
+              <Users className="h-4 w-4 text-purple-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalClientes}</div>
+            <p className="text-xs text-muted-foreground">Base de clientes ativa</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Técnicos Disponíveis</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+              <Wrench className="h-4 w-4 text-orange-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalTecnicos}</div>
+            <p className="text-xs text-muted-foreground">Equipe técnica cadastrada</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Valor Total Filtrado */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Valor Total das Ordens Filtradas</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Valor Total das Ordens Filtradas
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">R$ {calculateTotalValue().toFixed(2)}</div>
-          <p className="text-xs text-muted-foreground">
+          <div className="text-3xl font-bold text-primary">R$ {calculateTotalValue().toFixed(2)}</div>
+          <p className="text-sm text-muted-foreground mt-1">
             Total de {filteredOrders.length} ordem{filteredOrders.length !== 1 ? 's' : ''} selecionada{filteredOrders.length !== 1 ? 's' : ''}
           </p>
         </CardContent>
       </Card>
 
-      {/* Recent Orders */}
+      {/* Ordens de Serviço - Layout melhorado */}
       <Card>
         <CardHeader>
-          <CardTitle>Ordens de Serviço</CardTitle>
-          <CardDescription>
-            {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
-              ? `Todas as ${recentOrders.length} ordens de serviço` 
-              : `Ordens filtradas - Total: ${filteredOrders.length}`
-            }
-          </CardDescription>
-          <div className="flex flex-wrap items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="aberta">Aberta</SelectItem>
-                <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                <SelectItem value="concluida">Concluída</SelectItem>
-                <SelectItem value="cancelada">Cancelada</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <CardTitle>Ordens de Serviço</CardTitle>
+              <CardDescription>
+                {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
+                  ? `Todas as ${recentOrders.length} ordens de serviço` 
+                  : `Ordens filtradas - Total: ${filteredOrders.length}`
+                }
+              </CardDescription>
+            </div>
             
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-40 justify-start text-left font-normal",
-                    !dateFilter.from && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateFilter.from ? (
-                    dateFilter.to ? (
-                      <>
-                        {format(dateFilter.from, "dd/MM", { locale: ptBR })} -{" "}
-                        {format(dateFilter.to, "dd/MM", { locale: ptBR })}
-                      </>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="aberta">Aberta</SelectItem>
+                    <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                    <SelectItem value="concluida">Concluída</SelectItem>
+                    <SelectItem value="cancelada">Cancelada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-48 justify-start text-left font-normal",
+                      !dateFilter.from && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFilter.from ? (
+                      dateFilter.to ? (
+                        <>
+                          {format(dateFilter.from, "dd/MM", { locale: ptBR })} -{" "}
+                          {format(dateFilter.to, "dd/MM", { locale: ptBR })}
+                        </>
+                      ) : (
+                        format(dateFilter.from, "dd/MM/yyyy", { locale: ptBR })
+                      )
                     ) : (
-                      format(dateFilter.from, "dd/MM/yyyy", { locale: ptBR })
-                    )
-                  ) : (
-                    <span>Data inicial</span>
-                  )}
+                      <span>Filtrar por data</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateFilter.from}
+                    selected={{from: dateFilter.from, to: dateFilter.to}}
+                    onSelect={(range) => setDateFilter({from: range?.from, to: range?.to})}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {(dateFilter.from || dateFilter.to) && (
+                <Button variant="outline" size="sm" onClick={clearDateFilter}>
+                  Limpar Data
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateFilter.from}
-                  selected={{from: dateFilter.from, to: dateFilter.to}}
-                  onSelect={(range) => setDateFilter({from: range?.from, to: range?.to})}
-                  numberOfMonths={2}
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
+              )}
 
-            {(dateFilter.from || dateFilter.to) && (
-              <Button variant="outline" size="sm" onClick={clearDateFilter}>
-                Limpar Data
+              <Button variant="outline" size="sm" onClick={downloadExcel}>
+                <Download className="h-4 w-4 mr-2" />
+                Excel
               </Button>
-            )}
-
-            <Button variant="outline" size="sm" onClick={downloadExcel}>
-              <Download className="h-4 w-4 mr-2" />
-              Baixar Excel
-            </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredOrders.map((order) => {
               const itensValue = order.itens?.reduce((total: number, item: any) => 
                 total + (item.quantidade * item.preco_unitario), 0) || 0
               const totalValue = (order.valor || 0) + itensValue
               
               return (
-                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <p className="font-medium">{order.clientes?.nome}</p>
+                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <p className="font-semibold">{order.clientes?.nome || 'Cliente não encontrado'}</p>
+                      {getStatusBadge(order.status)}
+                    </div>
+                    <p className="text-sm text-muted-foreground font-medium">{order.dispositivo}</p>
                     <p className="text-sm text-muted-foreground">{order.descricao_problema}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Técnico: {order.tecnicos?.nome || 'Não atribuído'}
-                    </p>
-                    {totalValue > 0 && (
-                      <p className="text-xs text-green-600 font-medium">
-                        Valor: R$ {totalValue.toFixed(2)}
-                      </p>
-                    )}
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>📅 {format(new Date(order.data_abertura), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                      <span>👨‍🔧 {order.tecnicos?.nome || 'Não atribuído'}</span>
+                      {order.data_conclusao && (
+                        <span>✅ Concluída em {format(new Date(order.data_conclusao), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right space-y-2">
-                    {getStatusBadge(order.status)}
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(order.data_abertura), 'dd/MM/yyyy', { locale: ptBR })}
-                    </p>
+                  <div className="text-right space-y-1 ml-4">
+                    {totalValue > 0 && (
+                      <div className="text-lg font-bold text-green-600">
+                        R$ {totalValue.toFixed(2)}
+                      </div>
+                    )}
+                    {totalValue > 0 && (order.valor || 0) > 0 && itensValue > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Serviço: R$ {(order.valor || 0).toFixed(2)} + Peças: R$ {itensValue.toFixed(2)}
+                      </div>
+                    )}
                   </div>
                 </div>
               )
             })}
             {filteredOrders.length === 0 && (
-              <p className="text-center text-muted-foreground py-4">
-                {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
-                  ? 'Nenhuma ordem de serviço encontrada' 
-                  : 'Nenhuma ordem encontrada com os filtros aplicados'
-                }
-              </p>
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                <p className="text-lg font-medium text-muted-foreground">
+                  {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
+                    ? 'Nenhuma ordem de serviço encontrada' 
+                    : 'Nenhuma ordem encontrada com os filtros aplicados'
+                  }
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {statusFilter !== 'all' || dateFilter.from || dateFilter.to
+                    ? 'Tente ajustar os filtros para ver mais resultados'
+                    : 'Crie sua primeira ordem de serviço para começar'
+                  }
+                </p>
+              </div>
             )}
           </div>
         </CardContent>
