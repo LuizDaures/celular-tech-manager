@@ -1,14 +1,13 @@
+
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Trash2, Plus } from 'lucide-react'
-import { ItemSelector } from '@/components/ItemSelector'
+import { OrdemBasicInfo } from '@/components/OrdemBasicInfo'
+import { OrdemItensManager } from '@/components/OrdemItensManager'
+import { OrdemStatusSection } from '@/components/OrdemStatusSection'
+import { useEstoqueManager } from '@/hooks/useEstoqueManager'
 
 interface OrdemFormProps {
   ordem?: OrdemCompleta | null
@@ -21,10 +20,11 @@ interface ItemForm {
   nome_item: string
   quantidade: number
   preco_unitario: number
-  is_from_estoque?: boolean // Nova propriedade para identificar origem
+  is_from_estoque?: boolean
 }
 
 export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps) {
+  // Estados básicos
   const [clienteId, setClienteId] = useState(ordem?.cliente_id || '')
   const [tecnicoId, setTecnicoId] = useState(ordem?.tecnico_id || '')
   const [dispositivo, setDispositivo] = useState(ordem?.dispositivo || '')
@@ -33,13 +33,16 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const [servicoRealizado, setServicoRealizado] = useState(ordem?.servico_realizado || '')
   const [status, setStatus] = useState<'aberta' | 'em_andamento' | 'concluida' | 'cancelada'>(ordem?.status || 'aberta')
   const [valor, setValor] = useState(ordem?.valor?.toString() || '')
+  
+  // Estados para itens
   const [itens, setItens] = useState<ItemForm[]>([])
-  const [originalItens, setOriginalItens] = useState<ItemForm[]>([]) // Para comparar mudanças
+  const [originalItens, setOriginalItens] = useState<ItemForm[]>([])
   
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { processarMudancasEstoque } = useEstoqueManager()
 
-  // Carregar itens da ordem se estiver editando
+  // Carregar itens da ordem
   useEffect(() => {
     if (ordem?.itens) {
       const itensCarregados = ordem.itens.map(item => ({
@@ -47,13 +50,14 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         nome_item: item.nome_item,
         quantidade: item.quantidade,
         preco_unitario: item.preco_unitario,
-        is_from_estoque: !!item.peca_id // Se tem peca_id, veio do estoque
+        is_from_estoque: !!item.peca_id
       }))
       setItens(itensCarregados)
-      setOriginalItens(itensCarregados) // Salvar estado original para comparações
+      setOriginalItens(itensCarregados)
     }
   }, [ordem?.itens])
 
+  // Queries para dados
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
     queryFn: async () => {
@@ -80,115 +84,21 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     }
   })
 
-  // Função para atualizar estoque
-  const updateEstoque = async (pecaId: string, quantidadeAlterada: number) => {
-    if (!pecaId) return
-    
-    console.log(`Atualizando estoque da peça ${pecaId} em ${quantidadeAlterada} unidades`)
-    
-    const { data: peca, error: fetchError } = await supabase
-      .from('pecas_manutencao')
-      .select('estoque')
-      .eq('id', pecaId)
-      .single()
-    
-    if (fetchError) {
-      console.error('Erro ao buscar estoque atual:', fetchError)
-      throw fetchError
-    }
-    
-    const novoEstoque = peca.estoque + quantidadeAlterada
-    console.log(`Estoque atual: ${peca.estoque}, novo estoque: ${novoEstoque}`)
-    
-    const { error } = await supabase
-      .from('pecas_manutencao')
-      .update({ estoque: novoEstoque })
-      .eq('id', pecaId)
-    
-    if (error) {
-      console.error('Erro ao atualizar estoque:', error)
-      throw error
-    }
-
-    // Invalidar cache imediatamente após atualização
-    queryClient.invalidateQueries({ queryKey: ['pecas'] })
-  }
-
-  // Função para processar mudanças no estoque
-  const processarMudancasEstoque = async (novosItens: ItemForm[]) => {
-    console.log('Processando mudanças no estoque...')
-    console.log('Itens originais:', originalItens)
-    console.log('Novos itens:', novosItens)
-
-    // Se é uma nova ordem, apenas debitar estoque das peças do estoque
-    if (!ordem) {
-      for (const item of novosItens) {
-        if (item.peca_id && item.is_from_estoque) {
-          await updateEstoque(item.peca_id, -item.quantidade)
-          console.log(`Debitado ${item.quantidade} unidades da peça ${item.peca_id}`)
-        }
-      }
-      return
-    }
-
-    // Para ordens existentes, calcular diferenças apenas para itens do estoque
-    const itensOriginaisMap = new Map(
-      originalItens
-        .filter(item => item.peca_id && item.is_from_estoque)
-        .map(item => [item.peca_id!, item.quantidade])
-    )
-    
-    const novosItensMap = new Map(
-      novosItens
-        .filter(item => item.peca_id && item.is_from_estoque)
-        .map(item => [item.peca_id!, item.quantidade])
-    )
-
-    // Itens removidos - devolver ao estoque
-    for (const [pecaId, quantidadeOriginal] of itensOriginaisMap) {
-      if (!novosItensMap.has(pecaId)) {
-        await updateEstoque(pecaId, quantidadeOriginal)
-        console.log(`Devolvido ${quantidadeOriginal} unidades da peça ${pecaId} (item removido)`)
-      }
-    }
-
-    // Itens adicionados - debitar estoque
-    for (const [pecaId, novaQuantidade] of novosItensMap) {
-      if (!itensOriginaisMap.has(pecaId)) {
-        await updateEstoque(pecaId, -novaQuantidade)
-        console.log(`Debitado ${novaQuantidade} unidades da peça ${pecaId} (item adicionado)`)
-      }
-    }
-
-    // Itens com quantidade alterada - ajustar diferença
-    for (const [pecaId, novaQuantidade] of novosItensMap) {
-      if (itensOriginaisMap.has(pecaId)) {
-        const quantidadeOriginal = itensOriginaisMap.get(pecaId)!
-        const diferenca = quantidadeOriginal - novaQuantidade
-        if (diferenca !== 0) {
-          await updateEstoque(pecaId, diferenca)
-          console.log(`Ajustado ${diferenca} unidades da peça ${pecaId} (quantidade alterada)`)
-        }
-      }
-    }
-  }
-
+  // Mutation para salvar ordem
   const saveOrdem = useMutation({
     mutationFn: async (data: any) => {
-      console.log('Saving ordem with data:', data)
+      console.log('Salvando ordem:', data)
       
       let ordemId = ordem?.id
 
+      // Salvar dados da ordem
       if (ordem) {
         const { error } = await supabase
           .from('ordens_servico')
           .update(data.ordemData)
           .eq('id', ordem.id)
         
-        if (error) {
-          console.error('Error updating ordem:', error)
-          throw error
-        }
+        if (error) throw error
       } else {
         const { data: newOrdem, error } = await supabase
           .from('ordens_servico')
@@ -196,20 +106,16 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
           .select()
           .single()
         
-        if (error) {
-          console.error('Error creating ordem:', error)
-          throw error
-        }
-        
+        if (error) throw error
         ordemId = newOrdem.id
       }
 
-      // Processar mudanças no estoque ANTES de salvar os itens
-      await processarMudancasEstoque(data.itens)
+      // Processar mudanças no estoque
+      await processarMudancasEstoque(data.itens, originalItens)
 
       // Gerenciar itens da ordem
-      if (ordemId && data.itens.length >= 0) {
-        // Deletar itens existentes se estiver editando
+      if (ordemId) {
+        // Deletar itens existentes
         if (ordem) {
           await supabase
             .from('itens_ordem')
@@ -231,10 +137,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             .from('itens_ordem')
             .insert(itensToInsert)
 
-          if (itensError) {
-            console.error('Error saving itens:', itensError)
-            throw itensError
-          }
+          if (itensError) throw itensError
         }
       }
     },
@@ -250,7 +153,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       onSuccess()
     },
     onError: (error: any) => {
-      console.error('Error saving ordem:', error)
+      console.error('Erro ao salvar ordem:', error)
       toast({
         title: "Erro",
         description: "Erro ao salvar ordem: " + error.message,
@@ -258,43 +161,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       })
     }
   })
-
-  const addItem = () => {
-    setItens([...itens, { nome_item: '', quantidade: 1, preco_unitario: 0, is_from_estoque: false }])
-  }
-
-  const addItemFromSelector = (item: any) => {
-    // Verificar se a peça já foi adicionada
-    const pecaJaAdicionada = itens.some(existingItem => existingItem.peca_id === item.peca_id)
-    
-    if (pecaJaAdicionada) {
-      toast({
-        title: "Peça já adicionada",
-        description: "Esta peça já foi adicionada à ordem. Edite a quantidade se necessário.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const newItem: ItemForm = {
-      peca_id: item.peca_id,
-      nome_item: item.nome_peca,
-      quantidade: item.quantidade,
-      preco_unitario: item.preco_unitario,
-      is_from_estoque: true // Marcado como vindo do estoque
-    }
-    setItens([...itens, newItem])
-  }
-
-  const removeItem = (index: number) => {
-    setItens(itens.filter((_, i) => i !== index))
-  }
-
-  const updateItem = (index: number, field: keyof ItemForm, value: string | number) => {
-    const updatedItens = [...itens]
-    updatedItens[index] = { ...updatedItens[index], [field]: value }
-    setItens(updatedItens)
-  }
 
   const calculateTotal = () => {
     const itensTotal = itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)
@@ -307,7 +173,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     
     if (!clienteId || !descricaoProblema.trim() || !dispositivo.trim()) {
       toast({
-        title: "Erro",
+        title: "Campos obrigatórios",
         description: "Cliente, dispositivo e descrição do problema são obrigatórios.",
         variant: "destructive",
       })
@@ -330,271 +196,67 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     saveOrdem.mutate({ ordemData, itens })
   }
 
-  if (readOnly && ordem) {
-    const totalItens = ordem.itens?.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0) || 0
-    
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>Cliente</Label>
-            <p className="mt-1 p-2 bg-muted rounded">{ordem.cliente?.nome || 'Cliente não encontrado'}</p>
-          </div>
-          <div>
-            <Label>Técnico</Label>
-            <p className="mt-1 p-2 bg-muted rounded">{ordem.tecnico?.nome || 'Não atribuído'}</p>
-          </div>
-        </div>
-        
-        <div>
-          <Label>Dispositivo</Label>
-          <p className="mt-1 p-2 bg-muted rounded">{ordem.dispositivo || 'Não informado'}</p>
-        </div>
-        
-        <div>
-          <Label>Descrição do Problema</Label>
-          <p className="mt-1 p-2 bg-muted rounded">{ordem.descricao_problema}</p>
-        </div>
-        
-        {ordem.diagnostico && (
-          <div>
-            <Label>Diagnóstico</Label>
-            <p className="mt-1 p-2 bg-muted rounded">{ordem.diagnostico}</p>
-          </div>
-        )}
-        
-        {ordem.servico_realizado && (
-          <div>
-            <Label>Serviço Realizado</Label>
-            <p className="mt-1 p-2 bg-muted rounded">{ordem.servico_realizado}</p>
-          </div>
-        )}
-
-        {ordem.itens && ordem.itens.length > 0 && (
-          <div>
-            <Label>Peças Utilizadas</Label>
-            <div className="mt-1 space-y-2">
-              {ordem.itens.map((item, index) => (
-                <div key={index} className="p-3 bg-muted rounded flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">{item.nome_item}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Quantidade: {item.quantidade} | Preço unitário: R$ {item.preco_unitario.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">R$ {(item.quantidade * item.preco_unitario).toFixed(2)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Label>Status</Label>
-            <p className="mt-1 p-2 bg-muted rounded capitalize">{ordem.status.replace('_', ' ')}</p>
-          </div>
-          <div>
-            <Label>Valor da Manutenção</Label>
-            <p className="mt-1 p-2 bg-muted rounded">
-              {ordem.valor ? `R$ ${ordem.valor.toFixed(2)}` : 'R$ 0,00'}
-            </p>
-          </div>
-          <div>
-            <Label>Total Geral</Label>
-            <p className="mt-1 p-2 bg-muted rounded font-semibold">
-              R$ {((ordem.valor || 0) + totalItens).toFixed(2)}
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="cliente">Cliente *</Label>
-          <Select value={clienteId} onValueChange={setClienteId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione um cliente" />
-            </SelectTrigger>
-            <SelectContent>
-              {clientes.map((cliente) => (
-                <SelectItem key={cliente.id} value={cliente.id}>
-                  {cliente.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="tecnico">Técnico</Label>
-          <Select value={tecnicoId || 'none'} onValueChange={(value) => setTecnicoId(value === 'none' ? '' : value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione um técnico" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nenhum</SelectItem>
-              {tecnicos.map((tecnico) => (
-                <SelectItem key={tecnico.id} value={tecnico.id}>
-                  {tecnico.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="dispositivo">Dispositivo *</Label>
-        <Input
-          id="dispositivo"
-          value={dispositivo}
-          onChange={(e) => setDispositivo(e.target.value)}
-          placeholder="Ex: iPhone 12, Samsung Galaxy S21, Notebook Dell"
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="descricao">Descrição do Problema *</Label>
-        <Textarea
-          id="descricao"
-          value={descricaoProblema}
-          onChange={(e) => setDescricaoProblema(e.target.value)}
-          placeholder="Descreva o problema reportado pelo cliente"
-          rows={3}
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="diagnostico">Diagnóstico</Label>
-        <Textarea
-          id="diagnostico"
-          value={diagnostico}
-          onChange={(e) => setDiagnostico(e.target.value)}
-          placeholder="Diagnóstico técnico do problema"
-          rows={3}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="servico">Serviço Realizado</Label>
-        <Textarea
-          id="servico"
-          value={servicoRealizado}
-          onChange={(e) => setServicoRealizado(e.target.value)}
-          placeholder="Descrição do serviço realizado"
-          rows={3}
-        />
-      </div>
-
-      {/* Seção de Peças */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <Label>Peças Utilizadas</Label>
-          <div className="flex gap-2">
-            <ItemSelector onAddItem={addItemFromSelector} />
-            <Button type="button" variant="outline" size="sm" onClick={addItem}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Item Manual
-            </Button>
-          </div>
-        </div>
-        
-        {itens.map((item, index) => (
-          <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-3 border rounded">
-            <div className="space-y-1">
-              <Label>Nome do Item</Label>
-              <Input
-                value={item.nome_item}
-                onChange={(e) => updateItem(index, 'nome_item', e.target.value)}
-                placeholder="Ex: Tela LCD"
-              />
-              {item.is_from_estoque && (
-                <p className="text-xs text-blue-600">📦 Peça do estoque</p>
-              )}
-            </div>
-            <div className="space-y-1">
-              <Label>Quantidade</Label>
-              <Input
-                type="number"
-                min="1"
-                value={item.quantidade}
-                onChange={(e) => updateItem(index, 'quantidade', parseInt(e.target.value) || 1)}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Preço Unitário</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={item.preco_unitario}
-                onChange={(e) => updateItem(index, 'preco_unitario', parseFloat(e.target.value) || 0)}
-                placeholder="0.00"
-              />
-            </div>
-            <div className="flex items-end">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => removeItem(index)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="status">Status</Label>
-          <Select value={status} onValueChange={(value) => setStatus(value as 'aberta' | 'em_andamento' | 'concluida' | 'cancelada')}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="aberta">Aberta</SelectItem>
-              <SelectItem value="em_andamento">Em Andamento</SelectItem>
-              <SelectItem value="concluida">Concluída</SelectItem>
-              <SelectItem value="cancelada">Cancelada</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="valor">Valor da Manutenção</Label>
-          <Input
-            id="valor"
-            type="number"
-            step="0.01"
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            placeholder="0.00"
+    <div className="max-w-5xl mx-auto">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Informações Básicas */}
+        <div className="bg-card border rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-4">Informações Básicas</h3>
+          <OrdemBasicInfo
+            clienteId={clienteId}
+            setClienteId={setClienteId}
+            tecnicoId={tecnicoId}
+            setTecnicoId={setTecnicoId}
+            dispositivo={dispositivo}
+            setDispositivo={setDispositivo}
+            descricaoProblema={descricaoProblema}
+            setDescricaoProblema={setDescricaoProblema}
+            diagnostico={diagnostico}
+            setDiagnostico={setDiagnostico}
+            servicoRealizado={servicoRealizado}
+            setServicoRealizado={setServicoRealizado}
+            clientes={clientes}
+            tecnicos={tecnicos}
+            readOnly={readOnly}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label>Total Geral</Label>
-          <div className="p-2 bg-muted rounded font-semibold">
-            R$ {calculateTotal().toFixed(2)}
-          </div>
+        {/* Itens da Ordem */}
+        <div className="bg-card border rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-4">Peças e Materiais</h3>
+          <OrdemItensManager
+            itens={itens}
+            setItens={setItens}
+            readOnly={readOnly}
+          />
         </div>
-      </div>
 
-      <div className="flex justify-end space-x-2">
-        <Button type="submit" disabled={saveOrdem.isPending}>
-          {saveOrdem.isPending ? 'Salvando...' : (ordem ? 'Atualizar' : 'Criar Ordem')}
-        </Button>
-      </div>
-    </form>
+        {/* Status e Valores */}
+        <div className="bg-card border rounded-lg p-6">
+          <h3 className="text-lg font-semibold mb-4">Status e Valores</h3>
+          <OrdemStatusSection
+            status={status}
+            setStatus={setStatus}
+            valor={valor}
+            setValor={setValor}
+            totalItens={itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)}
+            readOnly={readOnly}
+          />
+        </div>
+
+        {/* Botões de Ação */}
+        {!readOnly && (
+          <div className="flex justify-end space-x-4 pt-4">
+            <Button 
+              type="submit" 
+              disabled={saveOrdem.isPending}
+              className="min-w-32"
+            >
+              {saveOrdem.isPending ? 'Salvando...' : (ordem ? 'Atualizar Ordem' : 'Criar Ordem')}
+            </Button>
+          </div>
+        )}
+      </form>
+    </div>
   )
 }
