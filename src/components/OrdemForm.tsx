@@ -17,6 +17,7 @@ interface OrdemFormProps {
 }
 
 interface ItemForm {
+  peca_id?: string
   nome_item: string
   quantidade: number
   preco_unitario: number
@@ -32,6 +33,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const [status, setStatus] = useState<'aberta' | 'em_andamento' | 'concluida' | 'cancelada'>(ordem?.status || 'aberta')
   const [valor, setValor] = useState(ordem?.valor?.toString() || '')
   const [itens, setItens] = useState<ItemForm[]>([])
+  const [originalItens, setOriginalItens] = useState<ItemForm[]>([]) // Para comparar mudanças
   
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -39,11 +41,14 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   // Carregar itens da ordem se estiver editando
   useEffect(() => {
     if (ordem?.itens) {
-      setItens(ordem.itens.map(item => ({
+      const itensCarregados = ordem.itens.map(item => ({
+        peca_id: item.peca_id,
         nome_item: item.nome_item,
         quantidade: item.quantidade,
         preco_unitario: item.preco_unitario
-      })))
+      }))
+      setItens(itensCarregados)
+      setOriginalItens(itensCarregados) // Salvar estado original para comparações
     }
   }, [ordem?.itens])
 
@@ -72,6 +77,73 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       return data as Tecnico[]
     }
   })
+
+  // Função para atualizar estoque
+  const updateEstoque = async (pecaId: string, quantidadeAlterada: number) => {
+    if (!pecaId) return
+    
+    const { error } = await supabase
+      .from('pecas_manutencao')
+      .update({ 
+        estoque: supabase.raw(`estoque + ${quantidadeAlterada}`)
+      })
+      .eq('id', pecaId)
+    
+    if (error) {
+      console.error('Erro ao atualizar estoque:', error)
+      throw error
+    }
+  }
+
+  // Função para processar mudanças no estoque
+  const processarMudancasEstoque = async (novosItens: ItemForm[]) => {
+    console.log('Processando mudanças no estoque...')
+    console.log('Itens originais:', originalItens)
+    console.log('Novos itens:', novosItens)
+
+    // Se é uma nova ordem, apenas debitar estoque
+    if (!ordem) {
+      for (const item of novosItens) {
+        if (item.peca_id) {
+          await updateEstoque(item.peca_id, -item.quantidade)
+          console.log(`Debitado ${item.quantidade} unidades da peça ${item.peca_id}`)
+        }
+      }
+      return
+    }
+
+    // Para ordens existentes, calcular diferenças
+    const itensOriginaisMap = new Map(originalItens.map(item => [item.peca_id, item.quantidade]))
+    const novosItensMap = new Map(novosItens.map(item => [item.peca_id, item.quantidade]))
+
+    // Itens removidos - devolver ao estoque
+    for (const [pecaId, quantidadeOriginal] of itensOriginaisMap) {
+      if (pecaId && !novosItensMap.has(pecaId)) {
+        await updateEstoque(pecaId, quantidadeOriginal)
+        console.log(`Devolvido ${quantidadeOriginal} unidades da peça ${pecaId} (item removido)`)
+      }
+    }
+
+    // Itens adicionados - debitar estoque
+    for (const [pecaId, novaQuantidade] of novosItensMap) {
+      if (pecaId && !itensOriginaisMap.has(pecaId)) {
+        await updateEstoque(pecaId, -novaQuantidade)
+        console.log(`Debitado ${novaQuantidade} unidades da peça ${pecaId} (item adicionado)`)
+      }
+    }
+
+    // Itens com quantidade alterada - ajustar diferença
+    for (const [pecaId, novaQuantidade] of novosItensMap) {
+      if (pecaId && itensOriginaisMap.has(pecaId)) {
+        const quantidadeOriginal = itensOriginaisMap.get(pecaId)!
+        const diferenca = quantidadeOriginal - novaQuantidade
+        if (diferenca !== 0) {
+          await updateEstoque(pecaId, diferenca)
+          console.log(`Ajustado ${diferenca} unidades da peça ${pecaId} (quantidade alterada)`)
+        }
+      }
+    }
+  }
 
   const saveOrdem = useMutation({
     mutationFn: async (data: any) => {
@@ -104,8 +176,11 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         ordemId = newOrdem.id
       }
 
+      // Processar mudanças no estoque ANTES de salvar os itens
+      await processarMudancasEstoque(data.itens)
+
       // Gerenciar itens da ordem
-      if (ordemId && data.itens.length > 0) {
+      if (ordemId && data.itens.length >= 0) {
         // Deletar itens existentes se estiver editando
         if (ordem) {
           await supabase
@@ -115,14 +190,15 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         }
 
         // Inserir novos itens
-        const itensToInsert = data.itens.map((item: ItemForm) => ({
-          ordem_id: ordemId,
-          nome_item: item.nome_item,
-          quantidade: item.quantidade,
-          preco_unitario: item.preco_unitario
-        }))
+        if (data.itens.length > 0) {
+          const itensToInsert = data.itens.map((item: ItemForm) => ({
+            ordem_id: ordemId,
+            peca_id: item.peca_id || null,
+            nome_item: item.nome_item,
+            quantidade: item.quantidade,
+            preco_unitario: item.preco_unitario
+          }))
 
-        if (itensToInsert.length > 0) {
           const { error: itensError } = await supabase
             .from('itens_ordem')
             .insert(itensToInsert)
@@ -133,6 +209,9 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
           }
         }
       }
+
+      // Invalidar cache de peças para atualizar estoque na UI
+      queryClient.invalidateQueries({ queryKey: ['pecas'] })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ordens'] })
@@ -148,7 +227,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       console.error('Error saving ordem:', error)
       toast({
         title: "Erro",
-        description: "Erro ao salvar ordem.",
+        description: "Erro ao salvar ordem: " + error.message,
         variant: "destructive",
       })
     }
@@ -159,7 +238,20 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   }
 
   const addItemFromSelector = (item: any) => {
+    // Verificar se a peça já foi adicionada
+    const pecaJaAdicionada = itens.some(existingItem => existingItem.peca_id === item.peca_id)
+    
+    if (pecaJaAdicionada) {
+      toast({
+        title: "Peça já adicionada",
+        description: "Esta peça já foi adicionada à ordem. Edite a quantidade se necessário.",
+        variant: "destructive",
+      })
+      return
+    }
+
     const newItem: ItemForm = {
+      peca_id: item.peca_id,
       nome_item: item.nome_peca,
       quantidade: item.quantidade,
       preco_unitario: item.preco_unitario
@@ -251,7 +343,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
           </div>
         )}
 
-        {/* Exibir Peças na Visualização */}
         {ordem.itens && ordem.itens.length > 0 && (
           <div>
             <Label>Peças Utilizadas</Label>

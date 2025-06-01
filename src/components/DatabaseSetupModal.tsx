@@ -93,6 +93,16 @@ CREATE TABLE IF NOT EXISTS public.itens_ordem (
 ALTER TABLE public.itens_ordem ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "itens_ordem_policy" ON public.itens_ordem FOR ALL TO public USING (true) WITH CHECK (true);`
 
+// Lista das tabelas que devem existir
+const REQUIRED_TABLES = [
+  'dados_empresa',
+  'pecas_manutencao', 
+  'clientes',
+  'tecnicos',
+  'ordens_servico',
+  'itens_ordem'
+]
+
 interface DatabaseSetupModalProps {
   isOpen: boolean
   onConnectionSuccess: () => void
@@ -105,6 +115,7 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
   const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
   const [darkMode, setDarkMode] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [validationDetails, setValidationDetails] = useState<string>('')
   const { toast } = useToast()
 
   // Limpar status e campos quando o modal é aberto
@@ -121,6 +132,7 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
       setAnonKey('')
       setShowKey(false)
       setCopied(false)
+      setValidationDetails('')
     }
   }, [isOpen])
 
@@ -140,6 +152,61 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
     }
   }
 
+  // Função para validar se todas as tabelas existem
+  const validateDatabaseStructure = async (testClient: any) => {
+    console.log('Validando estrutura do banco de dados...')
+    
+    const missingTables = []
+    const existingTables = []
+    
+    for (const tableName of REQUIRED_TABLES) {
+      try {
+        console.log(`Verificando tabela: ${tableName}`)
+        
+        const testResult = await Promise.race([
+          testClient.from(tableName).select('*', { count: 'exact', head: true }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout na verificação da tabela')), 5000)
+          )
+        ])
+        
+        if (testResult?.error) {
+          if (testResult.error.code === 'PGRST116' || 
+              testResult.error.message?.includes('does not exist') ||
+              testResult.error.message?.includes('relation')) {
+            missingTables.push(tableName)
+            console.log(`Tabela ${tableName} não encontrada`)
+          } else if (testResult.error.code === '42501' || 
+                     testResult.error.message?.includes('permission')) {
+            // Tabela existe mas sem permissão - considerar como problema de configuração
+            console.log(`Tabela ${tableName} existe mas sem permissão adequada`)
+            existingTables.push(tableName + ' (sem permissão)')
+          } else {
+            // Outro erro
+            console.log(`Erro ao verificar tabela ${tableName}:`, testResult.error)
+            missingTables.push(tableName + ' (erro: ' + testResult.error.message + ')')
+          }
+        } else {
+          existingTables.push(tableName)
+          console.log(`Tabela ${tableName} encontrada e acessível`)
+        }
+      } catch (error: any) {
+        console.log(`Erro ao verificar tabela ${tableName}:`, error)
+        missingTables.push(tableName + ' (timeout/erro)')
+      }
+    }
+    
+    console.log('Tabelas encontradas:', existingTables)
+    console.log('Tabelas faltando:', missingTables)
+    
+    return {
+      isValid: missingTables.length === 0,
+      existingTables,
+      missingTables,
+      summary: `Encontradas: ${existingTables.length}/${REQUIRED_TABLES.length} tabelas`
+    }
+  }
+
   const handleTest = async () => {
     if (!url || !anonKey) {
       toast({ title: 'Erro', description: 'Preencha todos os campos.', variant: 'destructive' })
@@ -148,6 +215,7 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
 
     console.log('Iniciando teste de conexão com URL:', url)
     setStatus('testing')
+    setValidationDetails('')
 
     try {
       // Criar um cliente Supabase temporário apenas para teste
@@ -165,52 +233,37 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
 
       console.log('Cliente criado, testando conexão básica...')
 
-      // Teste 1: Verificar se as credenciais são válidas fazendo uma query básica
+      // Teste 1: Verificar se as credenciais são válidas
       const authTestPromise = testClient.auth.getSession()
-      const authResult = await Promise.race([
+      await Promise.race([
         authTestPromise,
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Timeout na autenticação')), 8000)
         )
       ])
 
-      console.log('Teste de autenticação concluído, testando tabelas...')
+      console.log('Teste de autenticação concluído, validando estrutura...')
 
-      // Teste 2: Verificar se consegue acessar as tabelas (estrutura existe)
-      const tablesTestPromise = testClient
-        .from('clientes')
-        .select('id', { count: 'exact', head: true })
+      // Teste 2: Validar estrutura completa do banco
+      const structureValidation = await validateDatabaseStructure(testClient)
+      
+      const details = [
+        `${structureValidation.summary}`,
+        structureValidation.existingTables.length > 0 ? `\nTabelas encontradas: ${structureValidation.existingTables.join(', ')}` : '',
+        structureValidation.missingTables.length > 0 ? `\nTabelas faltando: ${structureValidation.missingTables.join(', ')}` : ''
+      ].filter(Boolean).join('')
+      
+      setValidationDetails(details)
 
-      const tablesResult = await Promise.race([
-        tablesTestPromise,
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout ao testar tabelas')), 8000)
-        )
-      ]) as any
-
-      console.log('Resultado do teste de tabelas:', tablesResult)
-
-      // Verificar se houve erro específico de tabela não encontrada
-      if (tablesResult?.error) {
-        if (tablesResult.error.code === 'PGRST116' || 
-            tablesResult.error.message?.includes('does not exist') ||
-            tablesResult.error.message?.includes('relation') ||
-            tablesResult.error.message?.includes('table')) {
-          throw new Error('Estrutura de banco não criada')
-        }
-        
-        // Outros erros de permissão ou configuração
-        if (tablesResult.error.code === '42501' || 
-            tablesResult.error.message?.includes('permission') ||
-            tablesResult.error.message?.includes('policy')) {
-          throw new Error('Problema de permissões - verifique as políticas RLS')
-        }
-
-        throw new Error(`Erro no banco: ${tablesResult.error.message}`)
+      if (!structureValidation.isValid) {
+        throw new Error(`Estrutura incompleta do banco de dados. ${details}`)
       }
 
-      console.log('Conexão validada com sucesso!')
-      toast({ title: 'Sucesso', description: 'Conexão validada e estrutura detectada.' })
+      console.log('Estrutura do banco validada com sucesso!')
+      toast({ 
+        title: 'Sucesso', 
+        description: 'Conexão validada e estrutura completa detectada.' 
+      })
       setStatus('success')
 
     } catch (error: any) {
@@ -224,8 +277,8 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
       } else if (error.message?.includes('não foi possível criar cliente') || 
                  error.message?.includes('Credenciais inválidas')) {
         errorMessage = 'URL ou chave inválida. Verifique os dados inseridos.'
-      } else if (error.message?.includes('Estrutura de banco não criada')) {
-        errorMessage = 'Conexão válida, mas estrutura do banco não encontrada. Execute o script SQL no Supabase.'
+      } else if (error.message?.includes('Estrutura incompleta')) {
+        errorMessage = error.message
       } else if (error.message?.includes('permissões')) {
         errorMessage = 'Problema nas permissões do banco. Verifique as políticas RLS.'
       } else if (error.message?.includes('Failed to fetch') || 
@@ -337,10 +390,17 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
                 </div>
               )}
 
+              {validationDetails && (
+                <div className="text-xs bg-muted p-3 rounded">
+                  <p className="font-medium mb-1">Detalhes da validação:</p>
+                  <pre className="whitespace-pre-wrap">{validationDetails}</pre>
+                </div>
+              )}
+
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>* Campos obrigatórios</p>
                 <p>As configurações são salvas localmente no navegador.</p>
-                <p>Você deve criar manualmente a estrutura do banco pelo Supabase.</p>
+                <p>O sistema valida se todas as {REQUIRED_TABLES.length} tabelas necessárias estão presentes.</p>
               </div>
             </div>
 
