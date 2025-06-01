@@ -54,6 +54,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       }))
       setItens(itensCarregados)
       setOriginalItens(itensCarregados)
+      console.log('Itens originais carregados:', itensCarregados)
     }
   }, [ordem?.itens])
 
@@ -87,7 +88,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   // Mutation para salvar ordem
   const saveOrdem = useMutation({
     mutationFn: async (data: any) => {
-      console.log('Salvando ordem:', data)
+      console.log('=== SALVANDO ORDEM ===')
+      console.log('Dados da ordem:', data.ordemData)
+      console.log('Itens atuais:', data.itens)
+      console.log('Itens originais:', originalItens)
       
       let ordemId = ordem?.id
 
@@ -110,17 +114,19 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         ordemId = newOrdem.id
       }
 
-      // Processar mudanças no estoque
+      // Processar mudanças no estoque ANTES de gerenciar itens
       await processarMudancasEstoque(data.itens, originalItens)
 
       // Gerenciar itens da ordem
       if (ordemId) {
         // Deletar itens existentes
         if (ordem) {
-          await supabase
+          const { error: deleteError } = await supabase
             .from('itens_ordem')
             .delete()
             .eq('ordem_id', ordemId)
+          
+          if (deleteError) throw deleteError
         }
 
         // Inserir novos itens
@@ -142,13 +148,17 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       }
     },
     onSuccess: () => {
+      // Invalidar TODOS os caches relacionados
       queryClient.invalidateQueries({ queryKey: ['ordens'] })
       queryClient.invalidateQueries({ queryKey: ['pecas'] })
+      queryClient.invalidateQueries({ queryKey: ['pecas_manutencao'] })
+      queryClient.invalidateQueries({ queryKey: ['estoque'] })
+      
       toast({
         title: ordem ? "Ordem atualizada" : "Ordem criada",
         description: ordem ? 
-          "A ordem foi atualizada com sucesso." :
-          "A ordem foi criada com sucesso.",
+          "A ordem foi atualizada com sucesso. O estoque foi ajustado automaticamente." :
+          "A ordem foi criada com sucesso. O estoque foi ajustado automaticamente.",
       })
       onSuccess()
     },
@@ -197,11 +207,11 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-8">
+    <div className="max-w-5xl mx-auto p-2 sm:p-4">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Informações Básicas */}
-        <div className="bg-card border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Informações Básicas</h3>
+        <div className="bg-card border rounded-lg p-3 sm:p-4">
+          <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Informações Básicas</h3>
           <OrdemBasicInfo
             clienteId={clienteId}
             setClienteId={setClienteId}
@@ -222,8 +232,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         </div>
 
         {/* Itens da Ordem */}
-        <div className="bg-card border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Peças e Materiais</h3>
+        <div className="bg-card border rounded-lg p-3 sm:p-4">
+          <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Peças e Materiais</h3>
           <OrdemItensManager
             itens={itens}
             setItens={setItens}
@@ -232,8 +242,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         </div>
 
         {/* Status e Valores */}
-        <div className="bg-card border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-4">Status e Valores</h3>
+        <div className="bg-card border rounded-lg p-3 sm:p-4">
+          <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Status e Valores</h3>
           <OrdemStatusSection
             status={status}
             setStatus={setStatus}
@@ -246,7 +256,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
         {/* Botões de Ação */}
         {!readOnly && (
-          <div className="flex justify-end space-x-4 pt-4">
+          <div className="flex justify-end space-x-2 sm:space-x-4 pt-2 sm:pt-4">
             <Button 
               type="submit" 
               disabled={saveOrdem.isPending}

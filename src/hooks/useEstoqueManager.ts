@@ -47,8 +47,9 @@ export function useEstoqueManager() {
     }
 
     console.log(`Estoque atualizado com sucesso para peça ${pecaId}: ${novoEstoque}`)
-    // Invalidar cache
-    queryClient.invalidateQueries({ queryKey: ['pecas'] })
+    // Invalidar todos os caches relacionados
+    await queryClient.invalidateQueries({ queryKey: ['pecas'] })
+    await queryClient.invalidateQueries({ queryKey: ['pecas_manutencao'] })
   }
 
   const processarMudancasEstoque = async (novosItens: ItemForm[], itensOriginais: ItemForm[] = []) => {
@@ -77,10 +78,10 @@ export function useEstoqueManager() {
     })
 
     try {
-      // 1. Processar itens removidos - devolver ao estoque
+      // 1. Processar itens removidos - devolver ao estoque (CRÍTICO: ESTE ERA O BUG)
       for (const [pecaId, quantidadeOriginal] of itensOriginaisMap) {
         if (!novosItensMap.has(pecaId)) {
-          console.log(`Devolvendo ${quantidadeOriginal} unidades da peça ${pecaId} ao estoque`)
+          console.log(`🔄 DEVOLVENDO ${quantidadeOriginal} unidades da peça ${pecaId} ao estoque (item removido)`)
           await updateEstoque(pecaId, quantidadeOriginal)
         }
       }
@@ -88,7 +89,7 @@ export function useEstoqueManager() {
       // 2. Processar itens adicionados - debitar do estoque
       for (const [pecaId, novaQuantidade] of novosItensMap) {
         if (!itensOriginaisMap.has(pecaId)) {
-          console.log(`Debitando ${novaQuantidade} unidades da peça ${pecaId} do estoque`)
+          console.log(`➖ DEBITANDO ${novaQuantidade} unidades da peça ${pecaId} do estoque (item adicionado)`)
           await updateEstoque(pecaId, -novaQuantidade)
         }
       }
@@ -99,7 +100,7 @@ export function useEstoqueManager() {
         if (quantidadeOriginal !== undefined) {
           const diferenca = quantidadeOriginal - novaQuantidade
           if (diferenca !== 0) {
-            console.log(`Ajustando estoque da peça ${pecaId}: diferença de ${diferenca} unidades`)
+            console.log(`📊 AJUSTANDO estoque da peça ${pecaId}: diferença de ${diferenca} unidades (original: ${quantidadeOriginal}, nova: ${novaQuantidade})`)
             await updateEstoque(pecaId, diferenca)
           }
         }

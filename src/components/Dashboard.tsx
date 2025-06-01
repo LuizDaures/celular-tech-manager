@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { FileText, Users, Wrench, TrendingUp, Filter, CalendarIcon, Download, DollarSign, Activity, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { FileText, Users, Wrench, Filter, CalendarIcon, Download, DollarSign, Activity, CheckCircle, Clock, XCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
@@ -281,30 +281,30 @@ export function Dashboard() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Visão geral da assistência técnica</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Visão geral da assistência técnica</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={loadDashboardData} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={loadDashboardData} disabled={loading}>
             {loading ? 'Carregando...' : 'Atualizar'}
           </Button>
         </div>
       </div>
 
-      {/* Statistics Cards - Grid melhorado */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
+      {/* Statistics Cards - Responsivo */}
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Ordens</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <FileText className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Total de Ordens</CardTitle>
+            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-blue-100 flex items-center justify-center">
+              <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrdens}</div>
+            <div className="text-xl sm:text-2xl font-bold">{stats.totalOrdens}</div>
             <p className="text-xs text-muted-foreground">
               {stats.ordensHoje} abertas hoje
             </p>
@@ -313,13 +313,13 @@ export function Dashboard() {
 
         <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Em Andamento</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
-              <Activity className="h-4 w-4 text-yellow-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Em Andamento</CardTitle>
+            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-yellow-100 flex items-center justify-center">
+              <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.ordensAbertas + stats.ordensAndamento}</div>
+            <div className="text-xl sm:text-2xl font-bold">{stats.ordensAbertas + stats.ordensAndamento}</div>
             <p className="text-xs text-muted-foreground">
               {stats.ordensAbertas} abertas, {stats.ordensAndamento} em progresso
             </p>
@@ -328,13 +328,13 @@ export function Dashboard() {
 
         <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Concluídas</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Concluídas</CardTitle>
+            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.ordensConcluidas}</div>
+            <div className="text-xl sm:text-2xl font-bold">{stats.ordensConcluidas}</div>
             <p className="text-xs text-muted-foreground">
               {((stats.ordensConcluidas / stats.totalOrdens) * 100 || 0).toFixed(1)}% do total
             </p>
@@ -343,13 +343,13 @@ export function Dashboard() {
 
         <Card className="relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Faturamento do Mês</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-              <DollarSign className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-xs sm:text-sm font-medium">Faturamento do Mês</CardTitle>
+            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-green-100 flex items-center justify-center">
+              <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ {stats.faturamentoMes.toFixed(2)}</div>
+            <div className="text-lg sm:text-2xl font-bold">R$ {stats.faturamentoMes.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
               Apenas ordens concluídas
             </p>
@@ -357,17 +357,17 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Recursos - Grid melhorado */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Recursos - Grid responsivo */}
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Clientes Cadastrados</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
-              <Users className="h-4 w-4 text-purple-600" />
+            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-purple-100 flex items-center justify-center">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalClientes}</div>
+            <div className="text-xl sm:text-2xl font-bold">{stats.totalClientes}</div>
             <p className="text-xs text-muted-foreground">Base de clientes ativa</p>
           </CardContent>
         </Card>
@@ -375,40 +375,44 @@ export function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Técnicos Disponíveis</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
-              <Wrench className="h-4 w-4 text-orange-600" />
+            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-orange-100 flex items-center justify-center">
+              <Wrench className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTecnicos}</div>
+            <div className="text-xl sm:text-2xl font-bold">{stats.totalTecnicos}</div>
             <p className="text-xs text-muted-foreground">Equipe técnica cadastrada</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Valor Total Filtrado */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Valor Total das Ordens Filtradas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-primary">R$ {calculateTotalValue().toFixed(2)}</div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Total de {filteredOrders.length} ordem{filteredOrders.length !== 1 ? 's' : ''} selecionada{filteredOrders.length !== 1 ? 's' : ''}
-          </p>
-        </CardContent>
-      </Card>
+      {/* Valor Total das Ordens Filtradas - REDESIGN SIMPLES */}
+      {filteredOrders.length > 0 && calculateTotalValue() > 0 && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-primary" />
+                <span className="font-medium text-sm sm:text-base">Total das Ordens Selecionadas:</span>
+              </div>
+              <div className="text-xl sm:text-2xl font-bold text-primary">
+                R$ {calculateTotalValue().toFixed(2)}
+              </div>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              {filteredOrders.length} ordem{filteredOrders.length !== 1 ? 's' : ''} filtrada{filteredOrders.length !== 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Ordens de Serviço - Layout melhorado */}
+      {/* Ordens de Serviço - Layout responsivo */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col gap-4">
             <div>
-              <CardTitle>Ordens de Serviço</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg sm:text-xl">Ordens de Serviço</CardTitle>
+              <CardDescription className="text-sm">
                 {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
                   ? `Todas as ${recentOrders.length} ordens de serviço` 
                   : `Ordens filtradas - Total: ${filteredOrders.length}`
@@ -416,11 +420,11 @@ export function Dashboard() {
               </CardDescription>
             </div>
             
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -438,7 +442,7 @@ export function Dashboard() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-48 justify-start text-left font-normal",
+                      "w-full sm:w-48 justify-start text-left font-normal",
                       !dateFilter.from && "text-muted-foreground"
                     )}
                   >
@@ -464,21 +468,23 @@ export function Dashboard() {
                     defaultMonth={dateFilter.from}
                     selected={{from: dateFilter.from, to: dateFilter.to}}
                     onSelect={(range) => setDateFilter({from: range?.from, to: range?.to})}
-                    numberOfMonths={2}
+                    numberOfMonths={1}
                   />
                 </PopoverContent>
               </Popover>
 
-              {(dateFilter.from || dateFilter.to) && (
-                <Button variant="outline" size="sm" onClick={clearDateFilter}>
-                  Limpar Data
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {(dateFilter.from || dateFilter.to) && (
+                  <Button variant="outline" size="sm" onClick={clearDateFilter}>
+                    Limpar Data
+                  </Button>
+                )}
 
-              <Button variant="outline" size="sm" onClick={downloadExcel}>
-                <Download className="h-4 w-4 mr-2" />
-                Excel
-              </Button>
+                <Button variant="outline" size="sm" onClick={downloadExcel}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Excel
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -490,15 +496,15 @@ export function Dashboard() {
               const totalValue = (order.valor || 0) + itensValue
               
               return (
-                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                <div key={order.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-3 sm:gap-4">
                   <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-3">
-                      <p className="font-semibold">{order.clientes?.nome || 'Cliente não encontrado'}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <p className="font-semibold text-sm sm:text-base">{order.clientes?.nome || 'Cliente não encontrado'}</p>
                       {getStatusBadge(order.status)}
                     </div>
                     <p className="text-sm text-muted-foreground font-medium">{order.dispositivo}</p>
                     <p className="text-sm text-muted-foreground">{order.descricao_problema}</p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
                       <span>📅 {format(new Date(order.data_abertura), 'dd/MM/yyyy', { locale: ptBR })}</span>
                       <span>👨‍🔧 {order.tecnicos?.nome || 'Não atribuído'}</span>
                       {order.data_conclusao && (
@@ -506,25 +512,25 @@ export function Dashboard() {
                       )}
                     </div>
                   </div>
-                  <div className="text-right space-y-1 ml-4">
-                    {totalValue > 0 && (
+                  {totalValue > 0 && (
+                    <div className="text-right space-y-1">
                       <div className="text-lg font-bold text-green-600">
                         R$ {totalValue.toFixed(2)}
                       </div>
-                    )}
-                    {totalValue > 0 && (order.valor || 0) > 0 && itensValue > 0 && (
-                      <div className="text-xs text-muted-foreground">
-                        Serviço: R$ {(order.valor || 0).toFixed(2)} + Peças: R$ {itensValue.toFixed(2)}
-                      </div>
-                    )}
-                  </div>
+                      {(order.valor || 0) > 0 && itensValue > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          Serviço: R$ {(order.valor || 0).toFixed(2)} + Peças: R$ {itensValue.toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
             {filteredOrders.length === 0 && (
-              <div className="text-center py-12">
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                <p className="text-lg font-medium text-muted-foreground">
+              <div className="text-center py-8 sm:py-12">
+                <FileText className="h-8 w-8 sm:h-12 sm:w-12 mx-auto text-muted-foreground/50 mb-4" />
+                <p className="text-base sm:text-lg font-medium text-muted-foreground">
                   {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
                     ? 'Nenhuma ordem de serviço encontrada' 
                     : 'Nenhuma ordem encontrada com os filtros aplicados'
