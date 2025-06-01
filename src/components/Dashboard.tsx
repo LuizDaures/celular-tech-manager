@@ -1,10 +1,18 @@
+
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { FileText, Users, Wrench, TrendingUp, Filter } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { FileText, Users, Wrench, TrendingUp, Filter, CalendarIcon, Download, DollarSign } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { cn } from '@/lib/utils'
+import * as XLSX from 'xlsx'
 
 const statusLabels = {
   'aberta': 'Aberta',
@@ -25,18 +33,17 @@ export function Dashboard() {
   const [recentOrders, setRecentOrders] = useState<any[]>([])
   const [filteredOrders, setFilteredOrders] = useState<any[]>([])
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [dateFilter, setDateFilter] = useState<{from?: Date, to?: Date}>({})
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
-    // Verificar se o cliente Supabase está disponível antes de carregar dados
     if (!supabase) {
       console.log('Cliente Supabase não disponível, não carregando dados do dashboard')
       setLoading(false)
       return
     }
     
-    // Verificar se há configuração válida no localStorage
     const config = localStorage.getItem('supabase_config')
     if (!config) {
       console.log('Configuração Supabase não encontrada')
@@ -48,12 +55,97 @@ export function Dashboard() {
   }, [])
 
   useEffect(() => {
-    if (statusFilter === 'all') {
-      setFilteredOrders(recentOrders)
-    } else {
-      setFilteredOrders(recentOrders.filter(order => order.status === statusFilter))
+    applyFilters()
+  }, [statusFilter, dateFilter, recentOrders])
+
+  const applyFilters = () => {
+    let filtered = [...recentOrders]
+    
+    // Filtro por status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(order => order.status === statusFilter)
     }
-  }, [statusFilter, recentOrders])
+    
+    // Filtro por data
+    if (dateFilter.from) {
+      const fromDate = new Date(dateFilter.from)
+      fromDate.setHours(0, 0, 0, 0)
+      
+      filtered = filtered.filter(order => {
+        const orderDate = new Date(order.data_abertura)
+        orderDate.setHours(0, 0, 0, 0)
+        return orderDate >= fromDate
+      })
+    }
+    
+    if (dateFilter.to) {
+      const toDate = new Date(dateFilter.to)
+      toDate.setHours(23, 59, 59, 999)
+      
+      filtered = filtered.filter(order => {
+        const orderDate = new Date(order.data_abertura)
+        return orderDate <= toDate
+      })
+    }
+    
+    setFilteredOrders(filtered)
+  }
+
+  const clearDateFilter = () => {
+    setDateFilter({})
+  }
+
+  const calculateTotalValue = () => {
+    return filteredOrders.reduce((total, order) => {
+      const orderValue = order.valor || 0
+      const itensValue = order.itens?.reduce((itemTotal: number, item: any) => 
+        itemTotal + (item.quantidade * item.preco_unitario), 0) || 0
+      return total + orderValue + itensValue
+    }, 0)
+  }
+
+  const downloadExcel = () => {
+    if (filteredOrders.length === 0) {
+      toast({
+        title: 'Nenhum dado para exportar',
+        description: 'Não há ordens para exportar com os filtros aplicados.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const excelData = filteredOrders.map(order => {
+      const itensValue = order.itens?.reduce((total: number, item: any) => 
+        total + (item.quantidade * item.preco_unitario), 0) || 0
+      
+      return {
+        'ID': order.id,
+        'Cliente': order.clientes?.nome || 'N/A',
+        'Técnico': order.tecnicos?.nome || 'Não atribuído',
+        'Dispositivo': order.dispositivo,
+        'Problema': order.descricao_problema,
+        'Status': statusLabels[order.status as keyof typeof statusLabels],
+        'Data Abertura': format(new Date(order.data_abertura), 'dd/MM/yyyy', { locale: ptBR }),
+        'Valor Manutenção': order.valor || 0,
+        'Valor Peças': itensValue,
+        'Total': (order.valor || 0) + itensValue,
+        'Data Conclusão': order.data_conclusao ? 
+          format(new Date(order.data_conclusao), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'
+      }
+    })
+
+    const ws = XLSX.utils.json_to_sheet(excelData)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Ordens de Serviço')
+    
+    const fileName = `ordens_servico_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+    XLSX.writeFile(wb, fileName)
+    
+    toast({
+      title: 'Arquivo baixado',
+      description: `${filteredOrders.length} ordens exportadas para ${fileName}`,
+    })
+  }
 
   const loadDashboardData = async () => {
     if (!supabase) {
@@ -91,16 +183,16 @@ export function Dashboard() {
 
       if (tecnicosError) throw tecnicosError
 
-      // Get recent orders with client info
+      // Get recent orders with client info and items
       const { data: recentOrdersData, error: recentError } = await supabase
         .from('ordens_servico')
         .select(`
           *,
           clientes:cliente_id (nome),
-          tecnicos:tecnico_id (nome)
+          tecnicos:tecnico_id (nome),
+          itens:itens_ordem (quantidade, preco_unitario, nome_item)
         `)
         .order('data_abertura', { ascending: false })
-        .limit(10)
 
       if (recentError) throw recentError
 
@@ -213,17 +305,31 @@ export function Dashboard() {
         </Card>
       </div>
 
+      {/* Valor Total das Ordens Filtradas */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Valor Total das Ordens Filtradas</CardTitle>
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">R$ {calculateTotalValue().toFixed(2)}</div>
+          <p className="text-xs text-muted-foreground">
+            Total de {filteredOrders.length} ordem{filteredOrders.length !== 1 ? 's' : ''} selecionada{filteredOrders.length !== 1 ? 's' : ''}
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Recent Orders */}
       <Card>
         <CardHeader>
-          <CardTitle>Ordens Recentes</CardTitle>
+          <CardTitle>Ordens de Serviço</CardTitle>
           <CardDescription>
-            {statusFilter === 'all' 
-              ? `Últimas ${recentOrders.length} ordens de serviço criadas` 
-              : `Ordens com status "${statusLabels[statusFilter as keyof typeof statusLabels]}" - Total: ${filteredOrders.length}`
+            {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
+              ? `Todas as ${recentOrders.length} ordens de serviço` 
+              : `Ordens filtradas - Total: ${filteredOrders.length}`
             }
           </CardDescription>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40">
@@ -237,32 +343,91 @@ export function Dashboard() {
                 <SelectItem value="cancelada">Cancelada</SelectItem>
               </SelectContent>
             </Select>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-40 justify-start text-left font-normal",
+                    !dateFilter.from && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFilter.from ? (
+                    dateFilter.to ? (
+                      <>
+                        {format(dateFilter.from, "dd/MM", { locale: ptBR })} -{" "}
+                        {format(dateFilter.to, "dd/MM", { locale: ptBR })}
+                      </>
+                    ) : (
+                      format(dateFilter.from, "dd/MM/yyyy", { locale: ptBR })
+                    )
+                  ) : (
+                    <span>Data inicial</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateFilter.from}
+                  selected={{from: dateFilter.from, to: dateFilter.to}}
+                  onSelect={(range) => setDateFilter({from: range?.from, to: range?.to})}
+                  numberOfMonths={2}
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+
+            {(dateFilter.from || dateFilter.to) && (
+              <Button variant="outline" size="sm" onClick={clearDateFilter}>
+                Limpar Data
+              </Button>
+            )}
+
+            <Button variant="outline" size="sm" onClick={downloadExcel}>
+              <Download className="h-4 w-4 mr-2" />
+              Baixar Excel
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredOrders.map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="space-y-1">
-                  <p className="font-medium">{order.clientes?.nome}</p>
-                  <p className="text-sm text-muted-foreground">{order.descricao_problema}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Técnico: {order.tecnicos?.nome || 'Não atribuído'}
-                  </p>
+            {filteredOrders.map((order) => {
+              const itensValue = order.itens?.reduce((total: number, item: any) => 
+                total + (item.quantidade * item.preco_unitario), 0) || 0
+              const totalValue = (order.valor || 0) + itensValue
+              
+              return (
+                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="space-y-1">
+                    <p className="font-medium">{order.clientes?.nome}</p>
+                    <p className="text-sm text-muted-foreground">{order.descricao_problema}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Técnico: {order.tecnicos?.nome || 'Não atribuído'}
+                    </p>
+                    {totalValue > 0 && (
+                      <p className="text-xs text-green-600 font-medium">
+                        Valor: R$ {totalValue.toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right space-y-2">
+                    {getStatusBadge(order.status)}
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(order.data_abertura), 'dd/MM/yyyy', { locale: ptBR })}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right space-y-2">
-                  {getStatusBadge(order.status)}
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(order.data_abertura).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-              </div>
-            ))}
+              )
+            })}
             {filteredOrders.length === 0 && (
               <p className="text-center text-muted-foreground py-4">
-                {statusFilter === 'all' 
+                {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
                   ? 'Nenhuma ordem de serviço encontrada' 
-                  : `Nenhuma ordem com status "${statusLabels[statusFilter as keyof typeof statusLabels]}" encontrada`
+                  : 'Nenhuma ordem encontrada com os filtros aplicados'
                 }
               </p>
             )}

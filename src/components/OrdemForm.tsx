@@ -21,6 +21,7 @@ interface ItemForm {
   nome_item: string
   quantidade: number
   preco_unitario: number
+  is_from_estoque?: boolean // Nova propriedade para identificar origem
 }
 
 export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps) {
@@ -45,7 +46,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         peca_id: item.peca_id,
         nome_item: item.nome_item,
         quantidade: item.quantidade,
-        preco_unitario: item.preco_unitario
+        preco_unitario: item.preco_unitario,
+        is_from_estoque: !!item.peca_id // Se tem peca_id, veio do estoque
       }))
       setItens(itensCarregados)
       setOriginalItens(itensCarregados) // Salvar estado original para comparações
@@ -82,7 +84,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const updateEstoque = async (pecaId: string, quantidadeAlterada: number) => {
     if (!pecaId) return
     
-    // Get current stock
+    console.log(`Atualizando estoque da peça ${pecaId} em ${quantidadeAlterada} unidades`)
+    
     const { data: peca, error: fetchError } = await supabase
       .from('pecas_manutencao')
       .select('estoque')
@@ -95,6 +98,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     }
     
     const novoEstoque = peca.estoque + quantidadeAlterada
+    console.log(`Estoque atual: ${peca.estoque}, novo estoque: ${novoEstoque}`)
     
     const { error } = await supabase
       .from('pecas_manutencao')
@@ -105,6 +109,9 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       console.error('Erro ao atualizar estoque:', error)
       throw error
     }
+
+    // Invalidar cache imediatamente após atualização
+    queryClient.invalidateQueries({ queryKey: ['pecas'] })
   }
 
   // Função para processar mudanças no estoque
@@ -113,10 +120,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     console.log('Itens originais:', originalItens)
     console.log('Novos itens:', novosItens)
 
-    // Se é uma nova ordem, apenas debitar estoque
+    // Se é uma nova ordem, apenas debitar estoque das peças do estoque
     if (!ordem) {
       for (const item of novosItens) {
-        if (item.peca_id) {
+        if (item.peca_id && item.is_from_estoque) {
           await updateEstoque(item.peca_id, -item.quantidade)
           console.log(`Debitado ${item.quantidade} unidades da peça ${item.peca_id}`)
         }
@@ -124,13 +131,22 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       return
     }
 
-    // Para ordens existentes, calcular diferenças
-    const itensOriginaisMap = new Map(originalItens.map(item => [item.peca_id, item.quantidade]))
-    const novosItensMap = new Map(novosItens.map(item => [item.peca_id, item.quantidade]))
+    // Para ordens existentes, calcular diferenças apenas para itens do estoque
+    const itensOriginaisMap = new Map(
+      originalItens
+        .filter(item => item.peca_id && item.is_from_estoque)
+        .map(item => [item.peca_id!, item.quantidade])
+    )
+    
+    const novosItensMap = new Map(
+      novosItens
+        .filter(item => item.peca_id && item.is_from_estoque)
+        .map(item => [item.peca_id!, item.quantidade])
+    )
 
     // Itens removidos - devolver ao estoque
     for (const [pecaId, quantidadeOriginal] of itensOriginaisMap) {
-      if (pecaId && !novosItensMap.has(pecaId)) {
+      if (!novosItensMap.has(pecaId)) {
         await updateEstoque(pecaId, quantidadeOriginal)
         console.log(`Devolvido ${quantidadeOriginal} unidades da peça ${pecaId} (item removido)`)
       }
@@ -138,7 +154,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
     // Itens adicionados - debitar estoque
     for (const [pecaId, novaQuantidade] of novosItensMap) {
-      if (pecaId && !itensOriginaisMap.has(pecaId)) {
+      if (!itensOriginaisMap.has(pecaId)) {
         await updateEstoque(pecaId, -novaQuantidade)
         console.log(`Debitado ${novaQuantidade} unidades da peça ${pecaId} (item adicionado)`)
       }
@@ -146,7 +162,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
     // Itens com quantidade alterada - ajustar diferença
     for (const [pecaId, novaQuantidade] of novosItensMap) {
-      if (pecaId && itensOriginaisMap.has(pecaId)) {
+      if (itensOriginaisMap.has(pecaId)) {
         const quantidadeOriginal = itensOriginaisMap.get(pecaId)!
         const diferenca = quantidadeOriginal - novaQuantidade
         if (diferenca !== 0) {
@@ -221,12 +237,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
           }
         }
       }
-
-      // Invalidar cache de peças para atualizar estoque na UI
-      queryClient.invalidateQueries({ queryKey: ['pecas'] })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ordens'] })
+      queryClient.invalidateQueries({ queryKey: ['pecas'] })
       toast({
         title: ordem ? "Ordem atualizada" : "Ordem criada",
         description: ordem ? 
@@ -246,7 +260,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   })
 
   const addItem = () => {
-    setItens([...itens, { nome_item: '', quantidade: 1, preco_unitario: 0 }])
+    setItens([...itens, { nome_item: '', quantidade: 1, preco_unitario: 0, is_from_estoque: false }])
   }
 
   const addItemFromSelector = (item: any) => {
@@ -266,7 +280,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       peca_id: item.peca_id,
       nome_item: item.nome_peca,
       quantidade: item.quantidade,
-      preco_unitario: item.preco_unitario
+      preco_unitario: item.preco_unitario,
+      is_from_estoque: true // Marcado como vindo do estoque
     }
     setItens([...itens, newItem])
   }
@@ -502,6 +517,9 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
                 onChange={(e) => updateItem(index, 'nome_item', e.target.value)}
                 placeholder="Ex: Tela LCD"
               />
+              {item.is_from_estoque && (
+                <p className="text-xs text-blue-600">📦 Peça do estoque</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Quantidade</Label>

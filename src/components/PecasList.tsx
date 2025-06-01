@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Edit, Trash2, Search } from 'lucide-react'
+import { Plus, Edit, Trash2, Search, Package } from 'lucide-react'
 import { PecaForm } from '@/components/PecaForm'
 
 export function PecasList() {
@@ -81,6 +81,11 @@ export function PecasList() {
     peca.codigo_fabricante?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Calcular valor total do estoque
+  const valorTotalEstoque = filteredPecas.reduce((total, peca) => {
+    return total + (peca.estoque * peca.preco_unitario)
+  }, 0)
+
   const handleEdit = (peca: PecaManutencao) => {
     setSelectedPeca(peca)
     setIsDialogOpen(true)
@@ -128,6 +133,20 @@ export function PecasList() {
         </Dialog>
       </div>
 
+      {/* Card com valor total do estoque */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Valor Total em Estoque</CardTitle>
+          <Package className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">R$ {valorTotalEstoque.toFixed(2)}</div>
+          <p className="text-xs text-muted-foreground">
+            Valor total das {filteredPecas.reduce((total, peca) => total + peca.estoque, 0)} peças em estoque
+          </p>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Lista de Peças</CardTitle>
@@ -164,6 +183,7 @@ export function PecasList() {
                     <TableHead className="hidden lg:table-cell">Código</TableHead>
                     <TableHead>Preço</TableHead>
                     <TableHead>Estoque</TableHead>
+                    <TableHead className="hidden md:table-cell">Valor Total</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -178,6 +198,11 @@ export function PecasList() {
                       <TableCell>
                         <span className={peca.estoque <= 5 ? 'text-red-600 font-medium' : ''}>
                           {peca.estoque}
+                        </span>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <span className="font-medium">
+                          R$ {(peca.estoque * peca.preco_unitario).toFixed(2)}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
