@@ -9,6 +9,7 @@ import { OrdemItensManager } from '@/components/OrdemItensManager'
 import { OrdemStatusSection } from '@/components/OrdemStatusSection'
 import { EstoqueSidebar } from '@/components/EstoqueSidebar'
 import { useEstoqueManager } from '@/hooks/useEstoqueManager'
+import { ItemValidator } from '@/components/ItemValidator'
 
 interface OrdemFormProps {
   ordem?: OrdemCompleta | null
@@ -89,6 +90,22 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       
       if (error) throw error
       return data as Tecnico[]
+    }
+  })
+
+  const { data: pecas = [] } = useQuery({
+    queryKey: ['pecas_manutencao'],
+    queryFn: async () => {
+      const supabase = await getSupabaseClient()
+      if (!supabase) return []
+      
+      const { data, error } = await supabase
+        .from('pecas_manutencao')
+        .select('*')
+        .order('nome')
+      
+      if (error) throw error
+      return data
     }
   })
 
@@ -194,6 +211,17 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       return
     }
 
+    // Validar itens
+    const itemErrors = ItemValidator.validateItems(itens, pecas)
+    if (itemErrors.length > 0) {
+      toast({
+        title: "Problemas com os itens",
+        description: itemErrors[0],
+        variant: "destructive",
+      })
+      return
+    }
+
     const ordemData = {
       cliente_id: clienteId,
       tecnico_id: tecnicoId === 'none' || !tecnicoId ? null : tecnicoId,
@@ -212,12 +240,12 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Formulário Principal */}
         <div className="xl:col-span-3">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Informações Básicas */}
-            <div className="bg-card border rounded-lg p-4">
+            <div className="bg-card border rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4">Informações Básicas</h3>
               <OrdemBasicInfo
                 clienteId={clienteId}
@@ -239,8 +267,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             </div>
 
             {/* Itens da Ordem */}
-            <div className="bg-card border rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-4">Peças e Materiais</h3>
+            <div className="bg-card border rounded-lg p-6">
               <OrdemItensManager
                 itens={itens}
                 setItens={setItens}
@@ -249,7 +276,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             </div>
 
             {/* Status e Valores */}
-            <div className="bg-card border rounded-lg p-4">
+            <div className="bg-card border rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4">Status e Valores</h3>
               <OrdemStatusSection
                 status={status}
@@ -268,6 +295,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
                   type="submit" 
                   disabled={saveOrdem.isPending}
                   className="min-w-32"
+                  size="lg"
                 >
                   {saveOrdem.isPending ? 'Salvando...' : (ordem ? 'Atualizar Ordem' : 'Criar Ordem')}
                 </Button>
