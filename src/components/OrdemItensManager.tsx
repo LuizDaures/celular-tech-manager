@@ -2,9 +2,11 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Trash2, Plus, Package2 } from 'lucide-react'
-import { ItemSelector } from '@/components/ItemSelector'
-import { useToast } from '@/hooks/use-toast'
+import { Badge } from '@/components/ui/badge'
+import { Trash2, Plus, Package2, AlertTriangle } from 'lucide-react'
+import { EstoquePicker } from '@/components/EstoquePicker'
+import { useItensManager } from '@/hooks/useItensManager'
+import { PecaManutencao } from '@/lib/supabase'
 
 interface ItemForm {
   peca_id?: string
@@ -21,45 +23,51 @@ interface OrdemItensManagerProps {
 }
 
 export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemItensManagerProps) {
-  const { toast } = useToast()
+  const {
+    addItem,
+    addItemFromEstoque,
+    removeItem,
+    updateItem,
+    validateItens,
+    totalValue,
+    pecas
+  } = useItensManager(itens)
 
-  const addItem = () => {
-    setItens([...itens, { nome_item: '', quantidade: 1, preco_unitario: 0, is_from_estoque: false }])
+  // Sincronizar com o estado externo
+  const handleItensChange = (newItens: ItemForm[]) => {
+    setItens(newItens)
   }
 
-  const addItemFromSelector = (item: any) => {
-    const pecaJaAdicionada = itens.some(existingItem => existingItem.peca_id === item.peca_id)
-    
-    if (pecaJaAdicionada) {
-      toast({
-        title: "Peça já adicionada",
-        description: "Esta peça já foi adicionada à ordem. Edite a quantidade se necessário.",
-        variant: "destructive",
-      })
-      return
-    }
+  const addManualItem = () => {
+    const newItens = [...itens, { nome_item: '', quantidade: 1, preco_unitario: 0, is_from_estoque: false }]
+    handleItensChange(newItens)
+  }
 
+  const handleRemoveItem = (index: number) => {
+    const newItens = itens.filter((_, i) => i !== index)
+    handleItensChange(newItens)
+  }
+
+  const handleUpdateItem = (index: number, field: keyof ItemForm, value: string | number) => {
+    const newItens = [...itens]
+    newItens[index] = { ...newItens[index], [field]: value }
+    handleItensChange(newItens)
+  }
+
+  const handleSelectFromEstoque = (peca: PecaManutencao, quantidade: number) => {
     const newItem: ItemForm = {
-      peca_id: item.peca_id,
-      nome_item: item.nome_peca,
-      quantidade: item.quantidade,
-      preco_unitario: item.preco_unitario,
+      peca_id: peca.id,
+      nome_item: peca.nome,
+      quantidade,
+      preco_unitario: peca.preco_unitario,
       is_from_estoque: true
     }
-    setItens([...itens, newItem])
+    const newItens = [...itens, newItem]
+    handleItensChange(newItens)
   }
 
-  const removeItem = (index: number) => {
-    setItens(itens.filter((_, i) => i !== index))
-  }
-
-  const updateItem = (index: number, field: keyof ItemForm, value: string | number) => {
-    const updatedItens = [...itens]
-    updatedItens[index] = { ...updatedItens[index], [field]: value }
-    setItens(updatedItens)
-  }
-
-  const totalItens = itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)
+  const usedPecas = itens.filter(item => item.peca_id).map(item => item.peca_id!)
+  const errors = validateItens()
 
   if (readOnly && itens.length > 0) {
     return (
@@ -71,30 +79,30 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
         
         <div className="space-y-3">
           {itens.map((item, index) => (
-            <div key={index} className="p-3 sm:p-4 bg-muted/50 rounded-lg border">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+            <div key={index} className="p-4 bg-muted/30 rounded-lg border">
+              <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <p className="font-medium text-sm">{item.nome_item}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-medium">{item.nome_item}</p>
                     {item.is_from_estoque && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full self-start">📦 Estoque</span>
+                      <Badge variant="secondary" className="text-xs">Estoque</Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Qtd: {item.quantidade} × R$ {item.preco_unitario.toFixed(2)}
+                  <p className="text-sm text-muted-foreground">
+                    {item.quantidade} × R$ {item.preco_unitario.toFixed(2)}
                   </p>
                 </div>
-                <div className="text-left sm:text-right">
-                  <p className="font-semibold text-sm">R$ {(item.quantidade * item.preco_unitario).toFixed(2)}</p>
+                <div className="text-right">
+                  <p className="font-semibold">R$ {(item.quantidade * item.preco_unitario).toFixed(2)}</p>
                 </div>
               </div>
             </div>
           ))}
           
-          <div className="p-3 sm:p-4 bg-primary/5 rounded-lg border border-primary/20">
+          <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
             <div className="flex justify-between items-center">
               <Label className="font-medium">Total das Peças</Label>
-              <p className="font-bold text-lg">R$ {totalItens.toFixed(2)}</p>
+              <p className="font-bold text-lg">R$ {totalValue.toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -103,158 +111,138 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:gap-4">
+    <div className="space-y-6">
+      {/* Header com ações */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Package2 className="h-5 w-5 text-muted-foreground" />
-          <Label className="text-base font-medium">Peças Utilizadas</Label>
+          <Label className="text-base font-medium">Peças e Materiais</Label>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-2 w-full">
-          <div className="flex-1">
-            <ItemSelector onAddItem={addItemFromSelector} />
-          </div>
-          <Button type="button" variant="outline" size="sm" onClick={addItem} className="w-full sm:w-auto">
+        <div className="flex gap-2">
+          <EstoquePicker 
+            onSelectPeca={handleSelectFromEstoque}
+            usedPecas={usedPecas}
+          />
+          <Button type="button" variant="outline" onClick={addManualItem}>
             <Plus className="h-4 w-4 mr-2" />
             Item Manual
           </Button>
         </div>
       </div>
-      
-      {itens.length > 0 && (
-        <div className="space-y-3">
-          {itens.map((item, index) => (
-            <div key={index} className="flex flex-col gap-3 p-3 border rounded-lg bg-card">
-              {/* Mobile Layout */}
-              <div className="block sm:hidden space-y-3">
-                <div>
-                  <Label className="text-xs font-medium text-muted-foreground">Nome do Item</Label>
-                  <Input
-                    value={item.nome_item}
-                    onChange={(e) => updateItem(index, 'nome_item', e.target.value)}
-                    placeholder="Ex: Tela LCD"
-                    className="h-9 text-sm mt-1"
-                    disabled={item.is_from_estoque}
-                    readOnly={item.is_from_estoque}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Qtd</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={item.quantidade}
-                      onChange={(e) => updateItem(index, 'quantidade', parseInt(e.target.value) || 1)}
-                      className="h-9 text-sm mt-1"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Preço Unit.</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={item.preco_unitario}
-                      onChange={(e) => updateItem(index, 'preco_unitario', parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                      className="h-9 text-sm mt-1"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Total</Label>
-                    <div className="text-sm font-medium">
-                      R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
-                    </div>
-                  </div>
-                  
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => removeItem(index)}
-                    className="h-9 w-9 text-red-500 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
 
-              {/* Desktop Layout */}
-              <div className="hidden sm:flex sm:items-center sm:gap-3">
-                <div className="flex-1">
-                  <Label className="text-xs font-medium text-muted-foreground">Nome do Item</Label>
-                  <Input
-                    value={item.nome_item}
-                    onChange={(e) => updateItem(index, 'nome_item', e.target.value)}
-                    placeholder="Ex: Tela LCD"
-                    className="h-9 text-sm mt-1"
-                    disabled={item.is_from_estoque}
-                    readOnly={item.is_from_estoque}
-                  />
+      {/* Alertas de validação */}
+      {errors.length > 0 && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <span className="font-medium text-destructive">Problemas encontrados:</span>
+          </div>
+          <ul className="text-sm text-destructive space-y-1">
+            {errors.map((error, index) => (
+              <li key={index}>• {error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
+      {/* Lista de itens */}
+      {itens.length > 0 ? (
+        <div className="space-y-4">
+          {itens.map((item, index) => (
+            <div key={index} className="p-4 border rounded-lg bg-card space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">Item {index + 1}</span>
+                  {item.is_from_estoque && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Package2 className="h-3 w-3 mr-1" />
+                      Estoque
+                    </Badge>
+                  )}
                 </div>
-                
-                <div className="w-24">
-                  <Label className="text-xs font-medium text-muted-foreground">Qtd</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={item.quantidade}
-                    onChange={(e) => updateItem(index, 'quantidade', parseInt(e.target.value) || 1)}
-                    className="h-9 text-sm mt-1"
-                  />
-                </div>
-                
-                <div className="w-28">
-                  <Label className="text-xs font-medium text-muted-foreground">Preço Unit.</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={item.preco_unitario}
-                    onChange={(e) => updateItem(index, 'preco_unitario', parseFloat(e.target.value) || 0)}
-                    placeholder="0.00"
-                    className="h-9 text-sm mt-1"
-                  />
-                </div>
-                
-                <div className="w-28">
-                  <Label className="text-xs font-medium text-muted-foreground">Total</Label>
-                  <div className="text-sm font-medium bg-muted px-3 py-2 rounded mt-1 text-center">
-                    R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
-                  </div>
-                </div>
-                
                 <Button
                   type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => removeItem(index)}
-                  className="h-9 w-9 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveItem(index)}
+                  className="text-destructive hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="md:col-span-6">
+                  <Label className="text-sm font-medium">Nome do Item</Label>
+                  <Input
+                    value={item.nome_item}
+                    onChange={(e) => handleUpdateItem(index, 'nome_item', e.target.value)}
+                    placeholder="Ex: Tela LCD"
+                    disabled={item.is_from_estoque}
+                    readOnly={item.is_from_estoque}
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <Label className="text-sm font-medium">Quantidade</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={item.quantidade}
+                    onChange={(e) => handleUpdateItem(index, 'quantidade', parseInt(e.target.value) || 1)}
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <Label className="text-sm font-medium">Preço Unit.</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={item.preco_unitario}
+                    onChange={(e) => handleUpdateItem(index, 'preco_unitario', parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                    className="mt-1"
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <Label className="text-sm font-medium">Total</Label>
+                  <div className="mt-1 px-3 py-2 bg-muted rounded-md text-sm font-medium">
+                    R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
           
-          <div className="p-3 sm:p-4 bg-primary/5 rounded-lg border border-primary/20">
+          {/* Total geral */}
+          <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
             <div className="flex justify-between items-center">
-              <Label className="font-medium">Total das Peças</Label>
-              <p className="font-bold text-lg">R$ {totalItens.toFixed(2)}</p>
+              <Label className="font-medium text-lg">Total das Peças</Label>
+              <p className="font-bold text-xl">R$ {totalValue.toFixed(2)}</p>
             </div>
           </div>
         </div>
-      )}
-      
-      {itens.length === 0 && (
-        <div className="text-center py-6 sm:py-8 text-muted-foreground border-2 border-dashed rounded-lg">
-          <Package2 className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Nenhuma peça adicionada</p>
-          <p className="text-xs">Use os botões acima para adicionar peças</p>
+      ) : (
+        <div className="text-center py-12 border-2 border-dashed rounded-lg bg-muted/20">
+          <Package2 className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-lg font-medium mb-2">Nenhuma peça adicionada</p>
+          <p className="text-muted-foreground mb-4">
+            Adicione peças do estoque ou crie itens manuais
+          </p>
+          <div className="flex gap-2 justify-center">
+            <EstoquePicker 
+              onSelectPeca={handleSelectFromEstoque}
+              usedPecas={usedPecas}
+            />
+            <Button type="button" variant="outline" onClick={addManualItem}>
+              <Plus className="h-4 w-4 mr-2" />
+              Item Manual
+            </Button>
+          </div>
         </div>
       )}
     </div>
