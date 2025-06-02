@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -6,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { FileText, Users, Wrench, Filter, CalendarIcon, Download, DollarSign, Activity, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { FileText, Users, Wrench, Filter, CalendarIcon, Download, DollarSign, Activity, CheckCircle, Clock, XCircle, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
@@ -109,27 +108,140 @@ export function Dashboard() {
     setDateFilter({})
   }
 
-// Agrupador único para totais
-const calculateTotals = () => {
-  return filteredOrders.reduce(
-    (totals, order) => {
-      const orderValue = order.valor || 0
-      const itensValue = order.itens?.reduce((itemTotal: number, item: any) =>
-        itemTotal + (item.quantidade * item.preco_unitario), 0) || 0
-      const totalOrder = orderValue + itensValue
+  const calculateTotals = () => {
+    return filteredOrders.reduce(
+      (totals, order) => {
+        const orderValue = order.valor || 0
+        const itensValue = order.itens?.reduce((itemTotal: number, item: any) =>
+          itemTotal + (item.quantidade * item.preco_unitario), 0) || 0
+        const totalOrder = orderValue + itensValue
 
-      if (order.status === 'cancelada') {
-        totals.totalCanceladas += totalOrder
-      } else {
-        totals.totalValidas += totalOrder
-      }
+        if (order.status === 'cancelada') {
+          totals.totalCanceladas += totalOrder
+        } else {
+          totals.totalValidas += totalOrder
+        }
 
-      return totals
-    },
-    { totalValidas: 0, totalCanceladas: 0 }
-  )
-}
+        return totals
+      },
+      { totalValidas: 0, totalCanceladas: 0 }
+    )
+  }
 
+  const downloadMetrics = async () => {
+    try {
+      // Buscar todas as métricas do sistema
+      const { data: allOrders, error: ordersError } = await supabase
+        .from('ordens_servico')
+        .select('*, itens:itens_ordem(*)')
+
+      if (ordersError) throw ordersError
+
+      const { data: allPecas, error: pecasError } = await supabase
+        .from('pecas_manutencao')
+        .select('*')
+
+      if (pecasError) throw pecasError
+
+      const { data: allItensOrdem, error: itensError } = await supabase
+        .from('itens_ordem')
+        .select('*')
+
+      if (itensError) throw itensError
+
+      // Calcular métricas completas
+      const totalFaturamento = allOrders?.reduce((total, ordem) => {
+        if (ordem.status === 'concluida') {
+          const valorOrdem = ordem.valor || 0
+          const valorItens = ordem.itens?.reduce((sum: number, item: any) => 
+            sum + (item.quantidade * item.preco_unitario), 0) || 0
+          return total + valorOrdem + valorItens
+        }
+        return total
+      }, 0) || 0
+
+      const pecasUtilizadas = allItensOrdem?.reduce((total, item) => total + item.quantidade, 0) || 0
+      const pecasEmEstoque = allPecas?.reduce((total, peca) => total + peca.estoque, 0) || 0
+      const valorEstoque = allPecas?.reduce((total, peca) => total + (peca.estoque * peca.preco_unitario), 0) || 0
+
+      const metricsData = [
+        {
+          'Métrica': 'Total de Ordens de Serviço',
+          'Valor': stats.totalOrdens,
+          'Observação': 'Todas as ordens cadastradas no sistema'
+        },
+        {
+          'Métrica': 'Clientes Cadastrados',
+          'Valor': stats.totalClientes,
+          'Observação': 'Total de clientes na base'
+        },
+        {
+          'Métrica': 'Técnicos Cadastrados',
+          'Valor': stats.totalTecnicos,
+          'Observação': 'Total de técnicos disponíveis'
+        },
+        {
+          'Métrica': 'Ordens Abertas',
+          'Valor': stats.ordensAbertas,
+          'Observação': 'Ordens aguardando atendimento'
+        },
+        {
+          'Métrica': 'Ordens Em Andamento',
+          'Valor': stats.ordensAndamento,
+          'Observação': 'Ordens sendo executadas'
+        },
+        {
+          'Métrica': 'Ordens Concluídas',
+          'Valor': stats.ordensConcluidas,
+          'Observação': 'Ordens finalizadas com sucesso'
+        },
+        {
+          'Métrica': 'Peças Utilizadas (Total)',
+          'Valor': pecasUtilizadas,
+          'Observação': 'Quantidade total de peças utilizadas em ordens'
+        },
+        {
+          'Métrica': 'Peças em Estoque',
+          'Valor': pecasEmEstoque,
+          'Observação': 'Quantidade total de peças disponíveis'
+        },
+        {
+          'Métrica': 'Valor Total em Estoque',
+          'Valor': `R$ ${valorEstoque.toFixed(2)}`,
+          'Observação': 'Valor monetário do estoque atual'
+        },
+        {
+          'Métrica': 'Faturamento Total (Ordens Concluídas)',
+          'Valor': `R$ ${totalFaturamento.toFixed(2)}`,
+          'Observação': 'Receita total de ordens concluídas'
+        },
+        {
+          'Métrica': 'Faturamento do Mês Atual',
+          'Valor': `R$ ${stats.faturamentoMes.toFixed(2)}`,
+          'Observação': 'Receita do mês atual'
+        }
+      ]
+
+      const ws = XLSX.utils.json_to_sheet(metricsData)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Métricas do Sistema')
+      
+      const fileName = `metricas_sistema_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+      XLSX.writeFile(wb, fileName)
+      
+      toast({
+        title: 'Métricas exportadas',
+        description: `Arquivo ${fileName} baixado com sucesso`,
+      })
+    } catch (error) {
+      console.error('Erro ao exportar métricas:', error)
+      toast({
+        title: 'Erro',
+        description: 'Erro ao exportar métricas do sistema',
+        variant: 'destructive',
+      })
+    }
+  }
 
   const downloadExcel = () => {
     if (filteredOrders.length === 0) {
@@ -399,41 +511,6 @@ const calculateTotals = () => {
         </Card>
       </div>
 
-     {filteredOrders.length > 0 && (
-  (() => {
-    const { totalValidas, totalCanceladas } = calculateTotals()
-
-    return (
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-1">
-              {statusFilter === 'all' ? (
-                <>
-                  <div className="text-sm font-semibold text-green-700">
-                    Ordens Válidas: R$ {totalValidas.toFixed(2)}
-                  </div>
-                  <div className="text-sm font-semibold text-red-600">
-                    Ordens Canceladas: R$ {totalCanceladas.toFixed(2)}
-                  </div>
-                </>
-              ) : (
-                <div className="text-sm font-semibold text-primary">
-                  Ordens '{statusLabels[statusFilter as keyof typeof statusLabels] || statusFilter}': R$ {(totalValidas + totalCanceladas).toFixed(2)}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                {filteredOrders.length} ordem{filteredOrders.length !== 1 ? 's' : ''} filtrada{filteredOrders.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  })()
-)}
-
-
       {/* Ordens de Serviço - Layout responsivo */}
       <Card>
         <CardHeader>
@@ -508,9 +585,40 @@ const calculateTotals = () => {
                   </Button>
                 )}
 
+                {/* Seção de totais reposicionada */}
+                {filteredOrders.length > 0 && (
+                  (() => {
+                    const { totalValidas, totalCanceladas } = calculateTotals()
+                    return (
+                      <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-md border text-sm">
+                        {statusFilter === 'all' ? (
+                          <>
+                            <span className="font-semibold text-green-700">
+                              Válidas: R$ {totalValidas.toFixed(2)}
+                            </span>
+                            <span className="text-muted-foreground">|</span>
+                            <span className="font-semibold text-red-600">
+                              Canceladas: R$ {totalCanceladas.toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-semibold text-primary">
+                            {statusLabels[statusFilter as keyof typeof statusLabels] || statusFilter}: R$ {(totalValidas + totalCanceladas).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })()
+                )}
+
                 <Button variant="outline" size="sm" onClick={downloadExcel}>
                   <Download className="h-4 w-4 mr-2" />
                   Excel
+                </Button>
+
+                <Button variant="outline" size="sm" onClick={downloadMetrics}>
+                  <Package className="h-4 w-4 mr-2" />
+                  Métricas
                 </Button>
               </div>
             </div>

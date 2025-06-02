@@ -1,6 +1,61 @@
 
 import { createClient } from '@supabase/supabase-js'
 
+// Função para validar estrutura do banco no Supabase
+const validateDatabaseStructure = async (client: any) => {
+  try {
+    console.log('Validando estrutura do banco de dados...')
+    
+    // Testar conexão básica
+    const { data: testConnection, error: connectionError } = await client
+      .from('clientes')
+      .select('count')
+      .limit(1)
+    
+    if (connectionError) {
+      console.error('Erro de conexão:', connectionError)
+      return false
+    }
+
+    // Verificar se todas as tabelas necessárias existem
+    const requiredTables = [
+      'clientes',
+      'tecnicos', 
+      'ordens_servico',
+      'pecas_manutencao',
+      'itens_ordem'
+    ]
+
+    for (const table of requiredTables) {
+      const { error } = await client
+        .from(table)
+        .select('*')
+        .limit(1)
+
+      if (error) {
+        console.error(`Tabela ${table} não encontrada ou inacessível:`, error)
+        return false
+      }
+    }
+
+    console.log('Estrutura do banco validada com sucesso!')
+    return true
+  } catch (error) {
+    console.error('Erro na validação do banco:', error)
+    return false
+  }
+}
+
+// Função para limpar localStorage preservando apenas o tema
+const clearLocalStorageExceptTheme = () => {
+  const theme = localStorage.getItem('theme')
+  localStorage.clear()
+  if (theme) {
+    localStorage.setItem('theme', theme)
+  }
+  console.log('localStorage limpo, apenas tema preservado')
+}
+
 // Função para obter configuração do localStorage
 const getSupabaseConfig = () => {
   try {
@@ -15,7 +70,7 @@ const getSupabaseConfig = () => {
 }
 
 // Criar cliente Supabase com configuração dinâmica
-const createSupabaseClient = () => {
+const createSupabaseClient = async () => {
   const config = getSupabaseConfig()
   if (!config.url || !config.anonKey) {
     console.log('Configuração Supabase não encontrada ou inválida')
@@ -23,14 +78,26 @@ const createSupabaseClient = () => {
   }
   
   try {
-    return createClient(config.url, config.anonKey)
+    const client = createClient(config.url, config.anonKey)
+    
+    // Validar estrutura do banco
+    const isValid = await validateDatabaseStructure(client)
+    
+    if (!isValid) {
+      console.log('Estrutura do banco inválida, limpando localStorage...')
+      clearLocalStorageExceptTheme()
+      return null
+    }
+    
+    return client
   } catch (error) {
     console.error('Erro ao criar cliente Supabase:', error)
+    clearLocalStorageExceptTheme()
     return null
   }
 }
 
-export const supabase = createSupabaseClient()
+export const supabase = await createSupabaseClient()
 
 // Types for our database tables
 export interface Cliente {
@@ -115,14 +182,33 @@ export interface OrdemCompleta extends Omit<OrdemServico, 'id'> {
 }
 
 // Função para recriar o cliente quando a configuração mudar
-export const recreateSupabaseClient = ({ url, anonKey }: { url: string; anonKey: string }) => {
+export const recreateSupabaseClient = async ({ url, anonKey }: { url: string; anonKey: string }) => {
   if (url && anonKey) {
     try {
-      return createClient(url, anonKey)
+      const client = createClient(url, anonKey)
+      
+      // Validar estrutura antes de aceitar a nova configuração
+      const isValid = await validateDatabaseStructure(client)
+      
+      if (!isValid) {
+        throw new Error('Estrutura do banco de dados inválida')
+      }
+      
+      return client
     } catch (error) {
       console.error('Erro ao recriar cliente Supabase:', error)
-      return null
+      clearLocalStorageExceptTheme()
+      throw error
     }
   }
+  clearLocalStorageExceptTheme()
   return null
+}
+
+// Função para desconectar e limpar dados
+export const disconnectDatabase = () => {
+  console.log('Desconectando banco e limpando dados...')
+  clearLocalStorageExceptTheme()
+  // Recarregar a página para garantir que todos os estados sejam limpos
+  window.location.reload()
 }

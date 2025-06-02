@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
@@ -7,6 +6,7 @@ import { useToast } from '@/hooks/use-toast'
 import { OrdemBasicInfo } from '@/components/OrdemBasicInfo'
 import { OrdemItensManager } from '@/components/OrdemItensManager'
 import { OrdemStatusSection } from '@/components/OrdemStatusSection'
+import { EstoqueSidebar } from '@/components/EstoqueSidebar'
 import { useEstoqueManager } from '@/hooks/useEstoqueManager'
 
 interface OrdemFormProps {
@@ -201,66 +201,78 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-2 sm:p-4">
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        {/* Informações Básicas */}
-        <div className="bg-card border rounded-lg p-3 sm:p-4">
-          <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Informações Básicas</h3>
-          <OrdemBasicInfo
-            clienteId={clienteId}
-            setClienteId={setClienteId}
-            tecnicoId={tecnicoId}
-            setTecnicoId={setTecnicoId}
-            dispositivo={dispositivo}
-            setDispositivo={setDispositivo}
-            descricaoProblema={descricaoProblema}
-            setDescricaoProblema={setDescricaoProblema}
-            diagnostico={diagnostico}
-            setDiagnostico={setDiagnostico}
-            servicoRealizado={servicoRealizado}
-            setServicoRealizado={setServicoRealizado}
-            clientes={clientes}
-            tecnicos={tecnicos}
-            readOnly={readOnly}
-          />
+    <div className="max-w-7xl mx-auto p-2 sm:p-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+        {/* Formulário Principal */}
+        <div className="lg:col-span-3">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            {/* Informações Básicas */}
+            <div className="bg-card border rounded-lg p-3 sm:p-4">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Informações Básicas</h3>
+              <OrdemBasicInfo
+                clienteId={clienteId}
+                setClienteId={setClienteId}
+                tecnicoId={tecnicoId}
+                setTecnicoId={setTecnicoId}
+                dispositivo={dispositivo}
+                setDispositivo={setDispositivo}
+                descricaoProblema={descricaoProblema}
+                setDescricaoProblema={setDescricaoProblema}
+                diagnostico={diagnostico}
+                setDiagnostico={setDiagnostico}
+                servicoRealizado={servicoRealizado}
+                setServicoRealizado={setServicoRealizado}
+                clientes={clientes}
+                tecnicos={tecnicos}
+                readOnly={readOnly}
+              />
+            </div>
+
+            {/* Itens da Ordem */}
+            <div className="bg-card border rounded-lg p-3 sm:p-4">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Peças e Materiais</h3>
+              <OrdemItensManager
+                itens={itens}
+                setItens={setItens}
+                readOnly={readOnly}
+              />
+            </div>
+
+            {/* Status e Valores */}
+            <div className="bg-card border rounded-lg p-3 sm:p-4">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Status e Valores</h3>
+              <OrdemStatusSection
+                status={status}
+                setStatus={setStatus}
+                valor={valor}
+                setValor={setValor}
+                totalItens={itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)}
+                readOnly={readOnly}
+              />
+            </div>
+
+            {/* Botões de Ação */}
+            {!readOnly && (
+              <div className="flex justify-end space-x-2 sm:space-x-4 pt-2 sm:pt-4">
+                <Button 
+                  type="submit" 
+                  disabled={saveOrdem.isPending}
+                  className="min-w-32"
+                >
+                  {saveOrdem.isPending ? 'Salvando...' : (ordem ? 'Atualizar Ordem' : 'Criar Ordem')}
+                </Button>
+              </div>
+            )}
+          </form>
         </div>
 
-        {/* Itens da Ordem */}
-        <div className="bg-card border rounded-lg p-3 sm:p-4">
-          <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Peças e Materiais</h3>
-          <OrdemItensManager
-            itens={itens}
-            setItens={setItens}
-            readOnly={readOnly}
-          />
-        </div>
-
-        {/* Status e Valores */}
-        <div className="bg-card border rounded-lg p-3 sm:p-4">
-          <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Status e Valores</h3>
-          <OrdemStatusSection
-            status={status}
-            setStatus={setStatus}
-            valor={valor}
-            setValor={setValor}
-            totalItens={itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)}
-            readOnly={readOnly}
-          />
-        </div>
-
-        {/* Botões de Ação */}
-        {!readOnly && (
-          <div className="flex justify-end space-x-2 sm:space-x-4 pt-2 sm:pt-4">
-            <Button 
-              type="submit" 
-              disabled={saveOrdem.isPending}
-              className="min-w-32"
-            >
-              {saveOrdem.isPending ? 'Salvando...' : (ordem ? 'Atualizar Ordem' : 'Criar Ordem')}
-            </Button>
+        {/* Sidebar de Estoque */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-4">
+            <EstoqueSidebar />
           </div>
-        )}
-      </form>
+        </div>
+      </div>
     </div>
   )
 }
