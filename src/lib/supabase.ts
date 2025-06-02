@@ -97,7 +97,29 @@ const createSupabaseClient = async () => {
   }
 }
 
-export const supabase = await createSupabaseClient()
+// Variable to store the initialized client
+let supabaseClient: any = null
+let clientInitPromise: Promise<any> | null = null
+
+// Function to get or initialize the Supabase client
+export const getSupabaseClient = async () => {
+  if (supabaseClient) {
+    return supabaseClient
+  }
+  
+  if (clientInitPromise) {
+    return await clientInitPromise
+  }
+  
+  clientInitPromise = createSupabaseClient()
+  supabaseClient = await clientInitPromise
+  clientInitPromise = null
+  
+  return supabaseClient
+}
+
+// Export the client as null initially - components should use getSupabaseClient()
+export const supabase = null
 
 // Types for our database tables
 export interface Cliente {
@@ -194,6 +216,9 @@ export const recreateSupabaseClient = async ({ url, anonKey }: { url: string; an
         throw new Error('Estrutura do banco de dados inválida')
       }
       
+      // Reset the cached client
+      supabaseClient = client
+      
       return client
     } catch (error) {
       console.error('Erro ao recriar cliente Supabase:', error)
@@ -202,12 +227,14 @@ export const recreateSupabaseClient = async ({ url, anonKey }: { url: string; an
     }
   }
   clearLocalStorageExceptTheme()
+  supabaseClient = null
   return null
 }
 
 // Função para desconectar e limpar dados
 export const disconnectDatabase = () => {
   console.log('Desconectando banco e limpando dados...')
+  supabaseClient = null
   clearLocalStorageExceptTheme()
   // Recarregar a página para garantir que todos os estados sejam limpos
   window.location.reload()

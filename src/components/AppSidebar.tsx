@@ -1,7 +1,7 @@
 
 import { Home, Users, Wrench, FileText, Settings, Package } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import {
   Sidebar,
   SidebarContent,
@@ -52,6 +52,9 @@ export function AppSidebar() {
   const { data: dadosEmpresa } = useQuery({
     queryKey: ['dados-empresa'],
     queryFn: async () => {
+      const supabase = await getSupabaseClient()
+      if (!supabase) return null
+      
       const { data, error } = await supabase
         .from('dados_empresa')
         .select('*')
