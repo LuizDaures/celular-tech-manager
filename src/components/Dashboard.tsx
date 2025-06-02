@@ -109,14 +109,27 @@ export function Dashboard() {
     setDateFilter({})
   }
 
-  const calculateTotalValue = () => {
-    return filteredOrders.reduce((total, order) => {
+// Agrupador único para totais
+const calculateTotals = () => {
+  return filteredOrders.reduce(
+    (totals, order) => {
       const orderValue = order.valor || 0
-      const itensValue = order.itens?.reduce((itemTotal: number, item: any) => 
+      const itensValue = order.itens?.reduce((itemTotal: number, item: any) =>
         itemTotal + (item.quantidade * item.preco_unitario), 0) || 0
-      return total + orderValue + itensValue
-    }, 0)
-  }
+      const totalOrder = orderValue + itensValue
+
+      if (order.status === 'cancelada') {
+        totals.totalCanceladas += totalOrder
+      } else {
+        totals.totalValidas += totalOrder
+      }
+
+      return totals
+    },
+    { totalValidas: 0, totalCanceladas: 0 }
+  )
+}
+
 
   const downloadExcel = () => {
     if (filteredOrders.length === 0) {
@@ -386,25 +399,40 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Valor Total das Ordens Filtradas - REDESIGN SIMPLES */}
-      {filteredOrders.length > 0 && calculateTotalValue() > 0 && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-primary" />
-                <span className="font-medium text-sm sm:text-base">Total das Ordens Selecionadas:</span>
-              </div>
-              <div className="text-xl sm:text-2xl font-bold text-primary">
-                R$ {calculateTotalValue().toFixed(2)}
-              </div>
+     {filteredOrders.length > 0 && (
+  (() => {
+    const { totalValidas, totalCanceladas } = calculateTotals()
+
+    return (
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              {statusFilter === 'all' ? (
+                <>
+                  <div className="text-sm font-semibold text-green-700">
+                    Ordens Válidas: R$ {totalValidas.toFixed(2)}
+                  </div>
+                  <div className="text-sm font-semibold text-red-600">
+                    Ordens Canceladas: R$ {totalCanceladas.toFixed(2)}
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm font-semibold text-primary">
+                  Ordens '{statusLabels[statusFilter as keyof typeof statusLabels] || statusFilter}': R$ {(totalValidas + totalCanceladas).toFixed(2)}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {filteredOrders.length} ordem{filteredOrders.length !== 1 ? 's' : ''} filtrada{filteredOrders.length !== 1 ? 's' : ''}
+              </p>
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              {filteredOrders.length} ordem{filteredOrders.length !== 1 ? 's' : ''} filtrada{filteredOrders.length !== 1 ? 's' : ''}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  })()
+)}
+
 
       {/* Ordens de Serviço - Layout responsivo */}
       <Card>

@@ -172,12 +172,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     }
   })
 
-  const calculateTotal = () => {
-    const itensTotal = itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)
-    const valorManutencao = parseFloat(valor) || 0
-    return itensTotal + valorManutencao
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     

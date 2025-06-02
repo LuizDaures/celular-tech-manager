@@ -117,13 +117,10 @@ export function OrdemStatusSection({
         <div className="space-y-2">
           <Label className="text-sm font-medium">Total Geral</Label>
           <Card>
-            <CardContent className="p-3">
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-1">
-                  Peças: R$ {totalItens.toFixed(2)} + Manutenção: R$ {valorManutencao.toFixed(2)}
-                </p>
-                <p className="text-xl font-bold">R$ {totalGeral.toFixed(2)}</p>
-              </div>
+            <CardContent className="p-2">
+        
+                <p className="text-sm">R$ {totalGeral.toFixed(2)}</p>
+         
             </CardContent>
           </Card>
         </div>
