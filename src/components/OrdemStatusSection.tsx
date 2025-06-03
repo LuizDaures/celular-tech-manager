@@ -37,7 +37,7 @@ export function OrdemStatusSection({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Status */}
-      <div className="space-y-2">
+      <div className="space-y-2 md:col-span-2">
         <Label>Status da Ordem</Label>
         {readOnly ? (
           <div className="py-2">
@@ -47,7 +47,7 @@ export function OrdemStatusSection({
           </div>
         ) : (
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger>
+            <SelectTrigger className="max-w-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -61,7 +61,7 @@ export function OrdemStatusSection({
         )}
       </div>
 
-      {/* Valor Manutenção */}
+      {/* Valor Manutenção e Valor Total na mesma linha */}
       <div className="space-y-2">
         <Label>Valor Manutenção</Label>
         {readOnly ? (
@@ -79,8 +79,7 @@ export function OrdemStatusSection({
         )}
       </div>
 
-      {/* Valor Total */}
-      <div className="space-y-2 md:col-span-2">
+      <div className="space-y-2">
         <Label>Valor Total</Label>
         {readOnly ? (
           <div className="py-2 text-lg font-semibold">

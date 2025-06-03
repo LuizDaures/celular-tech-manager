@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, Cliente } from '@/lib/supabase'
+import { getSupabaseClient, Cliente } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,6 +27,11 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
 
   const saveCliente = useMutation({
     mutationFn: async (data: { nome: string; telefone?: string; email?: string; endereco?: string; cpf?: string }) => {
+      const supabase = await getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Conexão com banco não disponível')
+      }
+
       if (cliente) {
         const { error } = await supabase
           .from('clientes')
@@ -52,10 +57,11 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
       })
       onSuccess()
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Error saving cliente:', error)
       toast({
         title: "Erro",
-        description: "Erro ao salvar cliente.",
+        description: "Erro ao salvar cliente: " + error.message,
         variant: "destructive",
       })
     }
