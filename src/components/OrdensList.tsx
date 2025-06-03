@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseClient, OrdemCompleta } from '@/lib/supabase'
@@ -10,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { OrdemForm } from '@/components/OrdemForm'
-import { Plus, Search, Edit, Eye, Trash, Download, Filter, Check } from 'lucide-react'
+import { Plus, Search, Edit, Eye, Trash, Download, Filter } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 const statusColors = {
@@ -47,6 +48,7 @@ export function OrdensList() {
         throw new Error('Database connection not available')
       }
       
+      // Buscar diretamente da tabela ordens_servico com joins
       const { data, error } = await supabase
         .from('ordens_servico')
         .select(`
@@ -78,6 +80,9 @@ export function OrdensList() {
         throw error
       }
       
+      console.log('Raw data from Supabase:', data)
+      
+      // Transform the data to match our interface
       const transformedData = data?.map(item => {
         const itensTotal = item.itens_ordem?.reduce((sum: number, itm: any) => 
           sum + (itm.quantidade * itm.preco_unitario), 0) || 0
@@ -124,40 +129,8 @@ export function OrdensList() {
         }
       }) || []
       
+      console.log('Transformed data:', transformedData)
       return transformedData as OrdemCompleta[]
-    }
-  })
-
-  // Mutation para concluir ordem
-  const concluirOrdemMutation = useMutation({
-    mutationFn: async (ordemId: string) => {
-      const supabase = await getSupabaseClient()
-      if (!supabase) throw new Error('Database connection not available')
-
-      const { error } = await supabase
-        .from('ordens_servico')
-        .update({ 
-          status: 'concluida',
-          data_conclusao: new Date().toISOString()
-        })
-        .eq('id', ordemId)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Ordem Concluída',
-        description: 'A ordem foi marcada como concluída com sucesso.',
-      })
-      queryClient.invalidateQueries({ queryKey: ['ordens'] })
-    },
-    onError: (error: Error) => {
-      console.error('Error concluding ordem:', error)
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível concluir a ordem de serviço.',
-        variant: 'destructive',
-      })
     }
   })
 
@@ -166,6 +139,7 @@ export function OrdensList() {
       const supabase = await getSupabaseClient()
       if (!supabase) throw new Error('Database connection not available')
 
+      // Primeiro excluir os itens da ordem
       const { error: itensError } = await supabase
         .from('itens_ordem')
         .delete()
@@ -173,6 +147,7 @@ export function OrdensList() {
 
       if (itensError) throw itensError
 
+      // Depois excluir a ordem
       const { error } = await supabase
         .from('ordens_servico')
         .delete()
@@ -218,7 +193,7 @@ export function OrdensList() {
 
       const empresa = empresaData || { nome: 'Sistema de Gestão', cnpj: '', logo_base64: '' }
 
-      // Template HTML com logo circular centralizada
+      // Template HTML otimizado com layout mais compacto e margens
       const htmlTemplate = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -242,7 +217,7 @@ export function OrdensList() {
       font-family: 'Arial', sans-serif;
       font-size: 12px;
       line-height: 1.4;
-      color: #000;
+      color: #333;
       background: #fff;
       margin: 20px;
       padding: 20px;
@@ -260,66 +235,56 @@ export function OrdensList() {
     
     .header {
       text-align: center;
-      margin-bottom: 25px;
-      border-bottom: 2px solid #000;
-      padding-bottom: 20px;
-    }
-
-    .logo-container {
-      margin-bottom: 15px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .logo {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      border: 3px solid #000;
-      object-fit: cover;
-      object-position: center;
-      display: block;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 15px;
     }
     
-    .company-info {
-      margin-bottom: 15px;
-    }
-
-    .company-info h2 {
-      font-size: 18px;
-      color: #000;
-      margin-bottom: 6px;
+    .header h1 {
+      font-size: 20px;
       font-weight: bold;
+      margin-bottom: 8px;
+      color: #2563eb;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
-
-    .company-info .cnpj {
-      font-size: 14px;
-      color: #000;
-      margin-bottom: 10px;
+    
+    .header-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .company-info h2 {
+      font-size: 16px;
+      color: #1f2937;
+      margin-bottom: 4px;
     }
     
     .ordem-info {
-      background: #f8f8f8;
-      padding: 12px 20px;
-      border-radius: 8px;
-      border: 2px solid #000;
-      display: inline-block;
-      margin: 0 auto;
+      text-align: right;
+      background: #f3f4f6;
+      padding: 10px 15px;
+      border-radius: 6px;
+      border-left: 4px solid #2563eb;
+      min-width: 220px;
     }
     
     .ordem-info .numero {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
-      color: #000;
-      margin-bottom: 6px;
+      color: #2563eb;
+      margin-bottom: 4px;
     }
     
     .date-info {
       display: flex;
-      justify-content: center;
-      gap: 20px;
-      font-size: 12px;
+      justify-content: space-between;
+      font-size: 11px;
+      gap: 10px;
       flex-wrap: wrap;
     }
     
@@ -332,7 +297,7 @@ export function OrdensList() {
     
     .section {
       margin-bottom: 15px;
-      border: 1px solid #ccc;
+      border: 1px solid #d1d5db;
       border-radius: 6px;
       overflow: hidden;
       background: #fff;
@@ -340,7 +305,7 @@ export function OrdensList() {
     }
     
     .section-header {
-      background: #000;
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
       color: white;
       padding: 8px 12px;
       font-weight: bold;
@@ -373,7 +338,7 @@ export function OrdensList() {
     
     .label {
       font-weight: bold;
-      color: #000;
+      color: #374151;
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.3px;
@@ -381,22 +346,22 @@ export function OrdensList() {
     }
     
     .value {
-      border-bottom: 1px solid #ccc;
+      border-bottom: 1px solid #d1d5db;
       min-height: 18px;
       padding: 2px 0;
-      color: #000;
+      color: #1f2937;
       font-size: 12px;
       word-wrap: break-word;
     }
     
     .text-area {
       min-height: 50px;
-      border: 1px solid #ccc;
+      border: 1px solid #d1d5db;
       padding: 8px;
       border-radius: 4px;
-      background: #f9f9f9;
+      background: #f9fafb;
       white-space: pre-wrap;
-      color: #000;
+      color: #1f2937;
       font-size: 12px;
       word-wrap: break-word;
       line-height: 1.5;
@@ -413,10 +378,10 @@ export function OrdensList() {
       white-space: nowrap;
     }
     
-    .status-aberta { background: #e6e6e6; color: #000; }
-    .status-em_andamento { background: #fff3cd; color: #856404; }
-    .status-concluida { background: #d4edda; color: #155724; }
-    .status-cancelada { background: #f8d7da; color: #721c24; }
+    .status-aberta { background: #dbeafe; color: #1d4ed8; }
+    .status-em_andamento { background: #fef3c7; color: #d97706; }
+    .status-concluida { background: #d1fae5; color: #059669; }
+    .status-cancelada { background: #fee2e2; color: #dc2626; }
     
     .pecas-table {
       width: 100%;
@@ -427,16 +392,16 @@ export function OrdensList() {
     
     .pecas-table th,
     .pecas-table td {
-      border: 1px solid #ccc;
+      border: 1px solid #d1d5db;
       padding: 6px 8px;
       text-align: left;
       word-wrap: break-word;
     }
     
     .pecas-table th {
-      background: #f0f0f0;
+      background: #f3f4f6;
       font-weight: bold;
-      color: #000;
+      color: #374151;
       font-size: 10px;
     }
     
@@ -445,7 +410,7 @@ export function OrdensList() {
     }
     
     .totals {
-      background: #f5f5f5;
+      background: #f8fafc;
       border-radius: 6px;
       padding: 12px;
       margin-top: 10px;
@@ -461,10 +426,10 @@ export function OrdensList() {
     
     .totals-row:last-child {
       margin-bottom: 0;
-      border-top: 2px solid #000;
+      border-top: 2px solid #2563eb;
       padding-top: 6px;
       font-weight: bold;
-      color: #000;
+      color: #2563eb;
       font-size: 14px;
     }
     
@@ -482,14 +447,14 @@ export function OrdensList() {
     }
     
     .signature-line {
-      border-bottom: 1px solid #000;
+      border-bottom: 1px solid #374151;
       height: 40px;
       margin-bottom: 6px;
     }
     
     .signature-label {
       font-size: 10px;
-      color: #000;
+      color: #6b7280;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -497,8 +462,8 @@ export function OrdensList() {
     .footer {
       text-align: center;
       font-size: 9px;
-      color: #666;
-      border-top: 1px solid #ccc;
+      color: #6b7280;
+      border-top: 1px solid #e5e7eb;
       padding-top: 12px;
       margin-top: 15px;
     }
@@ -546,30 +511,29 @@ export function OrdensList() {
 </head>
 <body>
   <div class="container">
+    <!-- Cabeçalho -->
     <div class="header">
-      ${empresa.logo_base64 ? `
-      <div class="logo-container">
-        <img src="data:image/png;base64,${empresa.logo_base64}" alt="Logo da empresa" class="logo" />
-      </div>
-      ` : ''}
-      
-      <div class="company-info">
-        <h2>${empresa.nome}</h2>
-        ${empresa.cnpj ? `<div class="cnpj">CNPJ: ${empresa.cnpj}</div>` : ''}
-      </div>
-      
-      <div class="ordem-info">
-        <div class="numero">Nº ${ordem.id?.slice(-6).toUpperCase() || '000001'}</div>
-        <div class="status-badge status-${ordem.status}">${statusLabels[ordem.status]}</div>
-      </div>
-      
-      <div class="date-info">
-        <span><strong>Abertura:</strong> ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</span>
-        ${ordem.data_conclusao ? `<span><strong>Conclusão:</strong> ${new Date(ordem.data_conclusao).toLocaleDateString('pt-BR')}</span>` : ''}
+      <h1>Ordem de Serviço</h1>
+      <div class="header-info">
+        <div class="company-info">
+          <h2>${empresa.nome}</h2>
+          ${empresa.cnpj ? `<div style="font-size: 12px; margin-top: 4px;">CNPJ: ${empresa.cnpj}</div>` : ''}
+        </div>
+        <div class="ordem-info">
+          <div class="numero">Nº ${ordem.id?.slice(-6).toUpperCase() || '000001'}</div>
+          <div class="date-info">
+            <span><strong>Abertura:</strong> ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</span>
+            ${ordem.data_conclusao ? `<span><strong>Conclusão:</strong> ${new Date(ordem.data_conclusao).toLocaleDateString('pt-BR')}</span>` : ''}
+          </div>
+          <div style="margin-top: 6px;">
+            <span class="status-badge status-${ordem.status}">${statusLabels[ordem.status]}</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="content">
+      <!-- Grid Compacto para informações principais -->
       <div class="compact-grid">
         <div class="section">
           <div class="section-header">Dados do Cliente</div>
@@ -610,6 +574,7 @@ export function OrdensList() {
         </div>
       </div>
 
+      <!-- Problema -->
       <div class="section">
         <div class="section-header">Problema Relatado</div>
         <div class="section-content">
@@ -618,6 +583,7 @@ export function OrdensList() {
       </div>
 
       ${ordem.diagnostico || ordem.servico_realizado ? `
+      <!-- Diagnóstico e Serviços -->
       <div class="compact-grid">
         ${ordem.diagnostico ? `
         <div class="section">
@@ -640,6 +606,7 @@ export function OrdensList() {
       ` : ''}
 
       ${ordem.itens && ordem.itens.length > 0 ? `
+      <!-- Peças -->
       <div class="section">
         <div class="section-header">Peças e Componentes</div>
         <div class="section-content">
@@ -667,6 +634,7 @@ export function OrdensList() {
       </div>
       ` : ''}
 
+      <!-- Resumo Financeiro -->
       <div class="section">
         <div class="section-header">Resumo Financeiro</div>
         <div class="section-content">
@@ -688,6 +656,7 @@ export function OrdensList() {
       </div>
     </div>
 
+    <!-- Assinaturas -->
     <div class="signatures">
       <div class="signature-box">
         <div class="signature-line"></div>
@@ -699,6 +668,7 @@ export function OrdensList() {
       </div>
     </div>
 
+    <!-- Rodapé -->
     <div class="footer">
       <p>Documento gerado em ${new Date().toLocaleString('pt-BR')} - ${empresa.nome}</p>
     </div>
@@ -707,17 +677,21 @@ export function OrdensList() {
 </html>
       `
 
+      // Criar um blob com o conteúdo HTML
       const blob = new Blob([htmlTemplate], { type: 'text/html' })
       const url = URL.createObjectURL(blob)
       
+      // Criar um link temporário para download
       const link = document.createElement('a')
       link.href = url
       link.download = `OS-${ordem.id?.slice(-6).toUpperCase() || '000001'}.html`
       
+      // Adicionar ao DOM, clicar e remover
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       
+      // Limpar o URL do blob
       URL.revokeObjectURL(url)
 
       toast({
@@ -761,10 +735,6 @@ export function OrdensList() {
 
   const handleDelete = (id: string) => {
     deleteMutation.mutate(id)
-  }
-
-  const handleConcluirOrdem = (id: string) => {
-    concluirOrdemMutation.mutate(id)
   }
 
   const handleCloseDialog = () => {
@@ -859,7 +829,8 @@ export function OrdensList() {
                     <TableHead className="hidden md:table-cell">Problema</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden lg:table-cell">Data Abertura</TableHead>
-                    <TableHead className="hidden md:table-cell">Valor Total</TableHead>
+                    <TableHead className="hidden md:table-cell">Valor Manutenção</TableHead>
+                    <TableHead className="hidden lg:table-cell">Total Itens</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -878,48 +849,18 @@ export function OrdensList() {
                         {new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {((ordem.valor_manutencao || 0) + (ordem.total || 0)) > 0 ? 
-                          `R$ ${((ordem.valor_manutencao || 0) + (ordem.total || 0)).toFixed(2)}` : '-'}
+                        {ordem.valor_manutencao ? `R$ ${ordem.valor_manutencao?.toFixed(2)}` : '-'}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {ordem.total ? `R$ ${ordem.total?.toFixed(2)}` : '-'}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-1">
-                          {(ordem.status === 'aberta' || ordem.status === 'em_andamento') && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                  title="Concluir ordem"
-                                >
-                                  <Check className="h-3 w-3" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="mx-4">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Concluir Ordem</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Tem certeza que deseja marcar esta ordem como concluída? A data de conclusão será registrada automaticamente.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction 
-                                    onClick={() => handleConcluirOrdem(ordem.id)}
-                                    className="bg-green-600 hover:bg-green-700"
-                                  >
-                                    Concluir
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
                           <Button
                             variant="outline"
                             size="icon"
                             onClick={() => handleDownload(ordem)}
                             className="h-8 w-8"
-                            title="Download PDF"
                           >
                             <Download className="h-3 w-3" />
                           </Button>
@@ -928,7 +869,6 @@ export function OrdensList() {
                             size="icon"
                             onClick={() => handleView(ordem)}
                             className="h-8 w-8"
-                            title="Visualizar"
                           >
                             <Eye className="h-3 w-3" />
                           </Button>
@@ -937,7 +877,6 @@ export function OrdensList() {
                             size="icon"
                             onClick={() => handleEdit(ordem)}
                             className="h-8 w-8"
-                            title="Editar"
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
@@ -947,7 +886,6 @@ export function OrdensList() {
                                 variant="outline"
                                 size="icon"
                                 className="h-8 w-8"
-                                title="Excluir"
                               >
                                 <Trash className="h-3 w-3" />
                               </Button>

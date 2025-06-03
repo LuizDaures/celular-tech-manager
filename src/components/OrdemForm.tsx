@@ -5,10 +5,10 @@ import { getSupabaseClient, OrdemCompleta, Cliente, Tecnico } from '@/lib/supaba
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { OrdemBasicInfo } from '@/components/OrdemBasicInfo'
-import { OrdemStatusSection } from '@/components/OrdemStatusSection'
 import { OrdemItensManager } from '@/components/OrdemItensManager'
+import { OrdemStatusSection } from '@/components/OrdemStatusSection'
+import { EstoqueSidebar } from '@/components/EstoqueSidebar'
 import { useEstoqueManager } from '@/hooks/useEstoqueManager'
-import { ItemValidator } from '@/components/ItemValidator'
 
 interface OrdemFormProps {
   ordem?: OrdemCompleta | null
@@ -34,7 +34,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const [servicoRealizado, setServicoRealizado] = useState(ordem?.servico_realizado || '')
   const [status, setStatus] = useState<'aberta' | 'em_andamento' | 'concluida' | 'cancelada'>(ordem?.status || 'aberta')
   const [valor, setValor] = useState(ordem?.valor?.toString() || '')
-  const [valorManutencao, setValorManutencao] = useState(ordem?.valor_manutencao?.toString() || '')
   
   // Estados para itens
   const [itens, setItens] = useState<ItemForm[]>([])
@@ -125,10 +124,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         ordemId = newOrdem.id
       }
 
-      // Processar mudanças no estoque apenas se for uma ordem existente com itens
-      if (ordem && data.itens.length > 0) {
-        await processarMudancasEstoque(data.itens, originalItens)
-      }
+      // Processar mudanças no estoque ANTES de gerenciar itens
+      await processarMudancasEstoque(data.itens, originalItens)
 
       // Gerenciar itens da ordem
       if (ordemId) {
@@ -170,8 +167,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       toast({
         title: ordem ? "Ordem atualizada" : "Ordem criada",
         description: ordem ? 
-          "A ordem foi atualizada com sucesso." :
-          "A ordem foi criada com sucesso.",
+          "A ordem foi atualizada com sucesso. O estoque foi ajustado automaticamente." :
+          "A ordem foi criada com sucesso. O estoque foi ajustado automaticamente.",
       })
       onSuccess()
     },
@@ -197,19 +194,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       return
     }
 
-    // Validar itens se houver
-    if (itens.length > 0) {
-      const itemErrors = ItemValidator.validateItems(itens, [])
-      if (itemErrors.length > 0) {
-        toast({
-          title: "Problemas com os itens",
-          description: itemErrors[0],
-          variant: "destructive",
-        })
-        return
-      }
-    }
-
     const ordemData = {
       cliente_id: clienteId,
       tecnico_id: tecnicoId === 'none' || !tecnicoId ? null : tecnicoId,
@@ -219,7 +203,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       servico_realizado: servicoRealizado.trim() || null,
       status,
       valor: valor ? parseFloat(valor) : null,
-      valor_manutencao: valorManutencao ? parseFloat(valorManutencao) : null,
       ...(status === 'concluida' && !ordem?.data_conclusao ? 
         { data_conclusao: new Date().toISOString() } : {})
     }
@@ -229,12 +212,12 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
         {/* Formulário Principal */}
-        <div>
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="xl:col-span-3">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Informações Básicas */}
-            <div className="bg-card border rounded-lg p-6">
+            <div className="bg-card border rounded-lg p-4">
               <h3 className="text-lg font-semibold mb-4">Informações Básicas</h3>
               <OrdemBasicInfo
                 clienteId={clienteId}
@@ -255,8 +238,9 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
               />
             </div>
 
-            {/* Peças e Materiais */}
-            <div className="bg-card border rounded-lg p-6">
+            {/* Itens da Ordem */}
+            <div className="bg-card border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Peças e Materiais</h3>
               <OrdemItensManager
                 itens={itens}
                 setItens={setItens}
@@ -265,15 +249,13 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             </div>
 
             {/* Status e Valores */}
-            <div className="bg-card border rounded-lg p-6">
+            <div className="bg-card border rounded-lg p-4">
               <h3 className="text-lg font-semibold mb-4">Status e Valores</h3>
               <OrdemStatusSection
                 status={status}
                 setStatus={setStatus}
                 valor={valor}
                 setValor={setValor}
-                valorManutencao={valorManutencao}
-                setValorManutencao={setValorManutencao}
                 totalItens={itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)}
                 readOnly={readOnly}
               />
@@ -286,13 +268,19 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
                   type="submit" 
                   disabled={saveOrdem.isPending}
                   className="min-w-32"
-                  size="lg"
                 >
                   {saveOrdem.isPending ? 'Salvando...' : (ordem ? 'Atualizar Ordem' : 'Criar Ordem')}
                 </Button>
               </div>
             )}
           </form>
+        </div>
+
+        {/* Sidebar de Estoque */}
+        <div className="xl:col-span-1">
+          <div className="sticky top-4">
+            <EstoqueSidebar />
+          </div>
         </div>
       </div>
     </div>

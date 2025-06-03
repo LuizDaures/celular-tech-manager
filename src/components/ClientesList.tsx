@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSupabaseClient, Cliente } from '@/lib/supabase'
+import { supabase, Cliente } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -23,11 +23,6 @@ export function ClientesList() {
     queryKey: ['clientes'],
     queryFn: async () => {
       console.log('Fetching clientes...')
-      const supabase = await getSupabaseClient()
-      if (!supabase) {
-        throw new Error('Conexão com banco não disponível')
-      }
-
       const { data, error } = await supabase
         .from('clientes')
         .select('*')
@@ -45,12 +40,7 @@ export function ClientesList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const supabase = await getSupabaseClient()
-      if (!supabase) {
-        throw new Error('Conexão com banco não disponível')
-      }
-
-      // Primeiro verificar se há ordens vinculadas
+      // Primeiro verificar se há ordens vinculadas - usando o nome correto da tabela
       const { data: ordens, error: ordensError } = await supabase
         .from('ordens_servico')
         .select('id')

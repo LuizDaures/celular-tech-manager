@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
-import { CheckCircle, Eye, EyeOff, Moon, Sun, XCircle, Database, ClipboardCopy, AlertCircle } from 'lucide-react'
+import { CheckCircle, Eye, EyeOff, Moon, Sun, XCircle, Database, ClipboardCopy } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS public.itens_ordem (
 ALTER TABLE public.itens_ordem ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "itens_ordem_policy" ON public.itens_ordem FOR ALL TO public USING (true) WITH CHECK (true);`
 
+// Lista das tabelas que devem existir
 const REQUIRED_TABLES = [
   'dados_empresa',
   'pecas_manutencao', 
@@ -107,29 +108,31 @@ interface DatabaseSetupModalProps {
   onConnectionSuccess: () => void
 }
 
-type ValidationStep = 'idle' | 'validating-credentials' | 'validating-connection' | 'validating-structure' | 'success' | 'error'
-
 export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetupModalProps) {
   const [url, setUrl] = useState('')
   const [anonKey, setAnonKey] = useState('')
   const [showKey, setShowKey] = useState(false)
-  const [validationStep, setValidationStep] = useState<ValidationStep>('idle')
+  const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
   const [darkMode, setDarkMode] = useState(false)
   const [copied, setCopied] = useState(false)
   const [validationDetails, setValidationDetails] = useState<string>('')
-  const [errorType, setErrorType] = useState<'credentials' | 'connection' | 'structure' | null>(null)
   const { toast } = useToast()
 
+  // Limpar status e campos quando o modal é aberto
   useEffect(() => {
     if (isOpen) {
-      console.log('Modal aberto - limpando estados')
-      setValidationStep('idle')
+      console.log('Modal aberto - limpando estados e localStorage')
+      
+      // Limpar completamente o localStorage
+      localStorage.clear()
+      
+      // Resetar todos os estados
+      setStatus('idle')
       setUrl('')
       setAnonKey('')
       setShowKey(false)
       setCopied(false)
       setValidationDetails('')
-      setErrorType(null)
     }
   }, [isOpen])
 
@@ -149,75 +152,58 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
     }
   }
 
-  const validateCredentials = (testUrl: string, testKey: string): boolean => {
-    // Validar formato da URL
-    try {
-      const urlObj = new URL(testUrl)
-      if (!urlObj.hostname.includes('supabase')) {
-        return false
-      }
-    } catch {
-      return false
-    }
-
-    // Validar formato da chave anon
-    if (!testKey || testKey.length < 100 || !testKey.startsWith('eyJ')) {
-      return false
-    }
-
-    return true
-  }
-
-  const testConnection = async (client: any): Promise<boolean> => {
-    try {
-      // Teste simples de conexão
-      const { data, error } = await Promise.race([
-        client.from('information_schema.tables').select('table_name').limit(1),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout na conexão')), 10000)
-        )
-      ])
-
-      return !error
-    } catch (error) {
-      console.log('Erro na conexão:', error)
-      return false
-    }
-  }
-
-  const validateDatabaseStructure = async (client: any): Promise<{ isValid: boolean; details: string }> => {
+  // Função para validar se todas as tabelas existem
+  const validateDatabaseStructure = async (testClient: any) => {
+    console.log('Validando estrutura do banco de dados...')
+    
     const missingTables = []
     const existingTables = []
     
     for (const tableName of REQUIRED_TABLES) {
       try {
-        const { error } = await client
-          .from(tableName)
-          .select('*', { count: 'exact', head: true })
+        console.log(`Verificando tabela: ${tableName}`)
         
-        if (error) {
-          if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
+        const testResult = await Promise.race([
+          testClient.from(tableName).select('*', { count: 'exact', head: true }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout na verificação da tabela')), 5000)
+          )
+        ])
+        
+        if (testResult?.error) {
+          if (testResult.error.code === 'PGRST116' || 
+              testResult.error.message?.includes('does not exist') ||
+              testResult.error.message?.includes('relation')) {
             missingTables.push(tableName)
+            console.log(`Tabela ${tableName} não encontrada`)
+          } else if (testResult.error.code === '42501' || 
+                     testResult.error.message?.includes('permission')) {
+            // Tabela existe mas sem permissão - considerar como problema de configuração
+            console.log(`Tabela ${tableName} existe mas sem permissão adequada`)
+            existingTables.push(tableName + ' (sem permissão)')
           } else {
-            missingTables.push(`${tableName} (erro: ${error.message})`)
+            // Outro erro
+            console.log(`Erro ao verificar tabela ${tableName}:`, testResult.error)
+            missingTables.push(tableName + ' (erro: ' + testResult.error.message + ')')
           }
         } else {
           existingTables.push(tableName)
+          console.log(`Tabela ${tableName} encontrada e acessível`)
         }
       } catch (error: any) {
-        missingTables.push(`${tableName} (timeout/erro)`)
+        console.log(`Erro ao verificar tabela ${tableName}:`, error)
+        missingTables.push(tableName + ' (timeout/erro)')
       }
     }
     
-    const details = [
-      `Encontradas: ${existingTables.length}/${REQUIRED_TABLES.length} tabelas`,
-      existingTables.length > 0 ? `\nTabelas encontradas: ${existingTables.join(', ')}` : '',
-      missingTables.length > 0 ? `\nTabelas faltando: ${missingTables.join(', ')}` : ''
-    ].filter(Boolean).join('')
-
+    console.log('Tabelas encontradas:', existingTables)
+    console.log('Tabelas faltando:', missingTables)
+    
     return {
       isValid: missingTables.length === 0,
-      details
+      existingTables,
+      missingTables,
+      summary: `Encontradas: ${existingTables.length}/${REQUIRED_TABLES.length} tabelas`
     }
   }
 
@@ -227,69 +213,77 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
       return
     }
 
-    console.log('Iniciando validação completa...')
+    console.log('Iniciando teste de conexão com URL:', url)
+    setStatus('testing')
     setValidationDetails('')
-    setErrorType(null)
 
     try {
-      // Passo 1: Validar credenciais
-      setValidationStep('validating-credentials')
-      console.log('Validando formato das credenciais...')
-      
-      if (!validateCredentials(url, anonKey)) {
-        setErrorType('credentials')
-        throw new Error('URL ou Anon Key com formato inválido')
-      }
-
-      // Passo 2: Testar conexão
-      setValidationStep('validating-connection')
-      console.log('Testando conexão com Supabase...')
-      
+      // Criar um cliente Supabase temporário apenas para teste
       let testClient
       try {
         testClient = createClient(url, anonKey)
-      } catch (error) {
-        setErrorType('connection')
-        throw new Error('Não foi possível criar cliente com essas credenciais')
+      } catch (clientError) {
+        console.error('Erro ao criar cliente Supabase:', clientError)
+        throw new Error('Credenciais inválidas - não foi possível criar cliente')
       }
 
-      const isConnected = await testConnection(testClient)
-      if (!isConnected) {
-        setErrorType('connection')
-        throw new Error('Falha na conexão com o banco de dados')
+      if (!testClient) {
+        throw new Error('Não foi possível criar cliente Supabase')
       }
 
-      // Passo 3: Validar estrutura
-      setValidationStep('validating-structure')
-      console.log('Validando estrutura do banco...')
-      
+      console.log('Cliente criado, testando conexão básica...')
+
+      // Teste 1: Verificar se as credenciais são válidas
+      const authTestPromise = testClient.auth.getSession()
+      await Promise.race([
+        authTestPromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout na autenticação')), 8000)
+        )
+      ])
+
+      console.log('Teste de autenticação concluído, validando estrutura...')
+
+      // Teste 2: Validar estrutura completa do banco
       const structureValidation = await validateDatabaseStructure(testClient)
-      setValidationDetails(structureValidation.details)
+      
+      const details = [
+        `${structureValidation.summary}`,
+        structureValidation.existingTables.length > 0 ? `\nTabelas encontradas: ${structureValidation.existingTables.join(', ')}` : '',
+        structureValidation.missingTables.length > 0 ? `\nTabelas faltando: ${structureValidation.missingTables.join(', ')}` : ''
+      ].filter(Boolean).join('')
+      
+      setValidationDetails(details)
 
       if (!structureValidation.isValid) {
-        setErrorType('structure')
-        throw new Error('Estrutura do banco incompleta')
+        throw new Error(`Estrutura incompleta do banco de dados. ${details}`)
       }
 
-      console.log('Validação completa bem-sucedida!')
-      setValidationStep('success')
+      console.log('Estrutura do banco validada com sucesso!')
       toast({ 
-        title: 'Sucesso!', 
+        title: 'Sucesso', 
         description: 'Conexão validada e estrutura completa detectada.' 
       })
+      setStatus('success')
 
     } catch (error: any) {
-      console.error('Erro na validação:', error)
-      setValidationStep('error')
+      console.error('Erro no teste de conexão:', error)
+      setStatus('error')
       
-      let errorMessage = 'Falha na validação.'
+      let errorMessage = 'Falha na conexão.'
       
-      if (errorType === 'credentials') {
-        errorMessage = 'URL ou Anon Key inválidos. Verifique o formato das credenciais.'
-      } else if (errorType === 'connection') {
-        errorMessage = 'Não foi possível conectar ao banco. Verifique as credenciais.'
-      } else if (errorType === 'structure') {
-        errorMessage = 'Banco conectado, mas estrutura incompleta. Execute o script SQL.'
+      if (error.message?.includes('Timeout')) {
+        errorMessage = 'Timeout na conexão. Verifique a URL e tente novamente.'
+      } else if (error.message?.includes('não foi possível criar cliente') || 
+                 error.message?.includes('Credenciais inválidas')) {
+        errorMessage = 'URL ou chave inválida. Verifique os dados inseridos.'
+      } else if (error.message?.includes('Estrutura incompleta')) {
+        errorMessage = error.message
+      } else if (error.message?.includes('permissões')) {
+        errorMessage = 'Problema nas permissões do banco. Verifique as políticas RLS.'
+      } else if (error.message?.includes('Failed to fetch') || 
+                 error.message?.includes('NetworkError')) {
+        errorMessage = 'Erro de rede. Verifique a URL do projeto.'
       }
       
       toast({ title: 'Erro', description: errorMessage, variant: 'destructive' })
@@ -297,73 +291,19 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
   }
 
   const handleSave = () => {
-    if (validationStep !== 'success') {
+    if (status !== 'success') {
       toast({ title: 'Erro', description: 'Você precisa validar a conexão primeiro.', variant: 'destructive' })
       return
     }
 
     console.log('Salvando configuração validada')
+    
+    // Salvar apenas após validação bem-sucedida
     localStorage.setItem('supabase_config', JSON.stringify({ url, anonKey }))
     localStorage.setItem('db_configured', 'true')
     
     toast({ title: 'Credenciais salvas', description: 'Conexão configurada com sucesso!' })
     onConnectionSuccess()
-  }
-
-  const getValidationIcon = () => {
-    switch (validationStep) {
-      case 'validating-credentials':
-      case 'validating-connection':
-      case 'validating-structure':
-        return <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-      case 'success':
-        return <CheckCircle className="h-4 w-4" />
-      case 'error':
-        return <XCircle className="h-4 w-4" />
-      default:
-        return null
-    }
-  }
-
-  const getValidationMessage = () => {
-    switch (validationStep) {
-      case 'validating-credentials':
-        return 'Validando credenciais...'
-      case 'validating-connection':
-        return 'Testando conexão...'
-      case 'validating-structure':
-        return 'Verificando estrutura do banco...'
-      case 'success':
-        return 'Conexão validada com sucesso!'
-      case 'error':
-        return getErrorMessage()
-      default:
-        return ''
-    }
-  }
-
-  const getErrorMessage = () => {
-    switch (errorType) {
-      case 'credentials':
-        return 'Credenciais inválidas'
-      case 'connection':
-        return 'Falha na conexão'
-      case 'structure':
-        return 'Estrutura do banco incompleta'
-      default:
-        return 'Erro na validação'
-    }
-  }
-
-  const getValidationColor = () => {
-    switch (validationStep) {
-      case 'success':
-        return 'text-green-600'
-      case 'error':
-        return 'text-red-600'
-      default:
-        return 'text-blue-600'
-    }
   }
 
   return (
@@ -383,7 +323,7 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
 
         <div className="space-y-6">
           <p className="text-muted-foreground">
-            Conecte-se ao Supabase para acessar o sistema
+            Conecte-se ao Supabase antes de acessar o sistema
           </p>
 
           <div className="flex flex-col lg:flex-row gap-6">
@@ -395,7 +335,6 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
                   value={url} 
                   onChange={(e) => setUrl(e.target.value)} 
                   placeholder="https://projeto.supabase.co"
-                  disabled={validationStep === 'validating-credentials' || validationStep === 'validating-connection' || validationStep === 'validating-structure'}
                 />
               </div>
               
@@ -408,7 +347,6 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
                     value={anonKey}
                     onChange={(e) => setAnonKey(e.target.value)}
                     className="pr-10"
-                    disabled={validationStep === 'validating-credentials' || validationStep === 'validating-connection' || validationStep === 'validating-structure'}
                   />
                   <button
                     type="button"
@@ -425,48 +363,44 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
                   variant="outline" 
                   className="flex-1" 
                   onClick={handleTest} 
-                  disabled={validationStep === 'validating-credentials' || validationStep === 'validating-connection' || validationStep === 'validating-structure'}
+                  disabled={status === 'testing'}
                 >
-                  {validationStep === 'validating-credentials' || validationStep === 'validating-connection' || validationStep === 'validating-structure' ? 'Validando...' : 'Validar Conexão'}
+                  {status === 'testing' ? 'Testando...' : 'Testar Conexão'}
                 </Button>
                 <Button 
                   className="flex-1" 
                   onClick={handleSave} 
-                  disabled={validationStep !== 'success'}
+                  disabled={status !== 'success'}
                 >
-                  Salvar e Conectar
+                  Salvar
                 </Button>
               </div>
 
-              {validationStep !== 'idle' && (
-                <div className={`text-sm flex items-center gap-2 ${getValidationColor()}`}>
-                  {getValidationIcon()}
-                  {getValidationMessage()}
+              {status === 'success' && (
+                <div className="text-green-600 text-sm flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Conexão validada com sucesso.
                 </div>
               )}
 
-              {validationDetails && validationStep !== 'idle' && (
-                <div className="text-xs bg-muted p-3 rounded border">
+              {status === 'error' && (
+                <div className="text-red-600 text-sm flex items-center gap-2">
+                  <XCircle className="h-4 w-4" />
+                  Não foi possível validar a conexão.
+                </div>
+              )}
+
+              {validationDetails && (
+                <div className="text-xs bg-muted p-3 rounded">
                   <p className="font-medium mb-1">Detalhes da validação:</p>
                   <pre className="whitespace-pre-wrap">{validationDetails}</pre>
                 </div>
               )}
 
-              {errorType === 'structure' && (
-                <div className="text-xs bg-yellow-50 border border-yellow-200 p-3 rounded">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="h-4 w-4 text-yellow-600" />
-                    <span className="font-medium text-yellow-800">Estrutura Incompleta</span>
-                  </div>
-                  <p className="text-yellow-700">
-                    Execute o script SQL ao lado para criar as tabelas necessárias no seu projeto Supabase.
-                  </p>
-                </div>
-              )}
-
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>* Campos obrigatórios</p>
-                <p>O sistema valida credenciais, conexão e estrutura antes de permitir acesso.</p>
+                <p>As configurações são salvas localmente no navegador.</p>
+                <p>O sistema valida se todas as {REQUIRED_TABLES.length} tabelas necessárias estão presentes.</p>
               </div>
             </div>
 
@@ -474,7 +408,7 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
 
             <div className="lg:w-1/2 space-y-2">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Script para criação das tabelas</span>
+                <span className="text-sm font-medium">Esquema SQL do sistema</span>
                 <Button variant="outline" size="sm" onClick={handleCopySQL}>
                   <ClipboardCopy className="h-4 w-4 mr-1" />
                   {copied ? 'Copiado!' : 'Copiar'}
@@ -483,9 +417,6 @@ export function DatabaseSetupModal({ isOpen, onConnectionSuccess }: DatabaseSetu
               <pre className="text-xs p-2 bg-muted rounded overflow-auto max-h-64 whitespace-pre-wrap">
                 {schemaSQL}
               </pre>
-              <p className="text-xs text-muted-foreground">
-                Execute este script no editor SQL do seu projeto Supabase para criar a estrutura necessária.
-              </p>
             </div>
           </div>
         </div>
