@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, Tecnico } from '@/lib/supabase'
+import { getSupabaseClient, Tecnico } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,6 +26,11 @@ export function TecnicoForm({ tecnico, onSuccess }: TecnicoFormProps) {
 
   const saveTecnico = useMutation({
     mutationFn: async (data: { nome: string; telefone?: string; email?: string; endereco?: string; cpf?: string }) => {
+      const supabase = await getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Conexão com banco não disponível')
+      }
+
       if (tecnico) {
         const { error } = await supabase
           .from('tecnicos')
@@ -51,10 +56,11 @@ export function TecnicoForm({ tecnico, onSuccess }: TecnicoFormProps) {
       })
       onSuccess()
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Error saving tecnico:', error)
       toast({
         title: "Erro",
-        description: "Erro ao salvar técnico.",
+        description: "Erro ao salvar técnico: " + error.message,
         variant: "destructive",
       })
     }

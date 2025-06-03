@@ -34,6 +34,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const [servicoRealizado, setServicoRealizado] = useState(ordem?.servico_realizado || '')
   const [status, setStatus] = useState<'aberta' | 'em_andamento' | 'concluida' | 'cancelada'>(ordem?.status || 'aberta')
   const [valor, setValor] = useState(ordem?.valor?.toString() || '')
+  const [valorManutencao, setValorManutencao] = useState(ordem?.valor_manutencao?.toString() || '')
   
   // Estados para itens
   const [itens, setItens] = useState<ItemForm[]>([])
@@ -218,6 +219,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       servico_realizado: servicoRealizado.trim() || null,
       status,
       valor: valor ? parseFloat(valor) : null,
+      valor_manutencao: valorManutencao ? parseFloat(valorManutencao) : null,
       ...(status === 'concluida' && !ordem?.data_conclusao ? 
         { data_conclusao: new Date().toISOString() } : {})
     }
@@ -270,6 +272,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
                 setStatus={setStatus}
                 valor={valor}
                 setValor={setValor}
+                valorManutencao={valorManutencao}
+                setValorManutencao={setValorManutencao}
                 totalItens={itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)}
                 readOnly={readOnly}
               />

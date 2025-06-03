@@ -9,6 +9,8 @@ interface OrdemStatusSectionProps {
   setStatus: (status: 'aberta' | 'em_andamento' | 'concluida' | 'cancelada') => void
   valor: string
   setValor: (valor: string) => void
+  valorManutencao: string
+  setValorManutencao: (valor: string) => void
   totalItens: number
   readOnly?: boolean
 }
@@ -18,6 +20,8 @@ export function OrdemStatusSection({
   setStatus,
   valor,
   setValor,
+  valorManutencao,
+  setValorManutencao,
   totalItens,
   readOnly = false
 }: OrdemStatusSectionProps) {
@@ -57,8 +61,26 @@ export function OrdemStatusSection({
         )}
       </div>
 
-      {/* Valor Total */}
+      {/* Valor Manutenção */}
       <div className="space-y-2">
+        <Label>Valor Manutenção</Label>
+        {readOnly ? (
+          <div className="py-2 text-lg font-semibold">
+            {valorManutencao ? `R$ ${parseFloat(valorManutencao).toFixed(2)}` : 'Não informado'}
+          </div>
+        ) : (
+          <Input
+            type="number"
+            step="0.01"
+            value={valorManutencao}
+            onChange={(e) => setValorManutencao(e.target.value)}
+            placeholder="0.00"
+          />
+        )}
+      </div>
+
+      {/* Valor Total */}
+      <div className="space-y-2 md:col-span-2">
         <Label>Valor Total</Label>
         {readOnly ? (
           <div className="py-2 text-lg font-semibold">
@@ -73,11 +95,14 @@ export function OrdemStatusSection({
               onChange={(e) => setValor(e.target.value)}
               placeholder="0.00"
             />
-            {totalItens > 0 && (
-              <div className="text-sm text-muted-foreground">
-                Total das peças: R$ {totalItens.toFixed(2)}
-              </div>
-            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
+              {totalItens > 0 && (
+                <div>Total das peças: R$ {totalItens.toFixed(2)}</div>
+              )}
+              {valorManutencao && (
+                <div>Valor manutenção: R$ {parseFloat(valorManutencao).toFixed(2)}</div>
+              )}
+            </div>
           </div>
         )}
       </div>
