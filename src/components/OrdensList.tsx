@@ -1,7 +1,6 @@
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSupabaseClient, OrdemCompleta } from '@/lib/supabase'
+import { supabase, OrdemCompleta } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -41,12 +40,6 @@ export function OrdensList() {
     queryKey: ['ordens'],
     queryFn: async () => {
       console.log('Fetching ordens...')
-      
-      const supabase = await getSupabaseClient()
-      if (!supabase) {
-        console.error('Supabase client not available')
-        throw new Error('Database connection not available')
-      }
       
       // Buscar diretamente da tabela ordens_servico com joins
       const { data, error } = await supabase
@@ -136,9 +129,6 @@ export function OrdensList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const supabase = await getSupabaseClient()
-      if (!supabase) throw new Error('Database connection not available')
-
       // Primeiro excluir os itens da ordem
       const { error: itensError } = await supabase
         .from('itens_ordem')
@@ -174,16 +164,6 @@ export function OrdensList() {
 
   const handleDownload = async (ordem: OrdemCompleta) => {
     try {
-      const supabase = await getSupabaseClient()
-      if (!supabase) {
-        toast({
-          title: 'Erro',
-          description: 'Conexão com banco de dados não disponível.',
-          variant: 'destructive',
-        })
-        return
-      }
-
       // Buscar dados da empresa
       const { data: empresaData } = await supabase
         .from('dados_empresa')
@@ -759,8 +739,8 @@ export function OrdensList() {
               Nova Ordem
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-0">
-            <DialogHeader className="p-6 pb-2">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
+            <DialogHeader>
               <DialogTitle>
                 {isViewing ? 'Visualizar Ordem' : selectedOrdem ? 'Editar Ordem' : 'Nova Ordem'}
               </DialogTitle>
@@ -768,13 +748,11 @@ export function OrdensList() {
                 {isViewing ? 'Visualize os detalhes da ordem de serviço.' : selectedOrdem ? 'Edite os dados da ordem de serviço.' : 'Crie uma nova ordem de serviço.'}
               </DialogDescription>
             </DialogHeader>
-            <div className="px-6 pb-6">
-              <OrdemForm 
-                ordem={selectedOrdem}
-                readOnly={isViewing}
-                onSuccess={handleCloseDialog}
-              />
-            </div>
+            <OrdemForm 
+              ordem={selectedOrdem}
+              readOnly={isViewing}
+              onSuccess={handleCloseDialog}
+            />
           </DialogContent>
         </Dialog>
       </div>

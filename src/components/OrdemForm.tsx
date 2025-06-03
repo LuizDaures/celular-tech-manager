@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getSupabaseClient, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
+import { supabase, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { OrdemBasicInfo } from '@/components/OrdemBasicInfo'
@@ -63,9 +62,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
     queryFn: async () => {
-      const supabase = await getSupabaseClient()
-      if (!supabase) throw new Error('Database connection not available')
-
       const { data, error } = await supabase
         .from('clientes')
         .select('*')
@@ -79,9 +75,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const { data: tecnicos = [] } = useQuery({
     queryKey: ['tecnicos'],
     queryFn: async () => {
-      const supabase = await getSupabaseClient()
-      if (!supabase) throw new Error('Database connection not available')
-
       const { data, error } = await supabase
         .from('tecnicos')
         .select('*')
@@ -99,9 +92,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       console.log('Dados da ordem:', data.ordemData)
       console.log('Itens atuais:', data.itens)
       console.log('Itens originais:', originalItens)
-      
-      const supabase = await getSupabaseClient()
-      if (!supabase) throw new Error('Database connection not available')
       
       let ordemId = ordem?.id
 
@@ -211,14 +201,14 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   }
 
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+    <div className="max-w-7xl mx-auto p-2 sm:p-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Formulário Principal */}
-        <div className="xl:col-span-3">
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="lg:col-span-3">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             {/* Informações Básicas */}
-            <div className="bg-card border rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-4">Informações Básicas</h3>
+            <div className="bg-card border rounded-lg p-3 sm:p-4">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Informações Básicas</h3>
               <OrdemBasicInfo
                 clienteId={clienteId}
                 setClienteId={setClienteId}
@@ -239,8 +229,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             </div>
 
             {/* Itens da Ordem */}
-            <div className="bg-card border rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-4">Peças e Materiais</h3>
+            <div className="bg-card border rounded-lg p-3 sm:p-4">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Peças e Materiais</h3>
               <OrdemItensManager
                 itens={itens}
                 setItens={setItens}
@@ -249,8 +239,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             </div>
 
             {/* Status e Valores */}
-            <div className="bg-card border rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-4">Status e Valores</h3>
+            <div className="bg-card border rounded-lg p-3 sm:p-4">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Status e Valores</h3>
               <OrdemStatusSection
                 status={status}
                 setStatus={setStatus}
@@ -263,7 +253,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
             {/* Botões de Ação */}
             {!readOnly && (
-              <div className="flex justify-end pt-4">
+              <div className="flex justify-end space-x-2 sm:space-x-4 pt-2 sm:pt-4">
                 <Button 
                   type="submit" 
                   disabled={saveOrdem.isPending}
@@ -277,7 +267,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         </div>
 
         {/* Sidebar de Estoque */}
-        <div className="xl:col-span-1">
+        <div className="lg:col-span-1">
           <div className="sticky top-4">
             <EstoqueSidebar />
           </div>

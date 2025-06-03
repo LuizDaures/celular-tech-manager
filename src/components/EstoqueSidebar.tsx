@@ -1,5 +1,6 @@
+
 import { useQuery } from '@tanstack/react-query'
-import { getSupabaseClient, PecaManutencao } from '@/lib/supabase'
+import { supabase, PecaManutencao } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -13,7 +14,6 @@ export function EstoqueSidebar() {
   const { data: pecas = [], isLoading } = useQuery({
     queryKey: ['pecas_manutencao'],
     queryFn: async () => {
-      const supabase = await getSupabaseClient()
       if (!supabase) return []
       
       const { data, error } = await supabase

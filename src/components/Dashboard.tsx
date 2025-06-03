@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { FileText, Users, Wrench, Filter, CalendarIcon, Download, DollarSign, Activity, CheckCircle, Clock, XCircle, Package } from 'lucide-react'
-import { getSupabaseClient } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -53,6 +53,12 @@ export function Dashboard() {
   const { toast } = useToast()
 
   useEffect(() => {
+    if (!supabase) {
+      console.log('Cliente Supabase não disponível')
+      setLoading(false)
+      return
+    }
+    
     const config = localStorage.getItem('supabase_config')
     if (!config) {
       console.log('Configuração Supabase não encontrada')
@@ -124,16 +130,6 @@ export function Dashboard() {
 
   const downloadMetrics = async () => {
     try {
-      const supabase = await getSupabaseClient()
-      if (!supabase) {
-        toast({
-          title: 'Erro',
-          description: 'Conexão com banco de dados não estabelecida.',
-          variant: 'destructive',
-        })
-        return
-      }
-      
       // Buscar todas as métricas do sistema
       const { data: allOrders, error: ordersError } = await supabase
         .from('ordens_servico')
@@ -291,20 +287,19 @@ export function Dashboard() {
   }
 
   const loadDashboardData = async () => {
+    if (!supabase) {
+      toast({
+        title: 'Erro',
+        description: 'Conexão com banco de dados não estabelecida.',
+        variant: 'destructive',
+      })
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       console.log('Carregando dados do dashboard...')
-
-      const supabase = await getSupabaseClient()
-      if (!supabase) {
-        toast({
-          title: 'Erro',
-          description: 'Conexão com banco de dados não estabelecida.',
-          variant: 'destructive',
-        })
-        setLoading(false)
-        return
-      }
 
       // Get orders statistics
       const { data: ordens, error: ordensError } = await supabase
