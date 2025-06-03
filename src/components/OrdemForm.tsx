@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { OrdemBasicInfo } from '@/components/OrdemBasicInfo'
 import { OrdemStatusSection } from '@/components/OrdemStatusSection'
+import { OrdemItensManager } from '@/components/OrdemItensManager'
 import { useEstoqueManager } from '@/hooks/useEstoqueManager'
 import { ItemValidator } from '@/components/ItemValidator'
 
@@ -195,8 +196,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       return
     }
 
-    // Apenas validamos os itens se estiverem presentes na edição
-    if (ordem && itens.length > 0) {
+    // Validar itens se houver
+    if (itens.length > 0) {
       const itemErrors = ItemValidator.validateItems(itens, [])
       if (itemErrors.length > 0) {
         toast({
@@ -221,7 +222,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         { data_conclusao: new Date().toISOString() } : {})
     }
 
-    saveOrdem.mutate({ ordemData, itens: ordem ? itens : [] })
+    saveOrdem.mutate({ ordemData, itens })
   }
 
   return (
@@ -252,6 +253,15 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
               />
             </div>
 
+            {/* Peças e Materiais */}
+            <div className="bg-card border rounded-lg p-6">
+              <OrdemItensManager
+                itens={itens}
+                setItens={setItens}
+                readOnly={readOnly}
+              />
+            </div>
+
             {/* Status e Valores */}
             <div className="bg-card border rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4">Status e Valores</h3>
@@ -260,7 +270,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
                 setStatus={setStatus}
                 valor={valor}
                 setValor={setValor}
-                totalItens={ordem ? itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0) : 0}
+                totalItens={itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)}
                 readOnly={readOnly}
               />
             </div>

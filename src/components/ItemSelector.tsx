@@ -20,9 +20,10 @@ interface ItemForm {
 interface ItemSelectorProps {
   onAddItem: (item: ItemForm) => void
   isVisible?: boolean
+  usedPecas?: string[]
 }
 
-export function ItemSelector({ onAddItem, isVisible = true }: ItemSelectorProps) {
+export function ItemSelector({ onAddItem, isVisible = true, usedPecas = [] }: ItemSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFabricante, setSelectedFabricante] = useState('all')
@@ -61,7 +62,8 @@ export function ItemSelector({ onAddItem, isVisible = true }: ItemSelectorProps)
                          peca.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          peca.codigo_fabricante?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFabricante = selectedFabricante === 'all' || peca.fabricante === selectedFabricante
-    return matchesSearch && matchesFabricante && peca.estoque > 0
+    const notUsed = !usedPecas.includes(peca.id)
+    return matchesSearch && matchesFabricante && peca.estoque > 0 && notUsed
   })
 
   const handleAddItem = () => {
@@ -145,7 +147,7 @@ export function ItemSelector({ onAddItem, isVisible = true }: ItemSelectorProps)
           <div className="border rounded-lg max-h-64 overflow-y-auto">
             {filteredPecas.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground">
-                {pecas.filter(p => p.estoque > 0).length === 0 ? 
+                {pecas.filter(p => p.estoque > 0 && !usedPecas.includes(p.id)).length === 0 ? 
                   'Nenhuma peça com estoque disponível' : 
                   'Nenhuma peça encontrada'
                 }

@@ -1,8 +1,8 @@
 
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 
 interface OrdemStatusSectionProps {
   status: 'aberta' | 'em_andamento' | 'concluida' | 'cancelada'
@@ -21,110 +21,65 @@ export function OrdemStatusSection({
   totalItens,
   readOnly = false
 }: OrdemStatusSectionProps) {
-  const valorManutencao = parseFloat(valor) || 0
-  const totalGeral = totalItens + valorManutencao
+  const statusOptions = [
+    { value: 'aberta', label: 'Aberta', variant: 'secondary' as const },
+    { value: 'em_andamento', label: 'Em Andamento', variant: 'default' as const },
+    { value: 'concluida', label: 'Concluída', variant: 'default' as const },
+    { value: 'cancelada', label: 'Cancelada', variant: 'destructive' as const }
+  ]
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'aberta':
-        return 'text-yellow-600 bg-yellow-50 border-yellow-200'
-      case 'em_andamento':
-        return 'text-blue-600 bg-blue-50 border-blue-200'
-      case 'concluida':
-        return 'text-green-600 bg-green-50 border-green-200'
-      case 'cancelada':
-        return 'text-red-600 bg-red-50 border-red-200'
-      default:
-        return 'text-gray-600 bg-gray-50 border-gray-200'
-    }
-  }
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'aberta':
-        return 'Aberta'
-      case 'em_andamento':
-        return 'Em Andamento'
-      case 'concluida':
-        return 'Concluída'
-      case 'cancelada':
-        return 'Cancelada'
-      default:
-        return status
-    }
-  }
-
-  if (readOnly) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <Label className="text-sm font-medium">Status</Label>
-          <div className={`mt-1 p-3 rounded-md border text-sm font-medium ${getStatusColor(status)}`}>
-            {getStatusLabel(status)}
-          </div>
-        </div>
-        
-        <div>
-          <Label className="text-sm font-medium">Valor da Manutenção</Label>
-          <p className="mt-1 p-3 bg-muted rounded-md text-sm font-medium">
-            R$ {valorManutencao.toFixed(2)}
-          </p>
-        </div>
-        
-        <div>
-          <Label className="text-sm font-medium">Total Geral</Label>
-          <Card className="mt-1">
-            <CardContent className="p-3">
-              <p className="text-lg font-bold text-center">R$ {totalGeral.toFixed(2)}</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
+  const currentStatus = statusOptions.find(opt => opt.value === status)
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="status" className="text-sm font-medium">Status</Label>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Status */}
+      <div className="space-y-2">
+        <Label>Status da Ordem</Label>
+        {readOnly ? (
+          <div className="py-2">
+            <Badge variant={currentStatus?.variant}>
+              {currentStatus?.label}
+            </Badge>
+          </div>
+        ) : (
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="h-10">
+            <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="aberta">Aberta</SelectItem>
-              <SelectItem value="em_andamento">Em Andamento</SelectItem>
-              <SelectItem value="concluida">Concluída</SelectItem>
-              <SelectItem value="cancelada">Cancelada</SelectItem>
+              {statusOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-        </div>
+        )}
+      </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="valor" className="text-sm font-medium">Valor da Manutenção</Label>
-          <Input
-            id="valor"
-            type="number"
-            step="0.01"
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            placeholder="0.00"
-            className="h-10"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Total Geral</Label>
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="p-3">
-              <p className="text-xl font-bold text-center text-primary">R$ {totalGeral.toFixed(2)}</p>
-              <div className="text-xs text-center text-muted-foreground mt-1">
-                Peças: R$ {totalItens.toFixed(2)} + Serviço: R$ {valorManutencao.toFixed(2)}
+      {/* Valor Total */}
+      <div className="space-y-2">
+        <Label>Valor Total</Label>
+        {readOnly ? (
+          <div className="py-2 text-lg font-semibold">
+            {valor ? `R$ ${parseFloat(valor).toFixed(2)}` : 'Não informado'}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Input
+              type="number"
+              step="0.01"
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+              placeholder="0.00"
+            />
+            {totalItens > 0 && (
+              <div className="text-sm text-muted-foreground">
+                Total das peças: R$ {totalItens.toFixed(2)}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
