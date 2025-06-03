@@ -28,9 +28,8 @@ export function EstoquePicker({ onSelectPeca, usedPecas }: EstoquePickerProps) {
         fabricante: '',
         modelo: null,
         codigo_fabricante: null,
-        observacoes: null,
-        created_at: '',
-        updated_at: ''
+        criado_em: '',
+        atualizado_em: ''
       }
       onSelectPeca(pecaMock, item.quantidade)
     }
