@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, PecaManutencao } from '@/lib/supabase'
+import { getSupabaseClient, PecaManutencao } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,6 +26,11 @@ export function PecaForm({ peca, onSuccess }: PecaFormProps) {
   const savePeca = useMutation({
     mutationFn: async (data: any) => {
       console.log('Saving peca with data:', data)
+      
+      const supabase = await getSupabaseClient()
+      if (!supabase) {
+        throw new Error('Conexão com banco não disponível')
+      }
       
       if (peca) {
         const { error } = await supabase
@@ -54,6 +59,7 @@ export function PecaForm({ peca, onSuccess }: PecaFormProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pecas'] })
+      queryClient.invalidateQueries({ queryKey: ['pecas_manutencao'] })
       toast({
         title: peca ? "Peça atualizada" : "Peça criada",
         description: peca ? 
@@ -66,7 +72,7 @@ export function PecaForm({ peca, onSuccess }: PecaFormProps) {
       console.error('Error saving peca:', error)
       toast({
         title: "Erro",
-        description: "Erro ao salvar peça.",
+        description: "Erro ao salvar peça: " + error.message,
         variant: "destructive",
       })
     }

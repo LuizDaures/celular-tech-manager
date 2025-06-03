@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, PecaManutencao } from '@/lib/supabase'
+import { getSupabaseClient, PecaManutencao } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -24,6 +24,7 @@ export function PecasList() {
     queryKey: ['pecas'],
     queryFn: async () => {
       console.log('Fetching pecas...')
+      const supabase = await getSupabaseClient()
       if (!supabase) {
         console.log('Supabase not configured')
         return []
@@ -46,6 +47,7 @@ export function PecasList() {
 
   const deletePeca = useMutation({
     mutationFn: async (id: string) => {
+      const supabase = await getSupabaseClient()
       if (!supabase) {
         throw new Error('Banco não configurado')
       }
@@ -59,6 +61,7 @@ export function PecasList() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pecas'] })
+      queryClient.invalidateQueries({ queryKey: ['pecas_manutencao'] })
       toast({
         title: "Peça excluída",
         description: "A peça foi excluída com sucesso.",
@@ -81,7 +84,6 @@ export function PecasList() {
     peca.codigo_fabricante?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Calcular valor total do estoque
   const valorTotalEstoque = filteredPecas.reduce((total, peca) => {
     return total + (peca.estoque * peca.preco_unitario)
   }, 0)
@@ -133,27 +135,13 @@ export function PecasList() {
         </Dialog>
       </div>
 
-      {/* Card com valor total do estoque */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Valor Total em Estoque</CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">R$ {valorTotalEstoque.toFixed(2)}</div>
-          <p className="text-xs text-muted-foreground">
-            Valor total das {filteredPecas.reduce((total, peca) => total + peca.estoque, 0)} peças em estoque
-          </p>
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader>
           <CardTitle>Lista de Peças</CardTitle>
           <CardDescription>
             Total de {filteredPecas.length} peça{filteredPecas.length !== 1 ? 's' : ''} cadastrada{filteredPecas.length !== 1 ? 's' : ''}
           </CardDescription>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-between gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -162,6 +150,10 @@ export function PecasList() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-muted-foreground">Total em estoque</div>
+              <div className="text-lg font-semibold">R$ {valorTotalEstoque.toFixed(2)}</div>
             </div>
           </div>
         </CardHeader>
