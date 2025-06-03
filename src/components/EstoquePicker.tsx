@@ -4,7 +4,7 @@ import { PecaManutencao } from '@/lib/supabase'
 
 interface ItemForm {
   peca_id?: string
-  nome_item: string
+  nome_peca: string
   quantidade: number
   preco_unitario: number
   is_from_estoque?: boolean
@@ -22,13 +22,12 @@ export function EstoquePicker({ onSelectPeca, usedPecas }: EstoquePickerProps) {
       // Como o ItemSelector já validou, podemos criar um objeto PecaManutencao mock
       const pecaMock: PecaManutencao = {
         id: item.peca_id,
-        nome: item.nome_item,
+        nome: item.nome_peca,
         preco_unitario: item.preco_unitario,
         estoque: item.quantidade, // Este valor não é usado na validação
         fabricante: '',
         modelo: null,
         codigo_fabricante: null,
-        localizacao: null,
         observacoes: null,
         created_at: '',
         updated_at: ''
