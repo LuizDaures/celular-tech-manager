@@ -5,9 +5,7 @@ import { getSupabaseClient, OrdemCompleta, Cliente, Tecnico } from '@/lib/supaba
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { OrdemBasicInfo } from '@/components/OrdemBasicInfo'
-import { OrdemItensManager } from '@/components/OrdemItensManager'
 import { OrdemStatusSection } from '@/components/OrdemStatusSection'
-import { EstoqueSidebar } from '@/components/EstoqueSidebar'
 import { useEstoqueManager } from '@/hooks/useEstoqueManager'
 import { ItemValidator } from '@/components/ItemValidator'
 
@@ -93,22 +91,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
     }
   })
 
-  const { data: pecas = [] } = useQuery({
-    queryKey: ['pecas_manutencao'],
-    queryFn: async () => {
-      const supabase = await getSupabaseClient()
-      if (!supabase) return []
-      
-      const { data, error } = await supabase
-        .from('pecas_manutencao')
-        .select('*')
-        .order('nome')
-      
-      if (error) throw error
-      return data
-    }
-  })
-
   // Mutation para salvar ordem
   const saveOrdem = useMutation({
     mutationFn: async (data: any) => {
@@ -141,8 +123,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         ordemId = newOrdem.id
       }
 
-      // Processar mudanças no estoque ANTES de gerenciar itens
-      await processarMudancasEstoque(data.itens, originalItens)
+      // Processar mudanças no estoque apenas se for uma ordem existente com itens
+      if (ordem && data.itens.length > 0) {
+        await processarMudancasEstoque(data.itens, originalItens)
+      }
 
       // Gerenciar itens da ordem
       if (ordemId) {
@@ -184,8 +168,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       toast({
         title: ordem ? "Ordem atualizada" : "Ordem criada",
         description: ordem ? 
-          "A ordem foi atualizada com sucesso. O estoque foi ajustado automaticamente." :
-          "A ordem foi criada com sucesso. O estoque foi ajustado automaticamente.",
+          "A ordem foi atualizada com sucesso." :
+          "A ordem foi criada com sucesso.",
       })
       onSuccess()
     },
@@ -211,15 +195,17 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       return
     }
 
-    // Validar itens
-    const itemErrors = ItemValidator.validateItems(itens, pecas)
-    if (itemErrors.length > 0) {
-      toast({
-        title: "Problemas com os itens",
-        description: itemErrors[0],
-        variant: "destructive",
-      })
-      return
+    // Apenas validamos os itens se estiverem presentes na edição
+    if (ordem && itens.length > 0) {
+      const itemErrors = ItemValidator.validateItems(itens, [])
+      if (itemErrors.length > 0) {
+        toast({
+          title: "Problemas com os itens",
+          description: itemErrors[0],
+          variant: "destructive",
+        })
+        return
+      }
     }
 
     const ordemData = {
@@ -235,14 +221,14 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         { data_conclusao: new Date().toISOString() } : {})
     }
 
-    saveOrdem.mutate({ ordemData, itens })
+    saveOrdem.mutate({ ordemData, itens: ordem ? itens : [] })
   }
 
   return (
     <div className="w-full">
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Formulário Principal */}
-        <div className="xl:col-span-3">
+        <div>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Informações Básicas */}
             <div className="bg-card border rounded-lg p-6">
@@ -266,15 +252,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
               />
             </div>
 
-            {/* Itens da Ordem */}
-            <div className="bg-card border rounded-lg p-6">
-              <OrdemItensManager
-                itens={itens}
-                setItens={setItens}
-                readOnly={readOnly}
-              />
-            </div>
-
             {/* Status e Valores */}
             <div className="bg-card border rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4">Status e Valores</h3>
@@ -283,7 +260,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
                 setStatus={setStatus}
                 valor={valor}
                 setValor={setValor}
-                totalItens={itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)}
+                totalItens={ordem ? itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0) : 0}
                 readOnly={readOnly}
               />
             </div>
@@ -302,13 +279,6 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
               </div>
             )}
           </form>
-        </div>
-
-        {/* Sidebar de Estoque */}
-        <div className="xl:col-span-1">
-          <div className="sticky top-4">
-            <EstoqueSidebar />
-          </div>
         </div>
       </div>
     </div>

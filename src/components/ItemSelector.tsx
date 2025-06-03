@@ -1,13 +1,14 @@
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { supabase, PecaManutencao } from '@/lib/supabase'
+import { getSupabaseClient, PecaManutencao } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Plus, Search } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 interface ItemForm {
   peca_id: string
@@ -18,19 +19,31 @@ interface ItemForm {
 
 interface ItemSelectorProps {
   onAddItem: (item: ItemForm) => void
+  isVisible?: boolean
 }
 
-export function ItemSelector({ onAddItem }: ItemSelectorProps) {
+export function ItemSelector({ onAddItem, isVisible = true }: ItemSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFabricante, setSelectedFabricante] = useState('all')
   const [quantity, setQuantity] = useState(1)
   const [customPrice, setCustomPrice] = useState('')
   const [selectedPeca, setSelectedPeca] = useState<PecaManutencao | null>(null)
+  const { toast } = useToast()
 
   const { data: pecas = [] } = useQuery({
     queryKey: ['pecas'],
     queryFn: async () => {
+      const supabase = await getSupabaseClient()
+      if (!supabase) {
+        toast({
+          title: "Erro",
+          description: "Conexão com banco de dados não disponível.",
+          variant: "destructive",
+        })
+        return []
+      }
+      
       const { data, error } = await supabase
         .from('pecas_manutencao')
         .select('*')
@@ -55,7 +68,12 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
     if (!selectedPeca) return
 
     if (quantity > selectedPeca.estoque) {
-      return // Não permite adicionar se quantidade for maior que estoque
+      toast({
+        title: "Erro",
+        description: "Quantidade excede o estoque disponível.",
+        variant: "destructive",
+      })
+      return
     }
 
     const itemToAdd: ItemForm = {
@@ -73,6 +91,8 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
     setSearchTerm('')
     setSelectedFabricante('all')
   }
+
+  if (!isVisible) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>

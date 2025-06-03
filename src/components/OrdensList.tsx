@@ -218,7 +218,7 @@ export function OrdensList() {
 
       const empresa = empresaData || { nome: 'Sistema de Gestão', cnpj: '', logo_base64: '' }
 
-      // Template HTML com cor preta e logo
+      // Template HTML com logo circular centralizada
       const htmlTemplate = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -260,66 +260,66 @@ export function OrdensList() {
     
     .header {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
       border-bottom: 2px solid #000;
-      padding-bottom: 15px;
+      padding-bottom: 20px;
+    }
+
+    .logo-container {
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     .logo {
-      margin-bottom: 10px;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 3px solid #000;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+    }
+    
+    .company-info {
+      margin-bottom: 15px;
     }
 
-    .logo img {
-      max-height: 80px;
-      max-width: 200px;
-      object-fit: contain;
-    }
-    
-    .header h1 {
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 8px;
-      color: #000;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    
-    .header-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 10px;
-      flex-wrap: wrap;
-      gap: 15px;
-    }
-    
     .company-info h2 {
-      font-size: 16px;
+      font-size: 18px;
       color: #000;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    .company-info .cnpj {
+      font-size: 14px;
+      color: #000;
+      margin-bottom: 10px;
     }
     
     .ordem-info {
-      text-align: right;
       background: #f8f8f8;
-      padding: 10px 15px;
-      border-radius: 6px;
-      border-left: 4px solid #000;
-      min-width: 220px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: 2px solid #000;
+      display: inline-block;
+      margin: 0 auto;
     }
     
     .ordem-info .numero {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: bold;
       color: #000;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     
     .date-info {
       display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      gap: 10px;
+      justify-content: center;
+      gap: 20px;
+      font-size: 12px;
       flex-wrap: wrap;
     }
     
@@ -548,26 +548,24 @@ export function OrdensList() {
   <div class="container">
     <div class="header">
       ${empresa.logo_base64 ? `
-      <div class="logo">
-        <img src="data:image/png;base64,${empresa.logo_base64}" alt="Logo da empresa" />
+      <div class="logo-container">
+        <img src="data:image/png;base64,${empresa.logo_base64}" alt="Logo da empresa" class="logo" />
       </div>
       ` : ''}
-      <h1>Ordem de Serviço</h1>
-      <div class="header-info">
-        <div class="company-info">
-          <h2>${empresa.nome}</h2>
-          ${empresa.cnpj ? `<div style="font-size: 12px; margin-top: 4px;">CNPJ: ${empresa.cnpj}</div>` : ''}
-        </div>
-        <div class="ordem-info">
-          <div class="numero">Nº ${ordem.id?.slice(-6).toUpperCase() || '000001'}</div>
-          <div class="date-info">
-            <span><strong>Abertura:</strong> ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</span>
-            ${ordem.data_conclusao ? `<span><strong>Conclusão:</strong> ${new Date(ordem.data_conclusao).toLocaleDateString('pt-BR')}</span>` : ''}
-          </div>
-          <div style="margin-top: 6px;">
-            <span class="status-badge status-${ordem.status}">${statusLabels[ordem.status]}</span>
-          </div>
-        </div>
+      
+      <div class="company-info">
+        <h2>${empresa.nome}</h2>
+        ${empresa.cnpj ? `<div class="cnpj">CNPJ: ${empresa.cnpj}</div>` : ''}
+      </div>
+      
+      <div class="ordem-info">
+        <div class="numero">Nº ${ordem.id?.slice(-6).toUpperCase() || '000001'}</div>
+        <div class="status-badge status-${ordem.status}">${statusLabels[ordem.status]}</div>
+      </div>
+      
+      <div class="date-info">
+        <span><strong>Abertura:</strong> ${new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}</span>
+        ${ordem.data_conclusao ? `<span><strong>Conclusão:</strong> ${new Date(ordem.data_conclusao).toLocaleDateString('pt-BR')}</span>` : ''}
       </div>
     </div>
 
