@@ -123,29 +123,95 @@ const getSupabaseClient = async () => {
   }
 }
 
+// Interface que define os métodos do query builder do Supabase
+interface SupabaseQueryBuilder {
+  select: (columns?: string) => Promise<any>
+  insert: (values: any) => Promise<any>
+  update: (values: any) => Promise<any>
+  delete: () => Promise<any>
+  eq: (column: string, value: any) => SupabaseQueryBuilder
+  neq: (column: string, value: any) => SupabaseQueryBuilder
+  gt: (column: string, value: any) => SupabaseQueryBuilder
+  gte: (column: string, value: any) => SupabaseQueryBuilder
+  lt: (column: string, value: any) => SupabaseQueryBuilder
+  lte: (column: string, value: any) => SupabaseQueryBuilder
+  like: (column: string, pattern: string) => SupabaseQueryBuilder
+  ilike: (column: string, pattern: string) => SupabaseQueryBuilder
+  is: (column: string, value: any) => SupabaseQueryBuilder
+  in: (column: string, values: any[]) => SupabaseQueryBuilder
+  contains: (column: string, value: any) => SupabaseQueryBuilder
+  containedBy: (column: string, value: any) => SupabaseQueryBuilder
+  rangeGt: (column: string, value: any) => SupabaseQueryBuilder
+  rangeGte: (column: string, value: any) => SupabaseQueryBuilder
+  rangeLt: (column: string, value: any) => SupabaseQueryBuilder
+  rangeLte: (column: string, value: any) => SupabaseQueryBuilder
+  rangeAdjacent: (column: string, value: any) => SupabaseQueryBuilder
+  overlaps: (column: string, value: any) => SupabaseQueryBuilder
+  textSearch: (column: string, query: string, config?: any) => SupabaseQueryBuilder
+  match: (query: Record<string, any>) => SupabaseQueryBuilder
+  not: (column: string, operator: string, value: any) => SupabaseQueryBuilder
+  or: (filters: string) => SupabaseQueryBuilder
+  filter: (column: string, operator: string, value: any) => SupabaseQueryBuilder
+  order: (column: string, options?: { ascending?: boolean }) => SupabaseQueryBuilder
+  limit: (count: number) => SupabaseQueryBuilder
+  range: (from: number, to: number) => SupabaseQueryBuilder
+  single: () => Promise<any>
+  maybeSingle: () => Promise<any>
+  csv: () => Promise<any>
+}
+
 // Proxy que mantém a interface síncrona do Supabase mas funciona de forma assíncrona internamente
 class SupabaseProxy {
-  from(tableName: string) {
-    const queryProxy = new Proxy({}, {
-      get(target, prop: string) {
-        return (...args: any[]) => {
-          return getSupabaseClient().then(client => {
-            if (!client) {
-              throw new Error('Cliente Supabase não disponível')
-            }
+  from(tableName: string): SupabaseQueryBuilder {
+    const createAsyncMethod = (methodName: string) => {
+      return (...args: any[]) => {
+        return getSupabaseClient().then(client => {
+          if (!client) {
+            throw new Error('Cliente Supabase não disponível')
+          }
+          
+          const table = client.from(tableName)
+          const method = table[methodName]
+          if (typeof method === 'function') {
+            const result = method.apply(table, args)
             
-            const table = client.from(tableName)
-            const method = table[prop]
-            if (typeof method === 'function') {
-              return method.apply(table, args)
+            // Se o resultado tem métodos de query builder, criar um novo proxy para eles
+            if (result && typeof result === 'object' && result.select) {
+              return createQueryBuilderProxy(result)
             }
-            return method
-          })
+            return result
+          }
+          return method
+        })
+      }
+    }
+
+    const createQueryBuilderProxy = (queryBuilder: any): any => {
+      return new Proxy(queryBuilder, {
+        get(target, prop: string) {
+          if (typeof target[prop] === 'function') {
+            return (...args: any[]) => {
+              const result = target[prop](...args)
+              // Se o resultado ainda é um query builder, envolver em proxy
+              if (result && typeof result === 'object' && result.select && prop !== 'select') {
+                return createQueryBuilderProxy(result)
+              }
+              return result
+            }
+          }
+          return target[prop]
         }
+      })
+    }
+
+    // Criar o proxy inicial que implementa a interface SupabaseQueryBuilder
+    const queryProxy = new Proxy({} as any, {
+      get(target, prop: string) {
+        return createAsyncMethod(prop)
       }
     })
     
-    return queryProxy
+    return queryProxy as SupabaseQueryBuilder
   }
 
   get auth() {
