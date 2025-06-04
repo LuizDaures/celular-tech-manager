@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { FileText, Users, Wrench, Filter, CalendarIcon, Download, DollarSign, Activity, CheckCircle, Clock, XCircle, Package } from 'lucide-react'
+import { FileText, Users, Wrench, Filter, CalendarIcon, Download, DollarSign, Activity, CheckCircle, Clock, XCircle, Package, Eye } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
@@ -397,6 +397,43 @@ export function Dashboard() {
     )
   }
 
+  const viewOrderDetails = (order: any) => {
+    const itensValue = order.itens?.reduce((total: number, item: any) => 
+      total + (item.quantidade * item.preco_unitario), 0) || 0
+    const totalValue = (order.valor || 0) + itensValue
+    
+    const details = `
+DETALHES DA ORDEM #${order.id}
+
+Cliente: ${order.clientes?.nome || 'N/A'}
+Telefone: ${order.clientes?.telefone || 'N/A'}
+CPF: ${order.clientes?.cpf || 'N/A'}
+
+Dispositivo: ${order.dispositivo}
+Problema: ${order.descricao_problema}
+Diagnóstico: ${order.diagnostico || 'Não informado'}
+Serviço Realizado: ${order.servico_realizado || 'Não informado'}
+
+Técnico: ${order.tecnicos?.nome || 'Não atribuído'}
+Status: ${statusLabels[order.status as keyof typeof statusLabels]}
+
+Data de Abertura: ${format(new Date(order.data_abertura), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+${order.data_conclusao ? `Data de Conclusão: ${format(new Date(order.data_conclusao), 'dd/MM/yyyy HH:mm', { locale: ptBR })}` : ''}
+
+VALORES:
+Valor da Manutenção: R$ ${(order.valor || 0).toFixed(2)}
+Valor das Peças: R$ ${itensValue.toFixed(2)}
+Total: R$ ${totalValue.toFixed(2)}
+
+${order.itens && order.itens.length > 0 ? `
+PEÇAS UTILIZADAS:
+${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${item.preco_unitario.toFixed(2)} = R$ ${(item.quantidade * item.preco_unitario).toFixed(2)}`).join('\n')}
+` : 'Nenhuma peça utilizada.'}
+    `.trim()
+    
+    alert(details)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -585,26 +622,32 @@ export function Dashboard() {
                   </Button>
                 )}
 
-                {/* Seção de totais reposicionada */}
+                {/* Labels simples para totais */}
                 {filteredOrders.length > 0 && (
                   (() => {
                     const { totalValidas, totalCanceladas } = calculateTotals()
                     return (
-                      <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-md border text-sm">
+                      <div className="space-y-2">
                         {statusFilter === 'all' ? (
-                          <>
-                            <span className="font-semibold text-green-700">
-                              Válidas: R$ {totalValidas.toFixed(2)}
-                            </span>
-                            <span className="text-muted-foreground">|</span>
-                            <span className="font-semibold text-red-600">
-                              Canceladas: R$ {totalCanceladas.toFixed(2)}
-                            </span>
-                          </>
+                          <div className="flex flex-col sm:flex-row gap-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-green-700">Ordens Válidas:</span>
+                              <span className="font-bold text-green-700">R$ {totalValidas.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-red-600">Ordens Canceladas:</span>
+                              <span className="font-bold text-red-600">R$ {totalCanceladas.toFixed(2)}</span>
+                            </div>
+                          </div>
                         ) : (
-                          <span className="font-semibold text-primary">
-                            {statusLabels[statusFilter as keyof typeof statusLabels] || statusFilter}: R$ {(totalValidas + totalCanceladas).toFixed(2)}
-                          </span>
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="font-medium text-primary">
+                              {statusLabels[statusFilter as keyof typeof statusLabels] || statusFilter}:
+                            </span>
+                            <span className="font-bold text-primary">
+                              R$ {(totalValidas + totalCanceladas).toFixed(2)}
+                            </span>
+                          </div>
                         )}
                       </div>
                     )
@@ -648,18 +691,29 @@ export function Dashboard() {
                       )}
                     </div>
                   </div>
-                  {totalValue > 0 && (
-                    <div className="text-right space-y-1">
-                      <div className="text-lg font-bold text-green-600">
-                        R$ {totalValue.toFixed(2)}
-                      </div>
-                      {(order.valor || 0) > 0 && itensValue > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          Serviço: R$ {(order.valor || 0).toFixed(2)} + Peças: R$ {itensValue.toFixed(2)}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => viewOrderDetails(order)}
+                      className="flex items-center gap-1"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Ver
+                    </Button>
+                    {totalValue > 0 && (
+                      <div className="text-right space-y-1">
+                        <div className="text-lg font-bold text-green-600">
+                          R$ {totalValue.toFixed(2)}
                         </div>
-                      )}
-                    </div>
-                  )}
+                        {(order.valor || 0) > 0 && itensValue > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            Serviço: R$ {(order.valor || 0).toFixed(2)} + Peças: R$ {itensValue.toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             })}

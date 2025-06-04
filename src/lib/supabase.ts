@@ -125,19 +125,30 @@ const getSupabaseClient = async () => {
 // Proxy para manter a mesma interface do objeto supabase original
 export const supabase = new Proxy({} as any, {
   get(target, prop) {
-    // Para métodos que retornam promises, interceptamos e aguardamos a inicialização
-    return async (...args: any[]) => {
-      const client = await getSupabaseClient()
-      if (!client) {
-        throw new Error('Cliente Supabase não disponível')
+    if (prop === 'from') {
+      return (...args: any[]) => {
+        return getSupabaseClient().then(client => {
+          if (!client) {
+            throw new Error('Cliente Supabase não disponível')
+          }
+          return client.from(...args)
+        })
       }
-      
-      // Acessar a propriedade/método no cliente real
-      const method = client[prop]
-      if (typeof method === 'function') {
-        return method.apply(client, args)
-      }
-      return method
+    }
+    
+    // Para outras propriedades, retornar uma função que aguarda a inicialização
+    return (...args: any[]) => {
+      return getSupabaseClient().then(client => {
+        if (!client) {
+          throw new Error('Cliente Supabase não disponível')
+        }
+        
+        const method = client[prop]
+        if (typeof method === 'function') {
+          return method.apply(client, args)
+        }
+        return method
+      })
     }
   }
 })
