@@ -1,5 +1,6 @@
 
 
+
 import { createClient } from '@supabase/supabase-js'
 
 // Função para validar estrutura do banco no Supabase
@@ -123,95 +124,237 @@ const getSupabaseClient = async () => {
   }
 }
 
-// Interface que define os métodos do query builder do Supabase
-interface SupabaseQueryBuilder {
-  select: (columns?: string) => Promise<any>
-  insert: (values: any) => Promise<any>
-  update: (values: any) => Promise<any>
-  delete: () => Promise<any>
-  eq: (column: string, value: any) => SupabaseQueryBuilder
-  neq: (column: string, value: any) => SupabaseQueryBuilder
-  gt: (column: string, value: any) => SupabaseQueryBuilder
-  gte: (column: string, value: any) => SupabaseQueryBuilder
-  lt: (column: string, value: any) => SupabaseQueryBuilder
-  lte: (column: string, value: any) => SupabaseQueryBuilder
-  like: (column: string, pattern: string) => SupabaseQueryBuilder
-  ilike: (column: string, pattern: string) => SupabaseQueryBuilder
-  is: (column: string, value: any) => SupabaseQueryBuilder
-  in: (column: string, values: any[]) => SupabaseQueryBuilder
-  contains: (column: string, value: any) => SupabaseQueryBuilder
-  containedBy: (column: string, value: any) => SupabaseQueryBuilder
-  rangeGt: (column: string, value: any) => SupabaseQueryBuilder
-  rangeGte: (column: string, value: any) => SupabaseQueryBuilder
-  rangeLt: (column: string, value: any) => SupabaseQueryBuilder
-  rangeLte: (column: string, value: any) => SupabaseQueryBuilder
-  rangeAdjacent: (column: string, value: any) => SupabaseQueryBuilder
-  overlaps: (column: string, value: any) => SupabaseQueryBuilder
-  textSearch: (column: string, query: string, config?: any) => SupabaseQueryBuilder
-  match: (query: Record<string, any>) => SupabaseQueryBuilder
-  not: (column: string, operator: string, value: any) => SupabaseQueryBuilder
-  or: (filters: string) => SupabaseQueryBuilder
-  filter: (column: string, operator: string, value: any) => SupabaseQueryBuilder
-  order: (column: string, options?: { ascending?: boolean }) => SupabaseQueryBuilder
-  limit: (count: number) => SupabaseQueryBuilder
-  range: (from: number, to: number) => SupabaseQueryBuilder
-  single: () => Promise<any>
-  maybeSingle: () => Promise<any>
-  csv: () => Promise<any>
+// Classe que simula a interface do Supabase Query Builder mas funciona de forma assíncrona
+class AsyncQueryBuilder {
+  private tableName: string
+  private operations: Array<{ method: string; args: any[] }> = []
+
+  constructor(tableName: string) {
+    this.tableName = tableName
+  }
+
+  // Métodos que retornam promises (operações finais)
+  async select(columns?: string) {
+    const client = await getSupabaseClient()
+    if (!client) throw new Error('Cliente Supabase não disponível')
+    
+    let query = client.from(this.tableName)
+    
+    // Aplicar todas as operações acumuladas
+    for (const op of this.operations) {
+      query = query[op.method](...op.args)
+    }
+    
+    // Aplicar o select final
+    return query.select(columns)
+  }
+
+  async insert(values: any) {
+    const client = await getSupabaseClient()
+    if (!client) throw new Error('Cliente Supabase não disponível')
+    
+    let query = client.from(this.tableName)
+    
+    // Aplicar todas as operações acumuladas
+    for (const op of this.operations) {
+      query = query[op.method](...op.args)
+    }
+    
+    return query.insert(values)
+  }
+
+  async update(values: any) {
+    const client = await getSupabaseClient()
+    if (!client) throw new Error('Cliente Supabase não disponível')
+    
+    let query = client.from(this.tableName)
+    
+    // Aplicar todas as operações acumuladas
+    for (const op of this.operations) {
+      query = query[op.method](...op.args)
+    }
+    
+    return query.update(values)
+  }
+
+  async delete() {
+    const client = await getSupabaseClient()
+    if (!client) throw new Error('Cliente Supabase não disponível')
+    
+    let query = client.from(this.tableName)
+    
+    // Aplicar todas as operações acumuladas
+    for (const op of this.operations) {
+      query = query[op.method](...op.args)
+    }
+    
+    return query.delete()
+  }
+
+  async single() {
+    const client = await getSupabaseClient()
+    if (!client) throw new Error('Cliente Supabase não disponível')
+    
+    let query = client.from(this.tableName)
+    
+    // Aplicar todas as operações acumuladas
+    for (const op of this.operations) {
+      query = query[op.method](...op.args)
+    }
+    
+    return query.single()
+  }
+
+  async maybeSingle() {
+    const client = await getSupabaseClient()
+    if (!client) throw new Error('Cliente Supabase não disponível')
+    
+    let query = client.from(this.tableName)
+    
+    // Aplicar todas as operações acumuladas
+    for (const op of this.operations) {
+      query = query[op.method](...op.args)
+    }
+    
+    return query.maybeSingle()
+  }
+
+  // Métodos que retornam o próprio builder (para chaining)
+  eq(column: string, value: any) {
+    this.operations.push({ method: 'eq', args: [column, value] })
+    return this
+  }
+
+  neq(column: string, value: any) {
+    this.operations.push({ method: 'neq', args: [column, value] })
+    return this
+  }
+
+  gt(column: string, value: any) {
+    this.operations.push({ method: 'gt', args: [column, value] })
+    return this
+  }
+
+  gte(column: string, value: any) {
+    this.operations.push({ method: 'gte', args: [column, value] })
+    return this
+  }
+
+  lt(column: string, value: any) {
+    this.operations.push({ method: 'lt', args: [column, value] })
+    return this
+  }
+
+  lte(column: string, value: any) {
+    this.operations.push({ method: 'lte', args: [column, value] })
+    return this
+  }
+
+  like(column: string, pattern: string) {
+    this.operations.push({ method: 'like', args: [column, pattern] })
+    return this
+  }
+
+  ilike(column: string, pattern: string) {
+    this.operations.push({ method: 'ilike', args: [column, pattern] })
+    return this
+  }
+
+  is(column: string, value: any) {
+    this.operations.push({ method: 'is', args: [column, value] })
+    return this
+  }
+
+  in(column: string, values: any[]) {
+    this.operations.push({ method: 'in', args: [column, values] })
+    return this
+  }
+
+  contains(column: string, value: any) {
+    this.operations.push({ method: 'contains', args: [column, value] })
+    return this
+  }
+
+  containedBy(column: string, value: any) {
+    this.operations.push({ method: 'containedBy', args: [column, value] })
+    return this
+  }
+
+  rangeGt(column: string, value: any) {
+    this.operations.push({ method: 'rangeGt', args: [column, value] })
+    return this
+  }
+
+  rangeGte(column: string, value: any) {
+    this.operations.push({ method: 'rangeGte', args: [column, value] })
+    return this
+  }
+
+  rangeLt(column: string, value: any) {
+    this.operations.push({ method: 'rangeLt', args: [column, value] })
+    return this
+  }
+
+  rangeLte(column: string, value: any) {
+    this.operations.push({ method: 'rangeLte', args: [column, value] })
+    return this
+  }
+
+  rangeAdjacent(column: string, value: any) {
+    this.operations.push({ method: 'rangeAdjacent', args: [column, value] })
+    return this
+  }
+
+  overlaps(column: string, value: any) {
+    this.operations.push({ method: 'overlaps', args: [column, value] })
+    return this
+  }
+
+  textSearch(column: string, query: string, config?: any) {
+    this.operations.push({ method: 'textSearch', args: [column, query, config] })
+    return this
+  }
+
+  match(query: Record<string, any>) {
+    this.operations.push({ method: 'match', args: [query] })
+    return this
+  }
+
+  not(column: string, operator: string, value: any) {
+    this.operations.push({ method: 'not', args: [column, operator, value] })
+    return this
+  }
+
+  or(filters: string) {
+    this.operations.push({ method: 'or', args: [filters] })
+    return this
+  }
+
+  filter(column: string, operator: string, value: any) {
+    this.operations.push({ method: 'filter', args: [column, operator, value] })
+    return this
+  }
+
+  order(column: string, options?: { ascending?: boolean }) {
+    this.operations.push({ method: 'order', args: [column, options] })
+    return this
+  }
+
+  limit(count: number) {
+    this.operations.push({ method: 'limit', args: [count] })
+    return this
+  }
+
+  range(from: number, to: number) {
+    this.operations.push({ method: 'range', args: [from, to] })
+    return this
+  }
 }
 
-// Proxy que mantém a interface síncrona do Supabase mas funciona de forma assíncrona internamente
+// Classe principal do Supabase
 class SupabaseProxy {
-  from(tableName: string): SupabaseQueryBuilder {
-    const createAsyncMethod = (methodName: string) => {
-      return (...args: any[]) => {
-        return getSupabaseClient().then(client => {
-          if (!client) {
-            throw new Error('Cliente Supabase não disponível')
-          }
-          
-          const table = client.from(tableName)
-          const method = table[methodName]
-          if (typeof method === 'function') {
-            const result = method.apply(table, args)
-            
-            // Se o resultado tem métodos de query builder, criar um novo proxy para eles
-            if (result && typeof result === 'object' && result.select) {
-              return createQueryBuilderProxy(result)
-            }
-            return result
-          }
-          return method
-        })
-      }
-    }
-
-    const createQueryBuilderProxy = (queryBuilder: any): any => {
-      return new Proxy(queryBuilder, {
-        get(target, prop: string) {
-          if (typeof target[prop] === 'function') {
-            return (...args: any[]) => {
-              const result = target[prop](...args)
-              // Se o resultado ainda é um query builder, envolver em proxy
-              if (result && typeof result === 'object' && result.select && prop !== 'select') {
-                return createQueryBuilderProxy(result)
-              }
-              return result
-            }
-          }
-          return target[prop]
-        }
-      })
-    }
-
-    // Criar o proxy inicial que implementa a interface SupabaseQueryBuilder
-    const queryProxy = new Proxy({} as any, {
-      get(target, prop: string) {
-        return createAsyncMethod(prop)
-      }
-    })
-    
-    return queryProxy as SupabaseQueryBuilder
+  from(tableName: string) {
+    return new AsyncQueryBuilder(tableName)
   }
 
   get auth() {
