@@ -122,36 +122,46 @@ const getSupabaseClient = async () => {
   }
 }
 
+// Função para criar um query builder que funciona de forma assíncrona
+const createAsyncQueryBuilder = async (tableName: string) => {
+  const client = await getSupabaseClient()
+  if (!client) {
+    throw new Error('Cliente Supabase não disponível')
+  }
+  return client.from(tableName)
+}
+
 // Proxy para manter a mesma interface do objeto supabase original
-export const supabase = new Proxy({} as any, {
-  get(target, prop) {
-    if (prop === 'from') {
-      return (tableName: string) => {
-        return getSupabaseClient().then(client => {
-          if (!client) {
-            throw new Error('Cliente Supabase não disponível')
-          }
-          return client.from(tableName)
-        })
-      }
+export const supabase = {
+  from: (tableName: string) => createAsyncQueryBuilder(tableName),
+  
+  // Métodos adicionais que podem ser necessários
+  auth: {
+    getSession: async () => {
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      return client.auth.getSession()
+    },
+    signInWithPassword: async (credentials: any) => {
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      return client.auth.signInWithPassword(credentials)
+    },
+    signOut: async () => {
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      return client.auth.signOut()
     }
-    
-    // Para outras propriedades, retornar uma função que aguarda a inicialização
-    return (...args: any[]) => {
-      return getSupabaseClient().then(client => {
-        if (!client) {
-          throw new Error('Cliente Supabase não disponível')
-        }
-        
-        const method = client[prop]
-        if (typeof method === 'function') {
-          return method.apply(client, args)
-        }
-        return method
-      })
+  },
+  
+  storage: {
+    from: async (bucketName: string) => {
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      return client.storage.from(bucketName)
     }
   }
-})
+}
 
 // Types for our database tables
 export interface Cliente {
