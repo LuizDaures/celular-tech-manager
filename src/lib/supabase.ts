@@ -97,7 +97,50 @@ const createSupabaseClient = async () => {
   }
 }
 
-export const supabase = await createSupabaseClient()
+// Cache para o cliente Supabase
+let supabaseClient: any = null
+let isInitializing = false
+
+// Função para obter o cliente Supabase de forma lazy
+const getSupabaseClient = async () => {
+  if (supabaseClient) {
+    return supabaseClient
+  }
+  
+  if (isInitializing) {
+    // Se já está inicializando, aguardar um pouco e tentar novamente
+    await new Promise(resolve => setTimeout(resolve, 100))
+    return getSupabaseClient()
+  }
+  
+  isInitializing = true
+  try {
+    supabaseClient = await createSupabaseClient()
+    return supabaseClient
+  } finally {
+    isInitializing = false
+  }
+}
+
+// Proxy para manter a mesma interface do objeto supabase original
+export const supabase = new Proxy({} as any, {
+  get(target, prop) {
+    // Para métodos que retornam promises, interceptamos e aguardamos a inicialização
+    return async (...args: any[]) => {
+      const client = await getSupabaseClient()
+      if (!client) {
+        throw new Error('Cliente Supabase não disponível')
+      }
+      
+      // Acessar a propriedade/método no cliente real
+      const method = client[prop]
+      if (typeof method === 'function') {
+        return method.apply(client, args)
+      }
+      return method
+    }
+  }
+})
 
 // Types for our database tables
 export interface Cliente {
@@ -194,6 +237,9 @@ export const recreateSupabaseClient = async ({ url, anonKey }: { url: string; an
         throw new Error('Estrutura do banco de dados inválida')
       }
       
+      // Atualizar o cache
+      supabaseClient = client
+      
       return client
     } catch (error) {
       console.error('Erro ao recriar cliente Supabase:', error)
@@ -202,12 +248,14 @@ export const recreateSupabaseClient = async ({ url, anonKey }: { url: string; an
     }
   }
   clearLocalStorageExceptTheme()
+  supabaseClient = null
   return null
 }
 
 // Função para desconectar e limpar dados
 export const disconnectDatabase = () => {
   console.log('Desconectando banco e limpando dados...')
+  supabaseClient = null
   clearLocalStorageExceptTheme()
   // Recarregar a página para garantir que todos os estados sejam limpos
   window.location.reload()
