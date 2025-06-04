@@ -132,9 +132,10 @@ interface QueryOperation {
 interface SupabaseResponse<T = any> {
   data: T | null
   error: any
+  count?: number
 }
 
-// Classe que implementa o padrão builder com suporte a async
+// Classe que implementa o padrão builder
 class AsyncQueryBuilder {
   private tableName: string
   private operations: QueryOperation[] = []
@@ -274,6 +275,12 @@ class AsyncQueryBuilder {
     return this
   }
 
+  // Método especial para select que pode estar no meio da cadeia
+  select(columns?: string): AsyncQueryBuilder {
+    this.operations.push({ method: 'select', args: [columns] })
+    return this
+  }
+
   // Método privado para aplicar operações
   private async applyOperations(query: any): Promise<any> {
     let result = query
@@ -283,14 +290,21 @@ class AsyncQueryBuilder {
     return result
   }
 
-  // Métodos finais que retornam promises
-  async select(columns?: string): Promise<SupabaseResponse> {
+  // Métodos finais que executam a query e retornam promises
+  async then(onFulfilled?: any, onRejected?: any): Promise<SupabaseResponse> {
     const client = await getSupabaseClient()
     if (!client) throw new Error('Cliente Supabase não disponível')
     
     const query = client.from(this.tableName)
     const queryWithOperations = await this.applyOperations(query)
-    return queryWithOperations.select(columns)
+    
+    // Se não há select nas operações, adicionar um select padrão
+    const hasSelect = this.operations.some(op => op.method === 'select')
+    if (!hasSelect) {
+      return queryWithOperations.select('*')
+    }
+    
+    return queryWithOperations
   }
 
   async insert(values: any): Promise<SupabaseResponse> {
@@ -326,7 +340,8 @@ class AsyncQueryBuilder {
     
     const query = client.from(this.tableName)
     const queryWithOperations = await this.applyOperations(query)
-    return queryWithOperations.single()
+    const result = await queryWithOperations
+    return result.single()
   }
 
   async maybeSingle(): Promise<SupabaseResponse> {
@@ -335,7 +350,8 @@ class AsyncQueryBuilder {
     
     const query = client.from(this.tableName)
     const queryWithOperations = await this.applyOperations(query)
-    return queryWithOperations.maybeSingle()
+    const result = await queryWithOperations
+    return result.maybeSingle()
   }
 }
 
