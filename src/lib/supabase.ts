@@ -1,4 +1,5 @@
 
+
 import { createClient } from '@supabase/supabase-js'
 
 // Função para validar estrutura do banco no Supabase
@@ -122,46 +123,64 @@ const getSupabaseClient = async () => {
   }
 }
 
-// Função para criar um query builder que funciona de forma assíncrona
-const createAsyncQueryBuilder = async (tableName: string) => {
-  const client = await getSupabaseClient()
-  if (!client) {
-    throw new Error('Cliente Supabase não disponível')
+// Proxy que mantém a interface síncrona do Supabase mas funciona de forma assíncrona internamente
+class SupabaseProxy {
+  from(tableName: string) {
+    const queryProxy = new Proxy({}, {
+      get(target, prop: string) {
+        return (...args: any[]) => {
+          return getSupabaseClient().then(client => {
+            if (!client) {
+              throw new Error('Cliente Supabase não disponível')
+            }
+            
+            const table = client.from(tableName)
+            const method = table[prop]
+            if (typeof method === 'function') {
+              return method.apply(table, args)
+            }
+            return method
+          })
+        }
+      }
+    })
+    
+    return queryProxy
   }
-  return client.from(tableName)
+
+  get auth() {
+    return {
+      getSession: async () => {
+        const client = await getSupabaseClient()
+        if (!client) throw new Error('Cliente Supabase não disponível')
+        return client.auth.getSession()
+      },
+      signInWithPassword: async (credentials: any) => {
+        const client = await getSupabaseClient()
+        if (!client) throw new Error('Cliente Supabase não disponível')
+        return client.auth.signInWithPassword(credentials)
+      },
+      signOut: async () => {
+        const client = await getSupabaseClient()
+        if (!client) throw new Error('Cliente Supabase não disponível')
+        return client.auth.signOut()
+      }
+    }
+  }
+
+  get storage() {
+    return {
+      from: async (bucketName: string) => {
+        const client = await getSupabaseClient()
+        if (!client) throw new Error('Cliente Supabase não disponível')
+        return client.storage.from(bucketName)
+      }
+    }
+  }
 }
 
-// Proxy para manter a mesma interface do objeto supabase original
-export const supabase = {
-  from: (tableName: string) => createAsyncQueryBuilder(tableName),
-  
-  // Métodos adicionais que podem ser necessários
-  auth: {
-    getSession: async () => {
-      const client = await getSupabaseClient()
-      if (!client) throw new Error('Cliente Supabase não disponível')
-      return client.auth.getSession()
-    },
-    signInWithPassword: async (credentials: any) => {
-      const client = await getSupabaseClient()
-      if (!client) throw new Error('Cliente Supabase não disponível')
-      return client.auth.signInWithPassword(credentials)
-    },
-    signOut: async () => {
-      const client = await getSupabaseClient()
-      if (!client) throw new Error('Cliente Supabase não disponível')
-      return client.auth.signOut()
-    }
-  },
-  
-  storage: {
-    from: async (bucketName: string) => {
-      const client = await getSupabaseClient()
-      if (!client) throw new Error('Cliente Supabase não disponível')
-      return client.storage.from(bucketName)
-    }
-  }
-}
+// Instância principal do Supabase
+export const supabase = new SupabaseProxy()
 
 // Types for our database tables
 export interface Cliente {
@@ -281,3 +300,4 @@ export const disconnectDatabase = () => {
   // Recarregar a página para garantir que todos os estados sejam limpos
   window.location.reload()
 }
+
