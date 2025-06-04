@@ -126,12 +126,12 @@ const getSupabaseClient = async () => {
 export const supabase = new Proxy({} as any, {
   get(target, prop) {
     if (prop === 'from') {
-      return (...args: any[]) => {
+      return (tableName: string) => {
         return getSupabaseClient().then(client => {
           if (!client) {
             throw new Error('Cliente Supabase não disponível')
           }
-          return client.from(...args)
+          return client.from(tableName)
         })
       }
     }
