@@ -122,12 +122,6 @@ const getSupabaseClient = async () => {
   }
 }
 
-// Interface para operações de query
-interface QueryOperation {
-  method: string
-  args: any[]
-}
-
 // Interface para o resultado das operações
 interface SupabaseResponse<T = any> {
   data: T | null
@@ -135,230 +129,241 @@ interface SupabaseResponse<T = any> {
   count?: number
 }
 
-// Classe que implementa o padrão builder
-class AsyncQueryBuilder {
+// Classe que implementa uma query builder que funciona de forma síncrona mas executa de forma assíncrona
+class SupabaseQueryBuilder {
   private tableName: string
-  private operations: QueryOperation[] = []
+  private operations: any[] = []
 
   constructor(tableName: string) {
     this.tableName = tableName
   }
 
   // Métodos de filtragem que retornam o builder para chaining
-  eq(column: string, value: any): AsyncQueryBuilder {
+  select(columns?: string) {
+    this.operations.push({ method: 'select', args: [columns || '*'] })
+    return this
+  }
+
+  eq(column: string, value: any) {
     this.operations.push({ method: 'eq', args: [column, value] })
     return this
   }
 
-  neq(column: string, value: any): AsyncQueryBuilder {
+  neq(column: string, value: any) {
     this.operations.push({ method: 'neq', args: [column, value] })
     return this
   }
 
-  gt(column: string, value: any): AsyncQueryBuilder {
+  gt(column: string, value: any) {
     this.operations.push({ method: 'gt', args: [column, value] })
     return this
   }
 
-  gte(column: string, value: any): AsyncQueryBuilder {
+  gte(column: string, value: any) {
     this.operations.push({ method: 'gte', args: [column, value] })
     return this
   }
 
-  lt(column: string, value: any): AsyncQueryBuilder {
+  lt(column: string, value: any) {
     this.operations.push({ method: 'lt', args: [column, value] })
     return this
   }
 
-  lte(column: string, value: any): AsyncQueryBuilder {
+  lte(column: string, value: any) {
     this.operations.push({ method: 'lte', args: [column, value] })
     return this
   }
 
-  like(column: string, pattern: string): AsyncQueryBuilder {
+  like(column: string, pattern: string) {
     this.operations.push({ method: 'like', args: [column, pattern] })
     return this
   }
 
-  ilike(column: string, pattern: string): AsyncQueryBuilder {
+  ilike(column: string, pattern: string) {
     this.operations.push({ method: 'ilike', args: [column, pattern] })
     return this
   }
 
-  is(column: string, value: any): AsyncQueryBuilder {
+  is(column: string, value: any) {
     this.operations.push({ method: 'is', args: [column, value] })
     return this
   }
 
-  in(column: string, values: any[]): AsyncQueryBuilder {
+  in(column: string, values: any[]) {
     this.operations.push({ method: 'in', args: [column, values] })
     return this
   }
 
-  contains(column: string, value: any): AsyncQueryBuilder {
+  contains(column: string, value: any) {
     this.operations.push({ method: 'contains', args: [column, value] })
     return this
   }
 
-  containedBy(column: string, value: any): AsyncQueryBuilder {
+  containedBy(column: string, value: any) {
     this.operations.push({ method: 'containedBy', args: [column, value] })
     return this
   }
 
-  rangeGt(column: string, value: any): AsyncQueryBuilder {
+  rangeGt(column: string, value: any) {
     this.operations.push({ method: 'rangeGt', args: [column, value] })
     return this
   }
 
-  rangeGte(column: string, value: any): AsyncQueryBuilder {
+  rangeGte(column: string, value: any) {
     this.operations.push({ method: 'rangeGte', args: [column, value] })
     return this
   }
 
-  rangeLt(column: string, value: any): AsyncQueryBuilder {
+  rangeLt(column: string, value: any) {
     this.operations.push({ method: 'rangeLt', args: [column, value] })
     return this
   }
 
-  rangeLte(column: string, value: any): AsyncQueryBuilder {
+  rangeLte(column: string, value: any) {
     this.operations.push({ method: 'rangeLte', args: [column, value] })
     return this
   }
 
-  rangeAdjacent(column: string, value: any): AsyncQueryBuilder {
+  rangeAdjacent(column: string, value: any) {
     this.operations.push({ method: 'rangeAdjacent', args: [column, value] })
     return this
   }
 
-  overlaps(column: string, value: any): AsyncQueryBuilder {
+  overlaps(column: string, value: any) {
     this.operations.push({ method: 'overlaps', args: [column, value] })
     return this
   }
 
-  textSearch(column: string, query: string, config?: any): AsyncQueryBuilder {
+  textSearch(column: string, query: string, config?: any) {
     this.operations.push({ method: 'textSearch', args: [column, query, config] })
     return this
   }
 
-  match(query: Record<string, any>): AsyncQueryBuilder {
+  match(query: Record<string, any>) {
     this.operations.push({ method: 'match', args: [query] })
     return this
   }
 
-  not(column: string, operator: string, value: any): AsyncQueryBuilder {
+  not(column: string, operator: string, value: any) {
     this.operations.push({ method: 'not', args: [column, operator, value] })
     return this
   }
 
-  or(filters: string): AsyncQueryBuilder {
+  or(filters: string) {
     this.operations.push({ method: 'or', args: [filters] })
     return this
   }
 
-  filter(column: string, operator: string, value: any): AsyncQueryBuilder {
+  filter(column: string, operator: string, value: any) {
     this.operations.push({ method: 'filter', args: [column, operator, value] })
     return this
   }
 
-  order(column: string, options?: { ascending?: boolean }): AsyncQueryBuilder {
+  order(column: string, options?: { ascending?: boolean }) {
     this.operations.push({ method: 'order', args: [column, options] })
     return this
   }
 
-  limit(count: number): AsyncQueryBuilder {
+  limit(count: number) {
     this.operations.push({ method: 'limit', args: [count] })
     return this
   }
 
-  range(from: number, to: number): AsyncQueryBuilder {
+  range(from: number, to: number) {
     this.operations.push({ method: 'range', args: [from, to] })
     return this
   }
 
-  // Método especial para select que pode estar no meio da cadeia
-  select(columns?: string): AsyncQueryBuilder {
-    this.operations.push({ method: 'select', args: [columns] })
-    return this
-  }
-
   // Método privado para aplicar operações
-  private async applyOperations(query: any): Promise<any> {
-    let result = query
-    for (const op of this.operations) {
-      result = result[op.method](...op.args)
-    }
-    return result
-  }
-
-  // Métodos finais que executam a query e retornam promises
-  async then(onFulfilled?: any, onRejected?: any): Promise<SupabaseResponse> {
+  private async executeQuery(): Promise<any> {
     const client = await getSupabaseClient()
     if (!client) throw new Error('Cliente Supabase não disponível')
     
-    const query = client.from(this.tableName)
-    const queryWithOperations = await this.applyOperations(query)
+    let query = client.from(this.tableName)
     
     // Se não há select nas operações, adicionar um select padrão
     const hasSelect = this.operations.some(op => op.method === 'select')
     if (!hasSelect) {
-      return queryWithOperations.select('*')
+      query = query.select('*')
     }
     
-    return queryWithOperations
+    // Aplicar todas as operações
+    for (const op of this.operations) {
+      query = query[op.method](...op.args)
+    }
+    
+    return query
   }
 
+  // Métodos que executam a query
   async insert(values: any): Promise<SupabaseResponse> {
     const client = await getSupabaseClient()
     if (!client) throw new Error('Cliente Supabase não disponível')
     
-    const query = client.from(this.tableName)
-    const queryWithOperations = await this.applyOperations(query)
-    return queryWithOperations.insert(values)
+    let query = client.from(this.tableName)
+    
+    // Aplicar operações de preparação (sem select)
+    for (const op of this.operations) {
+      if (op.method !== 'select') {
+        query = query[op.method](...op.args)
+      }
+    }
+    
+    return query.insert(values)
   }
 
   async update(values: any): Promise<SupabaseResponse> {
     const client = await getSupabaseClient()
     if (!client) throw new Error('Cliente Supabase não disponível')
     
-    const query = client.from(this.tableName)
-    const queryWithOperations = await this.applyOperations(query)
-    return queryWithOperations.update(values)
+    let query = client.from(this.tableName)
+    
+    // Aplicar operações de preparação (sem select)
+    for (const op of this.operations) {
+      if (op.method !== 'select') {
+        query = query[op.method](...op.args)
+      }
+    }
+    
+    return query.update(values)
   }
 
   async delete(): Promise<SupabaseResponse> {
     const client = await getSupabaseClient()
     if (!client) throw new Error('Cliente Supabase não disponível')
     
-    const query = client.from(this.tableName)
-    const queryWithOperations = await this.applyOperations(query)
-    return queryWithOperations.delete()
+    let query = client.from(this.tableName)
+    
+    // Aplicar operações de preparação (sem select)
+    for (const op of this.operations) {
+      if (op.method !== 'select') {
+        query = query[op.method](...op.args)
+      }
+    }
+    
+    return query.delete()
   }
 
   async single(): Promise<SupabaseResponse> {
-    const client = await getSupabaseClient()
-    if (!client) throw new Error('Cliente Supabase não disponível')
-    
-    const query = client.from(this.tableName)
-    const queryWithOperations = await this.applyOperations(query)
-    const result = await queryWithOperations
-    return result.single()
+    const query = await this.executeQuery()
+    return query.single()
   }
 
   async maybeSingle(): Promise<SupabaseResponse> {
-    const client = await getSupabaseClient()
-    if (!client) throw new Error('Cliente Supabase não disponível')
-    
-    const query = client.from(this.tableName)
-    const queryWithOperations = await this.applyOperations(query)
-    const result = await queryWithOperations
-    return result.maybeSingle()
+    const query = await this.executeQuery()
+    return query.maybeSingle()
+  }
+
+  // Este é o método que permite await direto no builder
+  then(onFulfilled?: any, onRejected?: any) {
+    return this.executeQuery().then(onFulfilled, onRejected)
   }
 }
 
 // Classe principal do Supabase
 class SupabaseProxy {
-  from(tableName: string): AsyncQueryBuilder {
-    return new AsyncQueryBuilder(tableName)
+  from(tableName: string): SupabaseQueryBuilder {
+    return new SupabaseQueryBuilder(tableName)
   }
 
   get auth() {
