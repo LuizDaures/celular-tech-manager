@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, Cliente } from '@/lib/supabase'
@@ -32,12 +31,14 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
           .from('clientes')
           .update(data)
           .eq('id', cliente.id)
+          .execute()
         
         if (error) throw error
       } else {
         const { error } = await supabase
           .from('clientes')
           .insert([data])
+          .execute()
         
         if (error) throw error
       }

@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, Cliente } from '@/lib/supabase'
@@ -27,6 +26,7 @@ export function ClientesList() {
         .from('clientes')
         .select('*')
         .order('criado_em', { ascending: false })
+        .execute()
 
       if (error) {
         console.error('Error fetching clientes:', error)
@@ -46,6 +46,7 @@ export function ClientesList() {
         .select('id')
         .eq('cliente_id', id)
         .limit(1)
+        .execute()
 
       if (ordensError) throw ordensError
 
@@ -57,6 +58,7 @@ export function ClientesList() {
         .from('clientes')
         .delete()
         .eq('id', id)
+        .execute()
 
       if (error) throw error
     },

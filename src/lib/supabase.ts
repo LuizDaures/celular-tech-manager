@@ -129,7 +129,7 @@ interface SupabaseResponse<T = any> {
   count?: number
 }
 
-// Classe que implementa uma query builder que funciona de forma síncrona mas executa de forma assíncrona
+// Classe que implementa uma query builder 
 class SupabaseQueryBuilder {
   private tableName: string
   private operations: any[] = []
@@ -295,7 +295,7 @@ class SupabaseQueryBuilder {
     return query
   }
 
-  // Métodos que executam a query
+  // Métodos que executam a query e retornam Promises
   async insert(values: any): Promise<SupabaseResponse> {
     const client = await getSupabaseClient()
     if (!client) throw new Error('Cliente Supabase não disponível')
@@ -354,9 +354,9 @@ class SupabaseQueryBuilder {
     return query.maybeSingle()
   }
 
-  // Este é o método que permite await direto no builder
-  then(onFulfilled?: any, onRejected?: any) {
-    return this.executeQuery().then(onFulfilled, onRejected)
+  // Método para executar e retornar o resultado diretamente
+  async execute(): Promise<SupabaseResponse> {
+    return this.executeQuery()
   }
 }
 
