@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, Cliente } from '@/lib/supabase'
+import { getSupabaseClient, Cliente } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,19 +26,20 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
 
   const saveCliente = useMutation({
     mutationFn: async (data: { nome: string; telefone?: string; email?: string; endereco?: string; cpf?: string }) => {
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
       if (cliente) {
-        const { error } = await supabase
+        const { error } = await client
           .from('clientes')
           .update(data)
           .eq('id', cliente.id)
-          .execute()
         
         if (error) throw error
       } else {
-        const { error } = await supabase
+        const { error } = await client
           .from('clientes')
           .insert([data])
-          .execute()
         
         if (error) throw error
       }

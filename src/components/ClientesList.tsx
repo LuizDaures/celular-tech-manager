@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, Cliente } from '@/lib/supabase'
+import { getSupabaseClient, Cliente } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -22,11 +22,13 @@ export function ClientesList() {
     queryKey: ['clientes'],
     queryFn: async () => {
       console.log('Fetching clientes...')
-      const { data, error } = await supabase
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
+      const { data, error } = await client
         .from('clientes')
         .select('*')
         .order('criado_em', { ascending: false })
-        .execute()
 
       if (error) {
         console.error('Error fetching clientes:', error)
@@ -40,13 +42,15 @@ export function ClientesList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Primeiro verificar se há ordens vinculadas - usando o nome correto da tabela
-      const { data: ordens, error: ordensError } = await supabase
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
+      // Primeiro verificar se há ordens vinculadas
+      const { data: ordens, error: ordensError } = await client
         .from('ordens_servico')
         .select('id')
         .eq('cliente_id', id)
         .limit(1)
-        .execute()
 
       if (ordensError) throw ordensError
 
@@ -54,11 +58,10 @@ export function ClientesList() {
         throw new Error('Não é possível excluir este cliente pois existem ordens de serviço vinculadas a ele.')
       }
 
-      const { error } = await supabase
+      const { error } = await client
         .from('clientes')
         .delete()
         .eq('id', id)
-        .execute()
 
       if (error) throw error
     },

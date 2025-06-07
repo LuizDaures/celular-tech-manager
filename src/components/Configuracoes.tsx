@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,11 +23,12 @@ export function Configuracoes() {
   const { data: dadosEmpresa } = useQuery({
     queryKey: ['dados-empresa'],
     queryFn: async () => {
-      if (!supabase) {
+      const client = await getSupabaseClient()
+      if (!client) {
         return null
       }
       
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('dados_empresa')
         .select('*')
         .limit(1)
@@ -46,19 +46,20 @@ export function Configuracoes() {
   // Mutation para salvar dados da empresa
   const saveEmpresaMutation = useMutation({
     mutationFn: async (data: { nome: string; cnpj?: string; logo_base64?: string }) => {
-      if (!supabase) {
+      const client = await getSupabaseClient()
+      if (!client) {
         throw new Error('Banco não configurado')
       }
       
       if (dadosEmpresa) {
-        const { error } = await supabase
+        const { error } = await client
           .from('dados_empresa')
           .update(data)
           .eq('id', dadosEmpresa.id)
         
         if (error) throw error
       } else {
-        const { error } = await supabase
+        const { error } = await client
           .from('dados_empresa')
           .insert([data])
         
