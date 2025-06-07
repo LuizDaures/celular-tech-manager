@@ -129,241 +129,121 @@ interface SupabaseResponse<T = any> {
   count?: number
 }
 
-// Classe que implementa uma query builder 
-class SupabaseQueryBuilder {
-  private tableName: string
-  private operations: any[] = []
-
-  constructor(tableName: string) {
-    this.tableName = tableName
+// Classe principal do Supabase que imita a API oficial
+class SupabaseProxy {
+  from(tableName: string) {
+    return {
+      select: (columns?: string) => this.buildQuery(tableName, 'select', columns || '*'),
+      insert: (values: any) => this.buildMutation(tableName, 'insert', values),
+      update: (values: any) => this.buildMutation(tableName, 'update', values),
+      delete: () => this.buildMutation(tableName, 'delete'),
+    }
   }
 
-  // Métodos de filtragem que retornam o builder para chaining
-  select(columns?: string) {
-    this.operations.push({ method: 'select', args: [columns || '*'] })
-    return this
+  private buildQuery(tableName: string, method: string, columns?: string) {
+    const operations = [{ method: 'select', args: [columns] }]
+    
+    return {
+      eq: (column: string, value: any) => this.addFilter(tableName, operations, 'eq', column, value),
+      neq: (column: string, value: any) => this.addFilter(tableName, operations, 'neq', column, value),
+      gt: (column: string, value: any) => this.addFilter(tableName, operations, 'gt', column, value),
+      gte: (column: string, value: any) => this.addFilter(tableName, operations, 'gte', column, value),
+      lt: (column: string, value: any) => this.addFilter(tableName, operations, 'lt', column, value),
+      lte: (column: string, value: any) => this.addFilter(tableName, operations, 'lte', column, value),
+      like: (column: string, pattern: string) => this.addFilter(tableName, operations, 'like', column, pattern),
+      ilike: (column: string, pattern: string) => this.addFilter(tableName, operations, 'ilike', column, pattern),
+      is: (column: string, value: any) => this.addFilter(tableName, operations, 'is', column, value),
+      in: (column: string, values: any[]) => this.addFilter(tableName, operations, 'in', column, values),
+      order: (column: string, options?: { ascending?: boolean }) => this.addFilter(tableName, operations, 'order', column, options),
+      limit: (count: number) => this.addFilter(tableName, operations, 'limit', count),
+      range: (from: number, to: number) => this.addFilter(tableName, operations, 'range', from, to),
+      single: () => this.executeQuery(tableName, operations, 'single'),
+      maybeSingle: () => this.executeQuery(tableName, operations, 'maybeSingle'),
+      execute: () => this.executeQuery(tableName, operations),
+    }
   }
 
-  eq(column: string, value: any) {
-    this.operations.push({ method: 'eq', args: [column, value] })
-    return this
+  private buildMutation(tableName: string, method: string, values?: any) {
+    return {
+      eq: (column: string, value: any) => this.addMutationFilter(tableName, method, values, 'eq', column, value),
+      neq: (column: string, value: any) => this.addMutationFilter(tableName, method, values, 'neq', column, value),
+      execute: () => this.executeMutation(tableName, method, values, []),
+    }
   }
 
-  neq(column: string, value: any) {
-    this.operations.push({ method: 'neq', args: [column, value] })
-    return this
+  private addFilter(tableName: string, operations: any[], filterMethod: string, ...args: any[]) {
+    const newOperations = [...operations, { method: filterMethod, args }]
+    
+    return {
+      eq: (column: string, value: any) => this.addFilter(tableName, newOperations, 'eq', column, value),
+      neq: (column: string, value: any) => this.addFilter(tableName, newOperations, 'neq', column, value),
+      gt: (column: string, value: any) => this.addFilter(tableName, newOperations, 'gt', column, value),
+      gte: (column: string, value: any) => this.addFilter(tableName, newOperations, 'gte', column, value),
+      lt: (column: string, value: any) => this.addFilter(tableName, newOperations, 'lt', column, value),
+      lte: (column: string, value: any) => this.addFilter(tableName, newOperations, 'lte', column, value),
+      like: (column: string, pattern: string) => this.addFilter(tableName, newOperations, 'like', column, pattern),
+      ilike: (column: string, pattern: string) => this.addFilter(tableName, newOperations, 'ilike', column, pattern),
+      is: (column: string, value: any) => this.addFilter(tableName, newOperations, 'is', column, value),
+      in: (column: string, values: any[]) => this.addFilter(tableName, newOperations, 'in', column, values),
+      order: (column: string, options?: { ascending?: boolean }) => this.addFilter(tableName, newOperations, 'order', column, options),
+      limit: (count: number) => this.addFilter(tableName, newOperations, 'limit', count),
+      range: (from: number, to: number) => this.addFilter(tableName, newOperations, 'range', from, to),
+      single: () => this.executeQuery(tableName, newOperations, 'single'),
+      maybeSingle: () => this.executeQuery(tableName, newOperations, 'maybeSingle'),
+      execute: () => this.executeQuery(tableName, newOperations),
+    }
   }
 
-  gt(column: string, value: any) {
-    this.operations.push({ method: 'gt', args: [column, value] })
-    return this
+  private addMutationFilter(tableName: string, method: string, values: any, filterMethod: string, ...args: any[]) {
+    const filters = [{ method: filterMethod, args }]
+    
+    return {
+      eq: (column: string, value: any) => this.addMutationFilter(tableName, method, values, 'eq', column, value),
+      neq: (column: string, value: any) => this.addMutationFilter(tableName, method, values, 'neq', column, value),
+      execute: () => this.executeMutation(tableName, method, values, [...filters, { method: filterMethod, args }]),
+    }
   }
 
-  gte(column: string, value: any) {
-    this.operations.push({ method: 'gte', args: [column, value] })
-    return this
-  }
-
-  lt(column: string, value: any) {
-    this.operations.push({ method: 'lt', args: [column, value] })
-    return this
-  }
-
-  lte(column: string, value: any) {
-    this.operations.push({ method: 'lte', args: [column, value] })
-    return this
-  }
-
-  like(column: string, pattern: string) {
-    this.operations.push({ method: 'like', args: [column, pattern] })
-    return this
-  }
-
-  ilike(column: string, pattern: string) {
-    this.operations.push({ method: 'ilike', args: [column, pattern] })
-    return this
-  }
-
-  is(column: string, value: any) {
-    this.operations.push({ method: 'is', args: [column, value] })
-    return this
-  }
-
-  in(column: string, values: any[]) {
-    this.operations.push({ method: 'in', args: [column, values] })
-    return this
-  }
-
-  contains(column: string, value: any) {
-    this.operations.push({ method: 'contains', args: [column, value] })
-    return this
-  }
-
-  containedBy(column: string, value: any) {
-    this.operations.push({ method: 'containedBy', args: [column, value] })
-    return this
-  }
-
-  rangeGt(column: string, value: any) {
-    this.operations.push({ method: 'rangeGt', args: [column, value] })
-    return this
-  }
-
-  rangeGte(column: string, value: any) {
-    this.operations.push({ method: 'rangeGte', args: [column, value] })
-    return this
-  }
-
-  rangeLt(column: string, value: any) {
-    this.operations.push({ method: 'rangeLt', args: [column, value] })
-    return this
-  }
-
-  rangeLte(column: string, value: any) {
-    this.operations.push({ method: 'rangeLte', args: [column, value] })
-    return this
-  }
-
-  rangeAdjacent(column: string, value: any) {
-    this.operations.push({ method: 'rangeAdjacent', args: [column, value] })
-    return this
-  }
-
-  overlaps(column: string, value: any) {
-    this.operations.push({ method: 'overlaps', args: [column, value] })
-    return this
-  }
-
-  textSearch(column: string, query: string, config?: any) {
-    this.operations.push({ method: 'textSearch', args: [column, query, config] })
-    return this
-  }
-
-  match(query: Record<string, any>) {
-    this.operations.push({ method: 'match', args: [query] })
-    return this
-  }
-
-  not(column: string, operator: string, value: any) {
-    this.operations.push({ method: 'not', args: [column, operator, value] })
-    return this
-  }
-
-  or(filters: string) {
-    this.operations.push({ method: 'or', args: [filters] })
-    return this
-  }
-
-  filter(column: string, operator: string, value: any) {
-    this.operations.push({ method: 'filter', args: [column, operator, value] })
-    return this
-  }
-
-  order(column: string, options?: { ascending?: boolean }) {
-    this.operations.push({ method: 'order', args: [column, options] })
-    return this
-  }
-
-  limit(count: number) {
-    this.operations.push({ method: 'limit', args: [count] })
-    return this
-  }
-
-  range(from: number, to: number) {
-    this.operations.push({ method: 'range', args: [from, to] })
-    return this
-  }
-
-  // Método privado para aplicar operações
-  private async executeQuery(): Promise<any> {
+  private async executeQuery(tableName: string, operations: any[], finalMethod?: string): Promise<SupabaseResponse> {
     const client = await getSupabaseClient()
     if (!client) throw new Error('Cliente Supabase não disponível')
     
-    let query = client.from(this.tableName)
-    
-    // Se não há select nas operações, adicionar um select padrão
-    const hasSelect = this.operations.some(op => op.method === 'select')
-    if (!hasSelect) {
-      query = query.select('*')
-    }
+    let query = client.from(tableName)
     
     // Aplicar todas as operações
-    for (const op of this.operations) {
+    for (const op of operations) {
       query = query[op.method](...op.args)
+    }
+    
+    // Aplicar método final se especificado
+    if (finalMethod) {
+      query = query[finalMethod]()
     }
     
     return query
   }
 
-  // Métodos que executam a query e retornam Promises
-  async insert(values: any): Promise<SupabaseResponse> {
+  private async executeMutation(tableName: string, method: string, values: any, filters: any[]): Promise<SupabaseResponse> {
     const client = await getSupabaseClient()
     if (!client) throw new Error('Cliente Supabase não disponível')
     
-    let query = client.from(this.tableName)
+    let query = client.from(tableName)
     
-    // Aplicar operações de preparação (sem select)
-    for (const op of this.operations) {
-      if (op.method !== 'select') {
-        query = query[op.method](...op.args)
-      }
+    // Aplicar filtros primeiro
+    for (const filter of filters) {
+      query = query[filter.method](...filter.args)
     }
     
-    return query.insert(values)
-  }
-
-  async update(values: any): Promise<SupabaseResponse> {
-    const client = await getSupabaseClient()
-    if (!client) throw new Error('Cliente Supabase não disponível')
-    
-    let query = client.from(this.tableName)
-    
-    // Aplicar operações de preparação (sem select)
-    for (const op of this.operations) {
-      if (op.method !== 'select') {
-        query = query[op.method](...op.args)
-      }
+    // Aplicar operação de mutação
+    if (method === 'insert') {
+      return query.insert(values)
+    } else if (method === 'update') {
+      return query.update(values)
+    } else if (method === 'delete') {
+      return query.delete()
     }
     
-    return query.update(values)
-  }
-
-  async delete(): Promise<SupabaseResponse> {
-    const client = await getSupabaseClient()
-    if (!client) throw new Error('Cliente Supabase não disponível')
-    
-    let query = client.from(this.tableName)
-    
-    // Aplicar operações de preparação (sem select)
-    for (const op of this.operations) {
-      if (op.method !== 'select') {
-        query = query[op.method](...op.args)
-      }
-    }
-    
-    return query.delete()
-  }
-
-  async single(): Promise<SupabaseResponse> {
-    const query = await this.executeQuery()
-    return query.single()
-  }
-
-  async maybeSingle(): Promise<SupabaseResponse> {
-    const query = await this.executeQuery()
-    return query.maybeSingle()
-  }
-
-  // Método para executar e retornar o resultado diretamente
-  async execute(): Promise<SupabaseResponse> {
-    return this.executeQuery()
-  }
-}
-
-// Classe principal do Supabase
-class SupabaseProxy {
-  from(tableName: string): SupabaseQueryBuilder {
-    return new SupabaseQueryBuilder(tableName)
+    return query
   }
 
   get auth() {
