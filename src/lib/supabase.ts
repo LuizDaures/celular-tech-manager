@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js'
 
 // Função para validar estrutura do banco no Supabase
@@ -121,113 +122,8 @@ export const getSupabaseClient = async () => {
   }
 }
 
-// Interface para o resultado das operações
-interface SupabaseResponse<T = any> {
-  data: T | null
-  error: any
-  count?: number
-}
-
-// Classe principal do Supabase que imita a API oficial
-class SupabaseProxy {
-  from(tableName: string) {
-    return {
-      select: async (columns?: string, options?: { count?: 'exact' | 'planned' | 'estimated', head?: boolean }) => {
-        const client = await getSupabaseClient()
-        if (!client) throw new Error('Cliente Supabase não disponível')
-        
-        let query = client.from(tableName).select(columns || '*', options)
-        return query
-      },
-      insert: async (values: any) => {
-        const client = await getSupabaseClient()
-        if (!client) throw new Error('Cliente Supabase não disponível')
-        
-        return client.from(tableName).insert(values)
-      },
-      update: (values: any) => this.buildMutation(tableName, 'update', values),
-      delete: () => this.buildMutation(tableName, 'delete'),
-    }
-  }
-
-  private buildMutation(tableName: string, method: string, values?: any) {
-    return {
-      eq: (column: string, value: any) => this.addMutationFilter(tableName, method, values, 'eq', column, value),
-      neq: (column: string, value: any) => this.addMutationFilter(tableName, method, values, 'neq', column, value),
-      execute: async () => {
-        const client = await getSupabaseClient()
-        if (!client) throw new Error('Cliente Supabase não disponível')
-        
-        let query = client.from(tableName)
-        
-        if (method === 'update') {
-          return query.update(values)
-        } else if (method === 'delete') {
-          return query.delete()
-        }
-        
-        return query
-      },
-    }
-  }
-
-  private addMutationFilter(tableName: string, method: string, values: any, filterMethod: string, column: string, value: any) {
-    return {
-      eq: (column: string, value: any) => this.addMutationFilter(tableName, method, values, 'eq', column, value),
-      neq: (column: string, value: any) => this.addMutationFilter(tableName, method, values, 'neq', column, value),
-      execute: async () => {
-        const client = await getSupabaseClient()
-        if (!client) throw new Error('Cliente Supabase não disponível')
-        
-        let query = client.from(tableName)
-        
-        if (method === 'update') {
-          query = query.update(values)
-        } else if (method === 'delete') {
-          query = query.delete()
-        }
-        
-        // Apply the filter
-        query = query[filterMethod](column, value)
-        
-        return query
-      },
-    }
-  }
-
-  get auth() {
-    return {
-      getSession: async () => {
-        const client = await getSupabaseClient()
-        if (!client) throw new Error('Cliente Supabase não disponível')
-        return client.auth.getSession()
-      },
-      signInWithPassword: async (credentials: any) => {
-        const client = await getSupabaseClient()
-        if (!client) throw new Error('Cliente Supabase não disponível')
-        return client.auth.signInWithPassword(credentials)
-      },
-      signOut: async () => {
-        const client = await getSupabaseClient()
-        if (!client) throw new Error('Cliente Supabase não disponível')
-        return client.auth.signOut()
-      }
-    }
-  }
-
-  get storage() {
-    return {
-      from: async (bucketName: string) => {
-        const client = await getSupabaseClient()
-        if (!client) throw new Error('Cliente Supabase não disponível')
-        return client.storage.from(bucketName)
-      }
-    }
-  }
-}
-
-// Instância principal do Supabase
-export const supabase = new SupabaseProxy()
+// Instância principal do Supabase usando o cliente real
+export const supabase = await getSupabaseClient()
 
 // Types for our database tables
 export interface Cliente {

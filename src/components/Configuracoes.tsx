@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseClient } from '@/lib/supabase'
@@ -123,94 +124,99 @@ export function Configuracoes() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Configurações</h1>
-        <p className="text-muted-foreground">
-          Configure os dados da sua empresa e outras preferências do sistema.
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto p-4 lg:p-6">
+        <div className="space-y-6">
+          <div className="mb-6">
+            <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Configurações</h1>
+            <p className="text-muted-foreground mt-1">
+              Configure os dados da sua empresa e outras preferências do sistema.
+            </p>
+          </div>
 
-      <div className="grid gap-6">
-        {/* Configurações da Empresa */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building className="h-5 w-5" />
-              Dados da Empresa
-            </CardTitle>
-            <CardDescription>
-              Configure as informações que aparecerão nos relatórios e documentos.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="company-name">Nome da Empresa</Label>
-                <Input
-                  id="company-name"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  placeholder="Nome da assistência técnica"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="company-cnpj">CNPJ</Label>
-                <Input
-                  id="company-cnpj"
-                  value={cnpj}
-                  onChange={(e) => setCnpj(e.target.value)}
-                  placeholder="00.000.000/0000-00"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="company-logo">Logo da Empresa</Label>
-                <Input
-                  id="company-logo"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  className="max-w-md"
-                />
-              </div>
-              
-              {logoPreview && (
+          {/* Configurações da Empresa */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                Dados da Empresa
+              </CardTitle>
+              <CardDescription>
+                Configure as informações que aparecerão nos relatórios e documentos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-muted-foreground">Logo carregada com sucesso</span>
-                  </div>
-                  <div className="border rounded-lg p-4 bg-gray-50 inline-block">
-                    <img 
-                      src={`data:image/png;base64,${logoPreview}`} 
-                      alt="Logo da empresa"
-                      className="max-h-24 max-w-48 object-contain"
-                    />
-                  </div>
+                  <Label htmlFor="company-name" className="text-sm font-medium">Nome da Empresa</Label>
+                  <Input
+                    id="company-name"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Nome da assistência técnica"
+                    className="w-full"
+                  />
                 </div>
-              )}
-            </div>
-            
-            <div className="pt-4">
-              <Button 
-                onClick={handleSaveSettings} 
-                disabled={saveEmpresaMutation.isPending}
-                className="w-full md:w-auto"
-              >
-                {saveEmpresaMutation.isPending ? 'Salvando...' : 'Salvar Informações'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="company-cnpj" className="text-sm font-medium">CNPJ</Label>
+                  <Input
+                    id="company-cnpj"
+                    value={cnpj}
+                    onChange={(e) => setCnpj(e.target.value)}
+                    placeholder="00.000.000/0000-00"
+                    className="w-full"
+                  />
+                </div>
+              </div>
 
-        <Separator />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="company-logo" className="text-sm font-medium">Logo da Empresa</Label>
+                  <Input
+                    id="company-logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="max-w-md"
+                  />
+                </div>
+                
+                {logoPreview && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-muted-foreground">Logo carregada com sucesso</span>
+                    </div>
+                    <div className="border rounded-lg p-4 bg-muted/50 inline-block">
+                      <img 
+                        src={`data:image/png;base64,${logoPreview}`} 
+                        alt="Logo da empresa"
+                        className="max-h-24 max-w-48 object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="pt-4 border-t">
+                <Button 
+                  onClick={handleSaveSettings} 
+                  disabled={saveEmpresaMutation.isPending}
+                  className="w-full md:w-auto"
+                  size="lg"
+                >
+                  {saveEmpresaMutation.isPending ? 'Salvando...' : 'Salvar Informações'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Configurações do Banco de Dados */}
-        <DatabaseConfig />
+          <Separator />
+
+          {/* Configurações do Banco de Dados */}
+          <DatabaseConfig />
+        </div>
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 
 import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 
 interface ItemForm {
   peca_id?: string
@@ -18,7 +18,10 @@ export function useEstoqueManager() {
     
     console.log(`Atualizando estoque da peça ${pecaId} em ${quantidadeAlterada} unidades`)
     
-    const { data: peca, error: fetchError } = await supabase
+    const client = await getSupabaseClient()
+    if (!client) throw new Error('Cliente Supabase não disponível')
+    
+    const { data: peca, error: fetchError } = await client
       .from('pecas_manutencao')
       .select('estoque')
       .eq('id', pecaId)
@@ -36,7 +39,7 @@ export function useEstoqueManager() {
       throw new Error(`Estoque insuficiente. Estoque atual: ${peca.estoque}, tentativa de débito: ${Math.abs(quantidadeAlterada)}`)
     }
     
-    const { error } = await supabase
+    const { error } = await client
       .from('pecas_manutencao')
       .update({ estoque: novoEstoque })
       .eq('id', pecaId)

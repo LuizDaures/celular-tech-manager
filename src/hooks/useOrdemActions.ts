@@ -1,6 +1,6 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 
 export function useOrdemActions() {
@@ -9,12 +9,13 @@ export function useOrdemActions() {
 
   const deleteOrdem = useMutation({
     mutationFn: async (ordemId: string) => {
-      if (!supabase) {
+      const client = await getSupabaseClient()
+      if (!client) {
         throw new Error('Banco não configurado')
       }
 
       // Primeiro, buscar os itens da ordem que vieram do estoque
-      const { data: itens, error: itensError } = await supabase
+      const { data: itens, error: itensError } = await client
         .from('itens_ordem')
         .select('*')
         .eq('ordem_id', ordemId)
@@ -27,7 +28,7 @@ export function useOrdemActions() {
           console.log(`Devolvendo ${item.quantidade} unidades da peça ${item.peca_id} ao estoque`)
           
           // Buscar estoque atual
-          const { data: peca, error: fetchError } = await supabase
+          const { data: peca, error: fetchError } = await client
             .from('pecas_manutencao')
             .select('estoque')
             .eq('id', item.peca_id)
@@ -40,7 +41,7 @@ export function useOrdemActions() {
 
           // Atualizar estoque
           const novoEstoque = peca.estoque + item.quantidade
-          const { error: updateError } = await supabase
+          const { error: updateError } = await client
             .from('pecas_manutencao')
             .update({ estoque: novoEstoque })
             .eq('id', item.peca_id)
@@ -52,7 +53,7 @@ export function useOrdemActions() {
       }
 
       // Deletar itens da ordem
-      const { error: deleteItensError } = await supabase
+      const { error: deleteItensError } = await client
         .from('itens_ordem')
         .delete()
         .eq('ordem_id', ordemId)
@@ -60,7 +61,7 @@ export function useOrdemActions() {
       if (deleteItensError) throw deleteItensError
 
       // Deletar a ordem
-      const { error: deleteOrdemError } = await supabase
+      const { error: deleteOrdemError } = await client
         .from('ordens_servico')
         .delete()
         .eq('id', ordemId)

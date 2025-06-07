@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
+import { getSupabaseClient, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { OrdemBasicInfo } from '@/components/OrdemBasicInfo'
@@ -62,7 +63,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
+      const { data, error } = await client
         .from('clientes')
         .select('*')
         .order('nome')
@@ -75,7 +79,10 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const { data: tecnicos = [] } = useQuery({
     queryKey: ['tecnicos'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
+      const { data, error } = await client
         .from('tecnicos')
         .select('*')
         .order('nome')
@@ -93,18 +100,21 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       console.log('Itens atuais:', data.itens)
       console.log('Itens originais:', originalItens)
       
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
       let ordemId = ordem?.id
 
       // Salvar dados da ordem
       if (ordem) {
-        const { error } = await supabase
+        const { error } = await client
           .from('ordens_servico')
           .update(data.ordemData)
           .eq('id', ordem.id)
         
         if (error) throw error
       } else {
-        const { data: newOrdem, error } = await supabase
+        const { data: newOrdem, error } = await client
           .from('ordens_servico')
           .insert([{ ...data.ordemData, data_abertura: new Date().toISOString() }])
           .select()
@@ -121,7 +131,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
       if (ordemId) {
         // Deletar itens existentes
         if (ordem) {
-          const { error: deleteError } = await supabase
+          const { error: deleteError } = await client
             .from('itens_ordem')
             .delete()
             .eq('ordem_id', ordemId)
@@ -139,7 +149,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             preco_unitario: item.preco_unitario
           }))
 
-          const { error: itensError } = await supabase
+          const { error: itensError } = await client
             .from('itens_ordem')
             .insert(itensToInsert)
 
@@ -201,75 +211,98 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-2 sm:p-4">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
-        {/* Formulário Principal */}
-        <div className="lg:col-span-3">
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-            {/* Informações Básicas */}
-            <div className="bg-card border rounded-lg p-3 sm:p-4">
-              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Informações Básicas</h3>
-              <OrdemBasicInfo
-                clienteId={clienteId}
-                setClienteId={setClienteId}
-                tecnicoId={tecnicoId}
-                setTecnicoId={setTecnicoId}
-                dispositivo={dispositivo}
-                setDispositivo={setDispositivo}
-                descricaoProblema={descricaoProblema}
-                setDescricaoProblema={setDescricaoProblema}
-                diagnostico={diagnostico}
-                setDiagnostico={setDiagnostico}
-                servicoRealizado={servicoRealizado}
-                setServicoRealizado={setServicoRealizado}
-                clientes={clientes}
-                tecnicos={tecnicos}
-                readOnly={readOnly}
-              />
-            </div>
-
-            {/* Itens da Ordem */}
-            <div className="bg-card border rounded-lg p-3 sm:p-4">
-              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Peças e Materiais</h3>
-              <OrdemItensManager
-                itens={itens}
-                setItens={setItens}
-                readOnly={readOnly}
-              />
-            </div>
-
-            {/* Status e Valores */}
-            <div className="bg-card border rounded-lg p-3 sm:p-4">
-              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Status e Valores</h3>
-              <OrdemStatusSection
-                status={status}
-                setStatus={setStatus}
-                valor={valor}
-                setValor={setValor}
-                totalItens={itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)}
-                readOnly={readOnly}
-              />
-            </div>
-
-            {/* Botões de Ação */}
-            {!readOnly && (
-              <div className="flex justify-end space-x-2 sm:space-x-4 pt-2 sm:pt-4">
-                <Button 
-                  type="submit" 
-                  disabled={saveOrdem.isPending}
-                  className="min-w-32"
-                >
-                  {saveOrdem.isPending ? 'Salvando...' : (ordem ? 'Atualizar Ordem' : 'Criar Ordem')}
-                </Button>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto p-4 lg:p-6">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          {/* Formulário Principal */}
+          <div className="xl:col-span-3">
+            <div className="space-y-6">
+              <div className="mb-6">
+                <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
+                  {ordem ? 'Editar Ordem de Serviço' : 'Nova Ordem de Serviço'}
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  {readOnly ? 'Visualizando ordem de serviço' : 'Preencha os dados da ordem de serviço'}
+                </p>
               </div>
-            )}
-          </form>
-        </div>
 
-        {/* Sidebar de Estoque */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-4">
-            <EstoqueSidebar />
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Informações Básicas */}
+                <div className="bg-card border rounded-lg p-4 lg:p-6">
+                  <h3 className="text-lg font-semibold mb-4 text-card-foreground flex items-center gap-2">
+                    <div className="w-2 h-6 bg-primary rounded-full"></div>
+                    Informações Básicas
+                  </h3>
+                  <OrdemBasicInfo
+                    clienteId={clienteId}
+                    setClienteId={setClienteId}
+                    tecnicoId={tecnicoId}
+                    setTecnicoId={setTecnicoId}
+                    dispositivo={dispositivo}
+                    setDispositivo={setDispositivo}
+                    descricaoProblema={descricaoProblema}
+                    setDescricaoProblema={setDescricaoProblema}
+                    diagnostico={diagnostico}
+                    setDiagnostico={setDiagnostico}
+                    servicoRealizado={servicoRealizado}
+                    setServicoRealizado={setServicoRealizado}
+                    clientes={clientes}
+                    tecnicos={tecnicos}
+                    readOnly={readOnly}
+                  />
+                </div>
+
+                {/* Peças e Materiais */}
+                <div className="bg-card border rounded-lg p-4 lg:p-6">
+                  <h3 className="text-lg font-semibold mb-4 text-card-foreground flex items-center gap-2">
+                    <div className="w-2 h-6 bg-primary rounded-full"></div>
+                    Peças e Materiais
+                  </h3>
+                  <OrdemItensManager
+                    itens={itens}
+                    setItens={setItens}
+                    readOnly={readOnly}
+                  />
+                </div>
+
+                {/* Status e Valores */}
+                <div className="bg-card border rounded-lg p-4 lg:p-6">
+                  <h3 className="text-lg font-semibold mb-4 text-card-foreground flex items-center gap-2">
+                    <div className="w-2 h-6 bg-primary rounded-full"></div>
+                    Status e Valores
+                  </h3>
+                  <OrdemStatusSection
+                    status={status}
+                    setStatus={setStatus}
+                    valor={valor}
+                    setValor={setValor}
+                    totalItens={itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)}
+                    readOnly={readOnly}
+                  />
+                </div>
+
+                {/* Botões de Ação */}
+                {!readOnly && (
+                  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                    <Button 
+                      type="submit" 
+                      disabled={saveOrdem.isPending}
+                      className="w-full sm:w-auto min-w-40"
+                      size="lg"
+                    >
+                      {saveOrdem.isPending ? 'Salvando...' : (ordem ? 'Atualizar Ordem' : 'Criar Ordem')}
+                    </Button>
+                  </div>
+                )}
+              </form>
+            </div>
+          </div>
+
+          {/* Sidebar de Estoque */}
+          <div className="xl:col-span-1">
+            <div className="sticky top-6">
+              <EstoqueSidebar />
+            </div>
           </div>
         </div>
       </div>
