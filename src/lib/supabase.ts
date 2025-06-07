@@ -122,9 +122,6 @@ export const getSupabaseClient = async () => {
   }
 }
 
-// Instância principal do Supabase usando o cliente real
-export const supabase = await getSupabaseClient()
-
 // Types for our database tables
 export interface Cliente {
   id: string

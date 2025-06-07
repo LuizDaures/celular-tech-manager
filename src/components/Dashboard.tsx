@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { FileText, Users, Wrench, Filter, CalendarIcon, Download, DollarSign, Activity, CheckCircle, Clock, XCircle, Package, Eye } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -53,12 +53,6 @@ export function Dashboard() {
   const { toast } = useToast()
 
   useEffect(() => {
-    if (!supabase) {
-      console.log('Cliente Supabase não disponível')
-      setLoading(false)
-      return
-    }
-    
     const config = localStorage.getItem('supabase_config')
     if (!config) {
       console.log('Configuração Supabase não encontrada')
@@ -130,20 +124,23 @@ export function Dashboard() {
 
   const downloadMetrics = async () => {
     try {
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+
       // Buscar todas as métricas do sistema
-      const { data: allOrders, error: ordersError } = await supabase
+      const { data: allOrders, error: ordersError } = await client
         .from('ordens_servico')
         .select('*, itens:itens_ordem(*)')
 
       if (ordersError) throw ordersError
 
-      const { data: allPecas, error: pecasError } = await supabase
+      const { data: allPecas, error: pecasError } = await client
         .from('pecas_manutencao')
         .select('*')
 
       if (pecasError) throw pecasError
 
-      const { data: allItensOrdem, error: itensError } = await supabase
+      const { data: allItensOrdem, error: itensError } = await client
         .from('itens_ordem')
         .select('*')
 
@@ -287,7 +284,8 @@ export function Dashboard() {
   }
 
   const loadDashboardData = async () => {
-    if (!supabase) {
+    const client = await getSupabaseClient()
+    if (!client) {
       toast({
         title: 'Erro',
         description: 'Conexão com banco de dados não estabelecida.',
@@ -302,28 +300,28 @@ export function Dashboard() {
       console.log('Carregando dados do dashboard...')
 
       // Get orders statistics
-      const { data: ordens, error: ordensError } = await supabase
+      const { data: ordens, error: ordensError } = await client
         .from('ordens_servico')
         .select('status, data_abertura, valor, itens:itens_ordem(quantidade, preco_unitario)')
 
       if (ordensError) throw ordensError
 
       // Get clients count
-      const { count: clientesCount, error: clientesError } = await supabase
+      const { count: clientesCount, error: clientesError } = await client
         .from('clientes')
         .select('*', { count: 'exact', head: true })
 
       if (clientesError) throw clientesError
 
       // Get technicians count
-      const { count: tecnicosCount, error: tecnicosError } = await supabase
+      const { count: tecnicosCount, error: tecnicosError } = await client
         .from('tecnicos')
         .select('*', { count: 'exact', head: true })
 
       if (tecnicosError) throw tecnicosError
 
       // Get recent orders with client info and items
-      const { data: recentOrdersData, error: recentError } = await supabase
+      const { data: recentOrdersData, error: recentError } = await client
         .from('ordens_servico')
         .select(`
           *,

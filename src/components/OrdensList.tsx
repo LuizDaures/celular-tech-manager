@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, OrdemCompleta } from '@/lib/supabase'
+import { getSupabaseClient, OrdemCompleta } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { OrdemForm } from '@/components/OrdemForm'
 import { Plus, Search, Edit, Eye, Trash, Download, Filter } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { useOrdemActions } from '@/hooks/useOrdemActions'
 
 const statusColors = {
   'aberta': 'bg-blue-500',
@@ -35,14 +36,18 @@ export function OrdensList() {
   const [isViewing, setIsViewing] = useState(false)
   const { toast } = useToast()
   const queryClient = useQueryClient()
+  const { deleteOrdem } = useOrdemActions()
 
   const { data: ordens = [], isLoading } = useQuery({
     queryKey: ['ordens'],
     queryFn: async () => {
       console.log('Fetching ordens...')
       
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
       // Buscar diretamente da tabela ordens_servico com joins
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('ordens_servico')
         .select(`
           *,
@@ -127,45 +132,13 @@ export function OrdensList() {
     }
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      // Primeiro excluir os itens da ordem
-      const { error: itensError } = await supabase
-        .from('itens_ordem')
-        .delete()
-        .eq('ordem_id', id)
-
-      if (itensError) throw itensError
-
-      // Depois excluir a ordem
-      const { error } = await supabase
-        .from('ordens_servico')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Sucesso',
-        description: 'Ordem de serviço excluída com sucesso.',
-      })
-      queryClient.invalidateQueries({ queryKey: ['ordens'] })
-    },
-    onError: (error: Error) => {
-      console.error('Error deleting ordem:', error)
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível excluir a ordem de serviço.',
-        variant: 'destructive',
-      })
-    }
-  })
-
   const handleDownload = async (ordem: OrdemCompleta) => {
     try {
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+
       // Buscar dados da empresa
-      const { data: empresaData } = await supabase
+      const { data: empresaData } = await client
         .from('dados_empresa')
         .select('*')
         .limit(1)
@@ -714,7 +687,7 @@ export function OrdensList() {
   }
 
   const handleDelete = (id: string) => {
-    deleteMutation.mutate(id)
+    deleteOrdem.mutate(id)
   }
 
   const handleCloseDialog = () => {
