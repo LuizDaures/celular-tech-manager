@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,7 +26,7 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
     setItens([...itens, { nome_item: '', quantidade: 1, preco_unitario: 0, is_from_estoque: false }])
   }
 
-  const addItemFromSelector = (item: any) => {
+  const addItemFromSelector = (item: ItemForm) => {
     const pecaJaAdicionada = itens.some(existingItem => existingItem.peca_id === item.peca_id)
     
     if (pecaJaAdicionada) {
@@ -39,14 +38,7 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
       return
     }
 
-    const newItem: ItemForm = {
-      peca_id: item.peca_id,
-      nome_item: item.nome_peca,
-      quantidade: item.quantidade,
-      preco_unitario: item.preco_unitario,
-      is_from_estoque: true
-    }
-    setItens([...itens, newItem])
+    setItens([...itens, item])
   }
 
   const removeItem = (index: number) => {

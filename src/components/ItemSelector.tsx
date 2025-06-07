@@ -11,9 +11,10 @@ import { Plus, Search } from 'lucide-react'
 
 interface ItemForm {
   peca_id?: string
-  nome_peca: string
+  nome_item: string
   quantidade: number
   preco_unitario: number
+  is_from_estoque?: boolean
 }
 
 interface ItemSelectorProps {
@@ -70,9 +71,10 @@ export function ItemSelector({ onAddItem, itensJaAdicionados = [] }: ItemSelecto
 
     const itemToAdd: ItemForm = {
       peca_id: selectedPeca.id,
-      nome_peca: selectedPeca.nome,
+      nome_item: selectedPeca.nome,
       quantidade: quantity,
-      preco_unitario: customPrice ? parseFloat(customPrice) : selectedPeca.preco_unitario
+      preco_unitario: customPrice ? parseFloat(customPrice) : selectedPeca.preco_unitario,
+      is_from_estoque: true
     }
 
     onAddItem(itemToAdd)
