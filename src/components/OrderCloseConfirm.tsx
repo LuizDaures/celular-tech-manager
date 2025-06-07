@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { CheckCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { supabase } from '@/lib/supabase'
+import { getSupabaseClient } from '@/lib/supabase'
 
 interface OrderCloseConfirmProps {
   orderId: string
@@ -29,7 +29,10 @@ export function OrderCloseConfirm({ orderId, onOrderClosed, disabled }: OrderClo
   const handleCloseOrder = async () => {
     setIsLoading(true)
     try {
-      const { error } = await supabase
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
+      const { error } = await client
         .from('ordens_servico')
         .update({ 
           status: 'concluida',

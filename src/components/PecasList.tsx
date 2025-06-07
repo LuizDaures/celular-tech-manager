@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, PecaManutencao } from '@/lib/supabase'
+import { getSupabaseClient, PecaManutencao } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -24,12 +24,13 @@ export function PecasList() {
     queryKey: ['pecas'],
     queryFn: async () => {
       console.log('Fetching pecas...')
-      if (!supabase) {
+      const client = await getSupabaseClient()
+      if (!client) {
         console.log('Supabase not configured')
         return []
       }
       
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('pecas_manutencao')
         .select('*')
         .order('nome')
@@ -46,11 +47,12 @@ export function PecasList() {
 
   const deletePeca = useMutation({
     mutationFn: async (id: string) => {
-      if (!supabase) {
+      const client = await getSupabaseClient()
+      if (!client) {
         throw new Error('Banco não configurado')
       }
       
-      const { error } = await supabase
+      const { error } = await client
         .from('pecas_manutencao')
         .delete()
         .eq('id', id)

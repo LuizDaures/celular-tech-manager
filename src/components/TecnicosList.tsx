@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, Tecnico } from '@/lib/supabase'
+import { getSupabaseClient, Tecnico } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -23,7 +23,10 @@ export function TecnicosList() {
     queryKey: ['tecnicos'],
     queryFn: async () => {
       console.log('Fetching tecnicos...')
-      const { data, error } = await supabase
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
+      const { data, error } = await client
         .from('tecnicos')
         .select('*')
         .order('criado_em', { ascending: false })
@@ -40,8 +43,11 @@ export function TecnicosList() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
       // Primeiro verificar se há ordens vinculadas - usando o nome correto da tabela
-      const { data: ordens, error: ordensError } = await supabase
+      const { data: ordens, error: ordensError } = await client
         .from('ordens_servico')
         .select('id')
         .eq('tecnico_id', id)
@@ -53,7 +59,7 @@ export function TecnicosList() {
         throw new Error('Não é possível excluir este técnico pois existem ordens de serviço vinculadas a ele.')
       }
 
-      const { error } = await supabase
+      const { error } = await client
         .from('tecnicos')
         .delete()
         .eq('id', id)

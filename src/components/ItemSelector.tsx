@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { supabase, PecaManutencao } from '@/lib/supabase'
+import { getSupabaseClient, PecaManutencao } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,7 +31,10 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
   const { data: pecas = [] } = useQuery({
     queryKey: ['pecas'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
+      const { data, error } = await client
         .from('pecas_manutencao')
         .select('*')
         .order('nome')

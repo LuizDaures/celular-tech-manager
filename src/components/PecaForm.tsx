@@ -1,7 +1,7 @@
 
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase, PecaManutencao } from '@/lib/supabase'
+import { getSupabaseClient, PecaManutencao } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,8 +27,11 @@ export function PecaForm({ peca, onSuccess }: PecaFormProps) {
     mutationFn: async (data: any) => {
       console.log('Saving peca with data:', data)
       
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
       if (peca) {
-        const { error } = await supabase
+        const { error } = await client
           .from('pecas_manutencao')
           .update({ ...data, atualizado_em: new Date().toISOString() })
           .eq('id', peca.id)
@@ -38,7 +41,7 @@ export function PecaForm({ peca, onSuccess }: PecaFormProps) {
           throw error
         }
       } else {
-        const { error } = await supabase
+        const { error } = await client
           .from('pecas_manutencao')
           .insert([{ 
             ...data, 
