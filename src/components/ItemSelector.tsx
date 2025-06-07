@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Search } from 'lucide-react'
 
 interface ItemForm {
-  peca_id: string
+  peca_id?: string
   nome_peca: string
   quantidade: number
   preco_unitario: number
@@ -18,9 +18,10 @@ interface ItemForm {
 
 interface ItemSelectorProps {
   onAddItem: (item: ItemForm) => void
+  itensJaAdicionados?: ItemForm[]
 }
 
-export function ItemSelector({ onAddItem }: ItemSelectorProps) {
+export function ItemSelector({ onAddItem, itensJaAdicionados = [] }: ItemSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFabricante, setSelectedFabricante] = useState('all')
@@ -46,12 +47,18 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
 
   const fabricantes = ['all', ...Array.from(new Set(pecas.map(peca => peca.fabricante).filter(Boolean)))]
 
+  // IDs das peças já adicionadas para filtrar
+  const pecasJaAdicionadasIds = itensJaAdicionados
+    .map(item => item.peca_id)
+    .filter(Boolean)
+
   const filteredPecas = pecas.filter(peca => {
     const matchesSearch = peca.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          peca.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          peca.codigo_fabricante?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFabricante = selectedFabricante === 'all' || peca.fabricante === selectedFabricante
-    return matchesSearch && matchesFabricante && peca.estoque > 0
+    const notAlreadyAdded = !pecasJaAdicionadasIds.includes(peca.id)
+    return matchesSearch && matchesFabricante && peca.estoque > 0 && notAlreadyAdded
   })
 
   const handleAddItem = () => {
@@ -85,14 +92,14 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
           Buscar Peça
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto mx-4">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto mx-4">
         <DialogHeader>
           <DialogTitle>Buscar e Adicionar Peça</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Filtros */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label>Buscar</Label>
               <div className="relative">
@@ -125,12 +132,14 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
           </div>
 
           {/* Lista de peças */}
-          <div className="border rounded-lg max-h-64 overflow-y-auto">
+          <div className="border rounded-lg max-h-80 overflow-y-auto">
             {filteredPecas.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">
-                {pecas.filter(p => p.estoque > 0).length === 0 ? 
-                  'Nenhuma peça com estoque disponível' : 
-                  'Nenhuma peça encontrada'
+              <div className="p-6 text-center text-muted-foreground">
+                {pecasJaAdicionadasIds.length > 0 && pecas.filter(p => p.estoque > 0).length > 0 ? 
+                  'Todas as peças disponíveis já foram adicionadas ou não correspondem aos filtros' :
+                  pecas.filter(p => p.estoque > 0).length === 0 ? 
+                    'Nenhuma peça com estoque disponível' : 
+                    'Nenhuma peça encontrada'
                 }
               </div>
             ) : (
@@ -138,12 +147,12 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
                 {filteredPecas.map(peca => (
                   <div 
                     key={peca.id}
-                    className={`p-3 cursor-pointer hover:bg-muted transition-colors ${
+                    className={`p-4 cursor-pointer hover:bg-muted transition-colors ${
                       selectedPeca?.id === peca.id ? 'bg-muted' : ''
                     }`}
                     onClick={() => setSelectedPeca(peca)}
                   >
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                       <div className="flex-1">
                         <div className="font-medium break-words">{peca.nome}</div>
                         <div className="text-sm text-muted-foreground break-words">
@@ -166,9 +175,9 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
 
           {/* Configurações da peça selecionada */}
           {selectedPeca && (
-            <div className="border rounded-lg p-4 bg-muted/50">
-              <h4 className="font-medium mb-3 break-words">Peça Selecionada: {selectedPeca.nome}</h4>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="border rounded-lg p-6 bg-muted/50">
+              <h4 className="font-medium mb-4 break-words">Peça Selecionada: {selectedPeca.nome}</h4>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Quantidade</Label>
                   <Input
@@ -197,7 +206,7 @@ export function ItemSelector({ onAddItem }: ItemSelectorProps) {
                 </div>
               </div>
               
-              <div className="mt-4 flex justify-end">
+              <div className="mt-6 flex justify-start">
                 <Button 
                   onClick={handleAddItem}
                   disabled={quantity > selectedPeca.estoque || quantity <= 0}
