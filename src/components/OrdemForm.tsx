@@ -212,7 +212,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-8">
         <div className="space-y-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">
