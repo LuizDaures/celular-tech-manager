@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { FileText, Users, Wrench, Filter, CalendarIcon, Download, DollarSign, Activity, CheckCircle, Clock, XCircle, Package, Eye } from 'lucide-react'
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
+import { FileText, Users, Wrench, Filter, CalendarIcon, Download, DollarSign, Activity, CheckCircle, Clock, XCircle, Package, Eye, TrendingUp, BarChart3 } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
@@ -34,6 +35,8 @@ const statusColors = {
   'cancelada': 'text-red-600 bg-red-50 border-red-200'
 }
 
+const ITEMS_PER_PAGE = 10
+
 export function Dashboard() {
   const [stats, setStats] = useState({
     totalOrdens: 0,
@@ -50,6 +53,7 @@ export function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<{from?: Date, to?: Date}>({})
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -66,6 +70,10 @@ export function Dashboard() {
   useEffect(() => {
     applyFilters()
   }, [statusFilter, dateFilter, recentOrders])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filteredOrders])
 
   const applyFilters = () => {
     let filtered = [...recentOrders]
@@ -440,118 +448,130 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
     )
   }
 
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE)
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const endIndex = startIndex + ITEMS_PER_PAGE
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
+
   return (
-    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Visão geral da assistência técnica</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={loadDashboardData} disabled={loading}>
-            {loading ? 'Carregando...' : 'Atualizar'}
-          </Button>
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50/50">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-6 border">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
+            <p className="text-muted-foreground mt-2 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Visão geral completa da assistência técnica
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={loadDashboardData} disabled={loading}>
+              {loading ? 'Carregando...' : 'Atualizar'}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Statistics Cards - Responsivo */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card className="relative overflow-hidden">
+      {/* Statistics Cards */}
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Total de Ordens</CardTitle>
-            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <FileText className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total de Ordens</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-blue-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{stats.totalOrdens}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-foreground">{stats.totalOrdens}</div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+              <TrendingUp className="h-3 w-3" />
               {stats.ordensHoje} abertas hoje
-            </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden">
+        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-yellow-500 hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Em Andamento</CardTitle>
-            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-yellow-100 flex items-center justify-center">
-              <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Em Andamento</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
+              <Activity className="h-4 w-4 text-yellow-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{stats.ordensAbertas + stats.ordensAndamento}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.ordensAbertas} abertas, {stats.ordensAndamento} em progresso
-            </p>
+            <div className="text-2xl font-bold text-foreground">{stats.ordensAbertas + stats.ordensAndamento}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {stats.ordensAbertas} abertas • {stats.ordensAndamento} em progresso
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden">
+        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Concluídas</CardTitle>
-            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Concluídas</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-green-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{stats.ordensConcluidas}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-foreground">{stats.ordensConcluidas}</div>
+            <div className="text-xs text-muted-foreground mt-1">
               {((stats.ordensConcluidas / stats.totalOrdens) * 100 || 0).toFixed(1)}% do total
-            </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden">
+        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Faturamento do Mês</CardTitle>
-            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-green-100 flex items-center justify-center">
-              <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento Mensal</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-emerald-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-2xl font-bold">R$ {stats.faturamentoMes.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-foreground">R$ {stats.faturamentoMes.toFixed(2)}</div>
+            <div className="text-xs text-muted-foreground mt-1">
               Apenas ordens concluídas
-            </p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recursos - Grid responsivo */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
-        <Card>
+      {/* Recursos Grid */}
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clientes Cadastrados</CardTitle>
-            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-purple-100 flex items-center justify-center">
-              <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Clientes Cadastrados</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
+              <Users className="h-4 w-4 text-purple-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{stats.totalClientes}</div>
-            <p className="text-xs text-muted-foreground">Base de clientes ativa</p>
+            <div className="text-2xl font-bold text-foreground">{stats.totalClientes}</div>
+            <p className="text-xs text-muted-foreground mt-1">Base de clientes ativa</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Técnicos Disponíveis</CardTitle>
-            <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-orange-100 flex items-center justify-center">
-              <Wrench className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Técnicos Disponíveis</CardTitle>
+            <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+              <Wrench className="h-4 w-4 text-orange-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{stats.totalTecnicos}</div>
-            <p className="text-xs text-muted-foreground">Equipe técnica cadastrada</p>
+            <div className="text-2xl font-bold text-foreground">{stats.totalTecnicos}</div>
+            <p className="text-xs text-muted-foreground mt-1">Equipe técnica cadastrada</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Ordens de Serviço - Layout responsivo */}
-      <Card>
-        <CardHeader>
+      {/* Ordens de Serviço Card */}
+      <Card className="shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100/50 border-b">
           <div className="flex flex-col gap-4">
             <div>
-              <CardTitle className="text-lg sm:text-xl">Ordens de Serviço</CardTitle>
+              <CardTitle className="text-xl font-semibold">Ordens de Serviço</CardTitle>
               <CardDescription className="text-sm">
                 {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
                   ? `Todas as ${recentOrders.length} ordens de serviço` 
@@ -560,7 +580,7 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
               </CardDescription>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -613,43 +633,11 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
                 </PopoverContent>
               </Popover>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {(dateFilter.from || dateFilter.to) && (
                   <Button variant="outline" size="sm" onClick={clearDateFilter}>
                     Limpar Data
                   </Button>
-                )}
-
-                {/* Labels simples para totais */}
-                {filteredOrders.length > 0 && (
-                  (() => {
-                    const { totalValidas, totalCanceladas } = calculateTotals()
-                    return (
-                      <div className="space-y-2">
-                        {statusFilter === 'all' ? (
-                          <div className="flex flex-col sm:flex-row gap-2 text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-green-700">Ordens Válidas:</span>
-                              <span className="font-bold text-green-700">R$ {totalValidas.toFixed(2)}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-red-600">Ordens Canceladas:</span>
-                              <span className="font-bold text-red-600">R$ {totalCanceladas.toFixed(2)}</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="font-medium text-primary">
-                              {statusLabels[statusFilter as keyof typeof statusLabels] || statusFilter}:
-                            </span>
-                            <span className="font-bold text-primary">
-                              R$ {(totalValidas + totalCanceladas).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })()
                 )}
 
                 <Button variant="outline" size="sm" onClick={downloadExcel}>
@@ -663,76 +651,153 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
                 </Button>
               </div>
             </div>
+
+            {/* Summary totals */}
+            {filteredOrders.length > 0 && (
+              (() => {
+                const { totalValidas, totalCanceladas } = calculateTotals()
+                return (
+                  <div className="bg-white rounded-lg border p-4">
+                    <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="text-sm">
+                          <span className="font-medium text-green-700">Válidas:</span>
+                          <span className="font-bold text-green-700 ml-2">R$ {totalValidas.toFixed(2)}</span>
+                        </div>
+                        {statusFilter === 'all' && (
+                          <div className="text-sm">
+                            <span className="font-medium text-red-600">Canceladas:</span>
+                            <span className="font-bold text-red-600 ml-2">R$ {totalCanceladas.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Exibindo {paginatedOrders.length} de {filteredOrders.length} ordens
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()
+            )}
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {filteredOrders.map((order) => {
+        <CardContent className="p-0">
+          <div className="divide-y">
+            {paginatedOrders.map((order) => {
               const itensValue = order.itens?.reduce((total: number, item: any) => 
                 total + (item.quantidade * item.preco_unitario), 0) || 0
               const totalValue = (order.valor || 0) + itensValue
               
               return (
-                <div key={order.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-3 sm:gap-4">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                      <p className="font-semibold text-sm sm:text-base">{order.clientes?.nome || 'Cliente não encontrado'}</p>
-                      {getStatusBadge(order.status)}
-                    </div>
-                    <p className="text-sm text-muted-foreground font-medium">{order.dispositivo}</p>
-                    <p className="text-sm text-muted-foreground">{order.descricao_problema}</p>
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground">
-                      <span>📅 {format(new Date(order.data_abertura), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                      <span>👨‍🔧 {order.tecnicos?.nome || 'Não atribuído'}</span>
-                      {order.data_conclusao && (
-                        <span>✅ Concluída em {format(new Date(order.data_conclusao), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => viewOrderDetails(order)}
-                      className="flex items-center gap-1"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Ver
-                    </Button>
-                    {totalValue > 0 && (
-                      <div className="text-right space-y-1">
-                        <div className="text-lg font-bold text-green-600">
-                          R$ {totalValue.toFixed(2)}
-                        </div>
-                        {(order.valor || 0) > 0 && itensValue > 0 && (
-                          <div className="text-xs text-muted-foreground">
-                            Serviço: R$ {(order.valor || 0).toFixed(2)} + Peças: R$ {itensValue.toFixed(2)}
-                          </div>
+                <div key={order.id} className="p-4 hover:bg-gray-50/50 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <p className="font-semibold text-base">{order.clientes?.nome || 'Cliente não encontrado'}</p>
+                        {getStatusBadge(order.status)}
+                      </div>
+                      <p className="text-sm font-medium text-foreground">{order.dispositivo}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{order.descricao_problema}</p>
+                      <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          📅 {format(new Date(order.data_abertura), 'dd/MM/yyyy', { locale: ptBR })}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          👨‍🔧 {order.tecnicos?.nome || 'Não atribuído'}
+                        </span>
+                        {order.data_conclusao && (
+                          <span className="flex items-center gap-1">
+                            ✅ Concluída em {format(new Date(order.data_conclusao), 'dd/MM/yyyy', { locale: ptBR })}
+                          </span>
                         )}
                       </div>
-                    )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => viewOrderDetails(order)}
+                        className="flex items-center gap-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Ver Detalhes
+                      </Button>
+                      {totalValue > 0 && (
+                        <div className="text-right space-y-1">
+                          <div className="text-lg font-bold text-green-600">
+                            R$ {totalValue.toFixed(2)}
+                          </div>
+                          {(order.valor || 0) > 0 && itensValue > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              Serviço: R$ {(order.valor || 0).toFixed(2)} + Peças: R$ {itensValue.toFixed(2)}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
             })}
-            {filteredOrders.length === 0 && (
-              <div className="text-center py-8 sm:py-12">
-                <FileText className="h-8 w-8 sm:h-12 sm:w-12 mx-auto text-muted-foreground/50 mb-4" />
-                <p className="text-base sm:text-lg font-medium text-muted-foreground">
-                  {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
-                    ? 'Nenhuma ordem de serviço encontrada' 
-                    : 'Nenhuma ordem encontrada com os filtros aplicados'
-                  }
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {statusFilter !== 'all' || dateFilter.from || dateFilter.to
-                    ? 'Tente ajustar os filtros para ver mais resultados'
-                    : 'Crie sua primeira ordem de serviço para começar'
-                  }
-                </p>
-              </div>
-            )}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="p-4 border-t bg-gray-50/50">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNumber = Math.max(1, Math.min(currentPage - 2 + i, totalPages - 4 + i))
+                    if (pageNumber > totalPages) return null
+                    
+                    return (
+                      <PaginationItem key={pageNumber}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(pageNumber)}
+                          isActive={currentPage === pageNumber}
+                          className="cursor-pointer"
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  })}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+
+          {filteredOrders.length === 0 && (
+            <div className="text-center py-12">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+              <p className="text-lg font-medium text-muted-foreground">
+                {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
+                  ? 'Nenhuma ordem de serviço encontrada' 
+                  : 'Nenhuma ordem encontrada com os filtros aplicados'
+                }
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {statusFilter !== 'all' || dateFilter.from || dateFilter.to
+                  ? 'Tente ajustar os filtros para ver mais resultados'
+                  : 'Crie sua primeira ordem de serviço para começar'
+                }
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

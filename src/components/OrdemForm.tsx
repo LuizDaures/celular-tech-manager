@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseClient, OrdemCompleta, Cliente, Tecnico } from '@/lib/supabase'
@@ -211,7 +212,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <div className="space-y-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">
@@ -224,7 +225,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Informações Básicas */}
-            <div className="bg-card border rounded-lg p-6">
+            <div className="bg-card border rounded-lg p-6 shadow-sm">
               <h3 className="text-xl font-semibold mb-6 text-card-foreground flex items-center gap-3">
                 <div className="w-1 h-8 bg-primary rounded-full"></div>
                 Informações Básicas
@@ -249,7 +250,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             </div>
 
             {/* Peças e Materiais */}
-            <div className="bg-card border rounded-lg p-6">
+            <div className="bg-card border rounded-lg p-6 shadow-sm">
               <h3 className="text-xl font-semibold mb-6 text-card-foreground flex items-center gap-3">
                 <div className="w-1 h-8 bg-primary rounded-full"></div>
                 Peças e Materiais
@@ -262,7 +263,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
             </div>
 
             {/* Status e Valores */}
-            <div className="bg-card border rounded-lg p-6">
+            <div className="bg-card border rounded-lg p-6 shadow-sm">
               <h3 className="text-xl font-semibold mb-6 text-card-foreground flex items-center gap-3">
                 <div className="w-1 h-8 bg-primary rounded-full"></div>
                 Status e Valores
