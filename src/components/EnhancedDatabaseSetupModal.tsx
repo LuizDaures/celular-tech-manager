@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -164,6 +163,38 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
     }
   }
 
+  const validateAnonKey = (key: string): boolean => {
+    // Validação básica da estrutura da anon key do Supabase
+    // Uma anon key válida deve:
+    // 1. Começar com "eyJ" (início de um JWT)
+    // 2. Ter pelo menos 100 caracteres
+    // 3. Conter pontos separando as seções do JWT
+    if (!key || key.length < 100) {
+      return false
+    }
+    
+    if (!key.startsWith('eyJ')) {
+      return false
+    }
+    
+    const parts = key.split('.')
+    if (parts.length !== 3) {
+      return false
+    }
+    
+    return true
+  }
+
+  const validateSupabaseUrl = (testUrl: string): boolean => {
+    // Validação da URL do Supabase
+    try {
+      const urlObj = new URL(testUrl)
+      return urlObj.hostname.includes('supabase.co') || urlObj.hostname.includes('localhost')
+    } catch {
+      return false
+    }
+  }
+
   const validateDatabaseStructure = async (testClient: any) => {
     console.log('Validando estrutura do banco...')
     setValidationResults(prev => ({ ...prev, connection: true, progress: 20 }))
@@ -227,6 +258,18 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
       return
     }
 
+    // Validar formato da URL
+    if (!validateSupabaseUrl(url)) {
+      setError('URL inválida. Use o formato: https://projeto.supabase.co')
+      return
+    }
+
+    // Validar formato da anon key
+    if (!validateAnonKey(anonKey)) {
+      setError('Anon key inválida. Verifique se você copiou corretamente a chave do painel do Supabase.')
+      return
+    }
+
     setIsLoading(true)
     setError('')
     setCurrentStep('validation')
@@ -237,12 +280,17 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
       const testClient = createClient(url, anonKey)
       setValidationResults(prev => ({ ...prev, progress: 10 }))
       
-      await Promise.race([
+      // Tentar uma operação simples para validar a conexão
+      const { error: connectionError } = await Promise.race([
         testClient.auth.getSession(),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Timeout na conexão')), 5000)
         )
-      ])
+      ]) as any
+
+      if (connectionError && connectionError.message.includes('Invalid API key')) {
+        throw new Error('Chave de API inválida. Verifique a anon key.')
+      }
 
       // Validate database structure
       const structureValidation = await validateDatabaseStructure(testClient)
@@ -266,6 +314,8 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
       console.error('Erro na validação:', error)
       setError(error.message?.includes('Timeout') ? 
         'Timeout na conexão. Verifique a URL e tente novamente.' :
+        error.message?.includes('Invalid API key') ?
+        'Chave de API inválida. Verifique a anon key.' :
         'Falha na conexão. Verifique suas credenciais.'
       )
       setCurrentStep('credentials')
@@ -278,6 +328,7 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
     if (!url || !anonKey) return
     
     setIsLoading(true)
+    setError('')
     setCurrentStep('validation')
     setValidationResults({ connection: null, tables: {}, progress: 0 })
 
@@ -292,6 +343,8 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
           description: 'Todas as tabelas foram encontradas.' 
         })
       } else {
+        // Manter no estado 'schema' para mostrar o botão novamente
+        setCurrentStep('schema')
         toast({ 
           title: 'Ainda faltam tabelas', 
           description: 'Execute o SQL fornecido e tente novamente.',
@@ -300,6 +353,7 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
       }
     } catch (error: any) {
       setError('Erro na validação: ' + error.message)
+      setCurrentStep('schema') // Manter no estado schema para permitir nova tentativa
     } finally {
       setIsLoading(false)
     }
@@ -436,6 +490,7 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
                     <div className="text-xs text-muted-foreground space-y-1">
                       <p>• Encontre suas credenciais no painel do Supabase</p>
                       <p>• As configurações são salvas localmente</p>
+                      <p>• A anon key deve começar com "eyJ" e ter mais de 100 caracteres</p>
                     </div>
                   </CardContent>
                 </Card>
