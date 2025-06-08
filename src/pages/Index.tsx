@@ -7,7 +7,7 @@ import { TecnicosList } from '@/components/TecnicosList'
 import { PecasList } from '@/components/PecasList'
 import { OrdensList } from '@/components/OrdensList'
 import { Configuracoes } from '@/components/Configuracoes'
-import { DatabaseSetupModal } from '@/components/DatabaseSetupModal'
+import { EnhancedDatabaseSetupModal } from '@/components/EnhancedDatabaseSetupModal'
 
 const Index = () => {
   const [currentView, setCurrentView] = useState('')
@@ -93,7 +93,7 @@ const Index = () => {
 
   return (
     <>
-      <DatabaseSetupModal 
+      <EnhancedDatabaseSetupModal 
         isOpen={showDatabaseSetup} 
         onConnectionSuccess={handleConnectionSuccess}
       />
