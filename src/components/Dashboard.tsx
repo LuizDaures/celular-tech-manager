@@ -13,6 +13,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import * as XLSX from 'xlsx'
+import { OrdemDetailsModal } from '@/components/OrdemDetailsModal'
 
 const statusLabels = {
   'aberta': 'Aberta',
@@ -29,10 +30,10 @@ const statusIcons = {
 }
 
 const statusColors = {
-  'aberta': 'text-yellow-600 bg-yellow-50 border-yellow-200',
-  'em_andamento': 'text-blue-600 bg-blue-50 border-blue-200',
-  'concluida': 'text-green-600 bg-green-50 border-green-200',
-  'cancelada': 'text-red-600 bg-red-50 border-red-200'
+  'aberta': 'text-yellow-600 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-950 dark:border-yellow-800',
+  'em_andamento': 'text-blue-600 bg-blue-50 border-blue-200 dark:text-blue-400 dark:bg-blue-950 dark:border-blue-800',
+  'concluida': 'text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800',
+  'cancelada': 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800'
 }
 
 const ITEMS_PER_PAGE = 10
@@ -54,6 +55,8 @@ export function Dashboard() {
   const [dateFilter, setDateFilter] = useState<{from?: Date, to?: Date}>({})
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedOrder, setSelectedOrder] = useState<any>(null)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -396,7 +399,7 @@ export function Dashboard() {
     const StatusIcon = statusIcons[status as keyof typeof statusIcons] || Activity
     
     return (
-      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${statusColors[status as keyof typeof statusColors] || 'text-gray-600 bg-gray-50 border-gray-200'}`}>
+      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${statusColors[status as keyof typeof statusColors] || 'text-muted-foreground bg-muted border-border'}`}>
         <StatusIcon className="h-3 w-3" />
         {statusLabels[status as keyof typeof statusLabels] || status}
       </div>
@@ -404,40 +407,8 @@ export function Dashboard() {
   }
 
   const viewOrderDetails = (order: any) => {
-    const itensValue = order.itens?.reduce((total: number, item: any) => 
-      total + (item.quantidade * item.preco_unitario), 0) || 0
-    const totalValue = (order.valor || 0) + itensValue
-    
-    const details = `
-DETALHES DA ORDEM #${order.id}
-
-Cliente: ${order.clientes?.nome || 'N/A'}
-Telefone: ${order.clientes?.telefone || 'N/A'}
-CPF: ${order.clientes?.cpf || 'N/A'}
-
-Dispositivo: ${order.dispositivo}
-Problema: ${order.descricao_problema}
-Diagnóstico: ${order.diagnostico || 'Não informado'}
-Serviço Realizado: ${order.servico_realizado || 'Não informado'}
-
-Técnico: ${order.tecnicos?.nome || 'Não atribuído'}
-Status: ${statusLabels[order.status as keyof typeof statusLabels]}
-
-Data de Abertura: ${format(new Date(order.data_abertura), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-${order.data_conclusao ? `Data de Conclusão: ${format(new Date(order.data_conclusao), 'dd/MM/yyyy HH:mm', { locale: ptBR })}` : ''}
-
-VALORES:
-Valor da Manutenção: R$ ${(order.valor || 0).toFixed(2)}
-Valor das Peças: R$ ${itensValue.toFixed(2)}
-Total: R$ ${totalValue.toFixed(2)}
-
-${order.itens && order.itens.length > 0 ? `
-PEÇAS UTILIZADAS:
-${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${item.preco_unitario.toFixed(2)} = R$ ${(item.quantidade * item.preco_unitario).toFixed(2)}`).join('\n')}
-` : 'Nenhuma peça utilizada.'}
-    `.trim()
-    
-    alert(details)
+    setSelectedOrder(order)
+    setIsDetailsModalOpen(true)
   }
 
   if (loading) {
@@ -454,9 +425,9 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
   const paginatedOrders = filteredOrders.slice(startIndex, endIndex)
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50/50">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-background">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-6 border">
+      <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-6 border border-border">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
@@ -475,11 +446,11 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
 
       {/* Statistics Cards */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-blue-500 hover:shadow-md transition-shadow bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total de Ordens</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <FileText className="h-4 w-4 text-blue-600" />
+            <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </div>
           </CardHeader>
           <CardContent>
@@ -491,11 +462,11 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-yellow-500 hover:shadow-md transition-shadow">
+        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-yellow-500 hover:shadow-md transition-shadow bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Em Andamento</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
-              <Activity className="h-4 w-4 text-yellow-600" />
+            <div className="h-8 w-8 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center">
+              <Activity className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             </div>
           </CardHeader>
           <CardContent>
@@ -506,11 +477,11 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-green-500 hover:shadow-md transition-shadow bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Concluídas</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-              <CheckCircle className="h-4 w-4 text-green-600" />
+            <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
             </div>
           </CardHeader>
           <CardContent>
@@ -521,11 +492,11 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow">
+        <Card className="relative overflow-hidden shadow-sm border-l-4 border-l-emerald-500 hover:shadow-md transition-shadow bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento Mensal</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
-              <DollarSign className="h-4 w-4 text-emerald-600" />
+            <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
           </CardHeader>
           <CardContent>
@@ -539,11 +510,11 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
 
       {/* Recursos Grid */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
-        <Card className="shadow-sm hover:shadow-md transition-shadow">
+        <Card className="shadow-sm hover:shadow-md transition-shadow bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Clientes Cadastrados</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
-              <Users className="h-4 w-4 text-purple-600" />
+            <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+              <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             </div>
           </CardHeader>
           <CardContent>
@@ -552,11 +523,11 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm hover:shadow-md transition-shadow">
+        <Card className="shadow-sm hover:shadow-md transition-shadow bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Técnicos Disponíveis</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
-              <Wrench className="h-4 w-4 text-orange-600" />
+            <div className="h-8 w-8 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+              <Wrench className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             </div>
           </CardHeader>
           <CardContent>
@@ -567,12 +538,12 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
       </div>
 
       {/* Ordens de Serviço Card */}
-      <Card className="shadow-sm">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100/50 border-b">
+      <Card className="shadow-sm bg-card border-border">
+        <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/25 border-b border-border">
           <div className="flex flex-col gap-4">
             <div>
-              <CardTitle className="text-xl font-semibold">Ordens de Serviço</CardTitle>
-              <CardDescription className="text-sm">
+              <CardTitle className="text-xl font-semibold text-foreground">Ordens de Serviço</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
                 {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
                   ? `Todas as ${recentOrders.length} ordens de serviço` 
                   : `Ordens filtradas - Total: ${filteredOrders.length}`
@@ -584,10 +555,10 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-40">
+                  <SelectTrigger className="w-full sm:w-40 bg-background border-border">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-background border-border">
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="aberta">Aberta</SelectItem>
                     <SelectItem value="em_andamento">Em Andamento</SelectItem>
@@ -602,7 +573,7 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full sm:w-48 justify-start text-left font-normal",
+                      "w-full sm:w-48 justify-start text-left font-normal bg-background border-border",
                       !dateFilter.from && "text-muted-foreground"
                     )}
                   >
@@ -621,7 +592,7 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 bg-background border-border" align="start">
                   <Calendar
                     initialFocus
                     mode="range"
@@ -629,6 +600,7 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
                     selected={{from: dateFilter.from, to: dateFilter.to}}
                     onSelect={(range) => setDateFilter({from: range?.from, to: range?.to})}
                     numberOfMonths={1}
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -657,17 +629,17 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
               (() => {
                 const { totalValidas, totalCanceladas } = calculateTotals()
                 return (
-                  <div className="bg-white rounded-lg border p-4">
+                  <div className="bg-background rounded-lg border border-border p-4">
                     <div className="flex flex-col sm:flex-row gap-4 justify-between">
                       <div className="flex items-center gap-4">
                         <div className="text-sm">
-                          <span className="font-medium text-green-700">Válidas:</span>
-                          <span className="font-bold text-green-700 ml-2">R$ {totalValidas.toFixed(2)}</span>
+                          <span className="font-medium text-green-700 dark:text-green-400">Válidas:</span>
+                          <span className="font-bold text-green-700 dark:text-green-400 ml-2">R$ {totalValidas.toFixed(2)}</span>
                         </div>
                         {statusFilter === 'all' && (
                           <div className="text-sm">
-                            <span className="font-medium text-red-600">Canceladas:</span>
-                            <span className="font-bold text-red-600 ml-2">R$ {totalCanceladas.toFixed(2)}</span>
+                            <span className="font-medium text-red-600 dark:text-red-400">Canceladas:</span>
+                            <span className="font-bold text-red-600 dark:text-red-400 ml-2">R$ {totalCanceladas.toFixed(2)}</span>
                           </div>
                         )}
                       </div>
@@ -682,18 +654,18 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="divide-y">
+          <div className="divide-y divide-border">
             {paginatedOrders.map((order) => {
               const itensValue = order.itens?.reduce((total: number, item: any) => 
                 total + (item.quantidade * item.preco_unitario), 0) || 0
               const totalValue = (order.valor || 0) + itensValue
               
               return (
-                <div key={order.id} className="p-4 hover:bg-gray-50/50 transition-colors">
+                <div key={order.id} className="p-4 hover:bg-muted/50 transition-colors">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex-1 space-y-2">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                        <p className="font-semibold text-base">{order.clientes?.nome || 'Cliente não encontrado'}</p>
+                        <p className="font-semibold text-base text-foreground">{order.clientes?.nome || 'Cliente não encontrado'}</p>
                         {getStatusBadge(order.status)}
                       </div>
                       <p className="text-sm font-medium text-foreground">{order.dispositivo}</p>
@@ -724,7 +696,7 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
                       </Button>
                       {totalValue > 0 && (
                         <div className="text-right space-y-1">
-                          <div className="text-lg font-bold text-green-600">
+                          <div className="text-base font-bold text-green-600 dark:text-green-400">
                             R$ {totalValue.toFixed(2)}
                           </div>
                           {(order.valor || 0) > 0 && itensValue > 0 && (
@@ -743,7 +715,7 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="p-4 border-t bg-gray-50/50">
+            <div className="p-4 border-t border-border bg-muted/25">
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
@@ -800,6 +772,13 @@ ${order.itens.map((item: any) => `- ${item.nome_item}: ${item.quantidade}x R$ ${
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Detalhes */}
+      <OrdemDetailsModal
+        ordem={selectedOrder}
+        open={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
+      />
     </div>
   )
 }

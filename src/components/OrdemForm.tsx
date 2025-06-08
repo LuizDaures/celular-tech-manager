@@ -21,6 +21,7 @@ interface ItemForm {
   quantidade: number
   preco_unitario: number
   is_from_estoque?: boolean
+  vinculado_ao_estoque?: boolean
 }
 
 export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps) {
@@ -50,7 +51,8 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
         nome_item: item.nome_item,
         quantidade: item.quantidade,
         preco_unitario: item.preco_unitario,
-        is_from_estoque: !!item.peca_id
+        is_from_estoque: !!item.peca_id,
+        vinculado_ao_estoque: !!item.peca_id
       }))
       setItens(itensCarregados)
       setOriginalItens(itensCarregados)
@@ -224,7 +226,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Informações Básicas */}
-          <div className="bg-card border rounded-lg p-4 shadow-sm">
+          <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
             <h3 className="text-lg font-semibold mb-4 text-card-foreground flex items-center gap-2">
               <div className="w-1 h-6 bg-primary rounded-full"></div>
               Informações Básicas
@@ -249,7 +251,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
           </div>
 
           {/* Peças e Materiais */}
-          <div className="bg-card border rounded-lg p-4 shadow-sm">
+          <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
             <h3 className="text-lg font-semibold mb-4 text-card-foreground flex items-center gap-2">
               <div className="w-1 h-6 bg-primary rounded-full"></div>
               Peças e Materiais
@@ -262,7 +264,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
           </div>
 
           {/* Status e Valores */}
-          <div className="bg-card border rounded-lg p-4 shadow-sm">
+          <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
             <h3 className="text-lg font-semibold mb-4 text-card-foreground flex items-center gap-2">
               <div className="w-1 h-6 bg-primary rounded-full"></div>
               Status e Valores

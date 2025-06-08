@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { OrdemForm } from '@/components/OrdemForm'
-import { Plus, Search, Edit, Eye, Trash, Download, Filter } from 'lucide-react'
+import { Plus, Search, Edit, Eye, Trash, Download, Filter, CheckCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useOrdemActions } from '@/hooks/useOrdemActions'
 
@@ -129,6 +129,39 @@ export function OrdensList() {
       
       console.log('Transformed data:', transformedData)
       return transformedData as OrdemCompleta[]
+    }
+  })
+
+  // Mutation para concluir ordem
+  const concluirOrdem = useMutation({
+    mutationFn: async (orderId: string) => {
+      const client = await getSupabaseClient()
+      if (!client) throw new Error('Cliente Supabase não disponível')
+      
+      const { error } = await client
+        .from('ordens_servico')
+        .update({ 
+          status: 'concluida',
+          data_conclusao: new Date().toISOString()
+        })
+        .eq('id', orderId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ordens'] })
+      toast({
+        title: 'Ordem concluída',
+        description: 'A ordem de serviço foi marcada como concluída com sucesso.',
+      })
+    },
+    onError: (error: any) => {
+      console.error('Erro ao concluir ordem:', error)
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível concluir a ordem de serviço.',
+        variant: 'destructive',
+      })
     }
   })
 
@@ -696,13 +729,17 @@ export function OrdensList() {
     setIsViewing(false)
   }
 
+  const handleConcluirOrdem = (orderId: string) => {
+    concluirOrdem.mutate(orderId)
+  }
+
   console.log('Filtered ordens:', filteredOrdens)
 
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Ordens de Serviço</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Ordens de Serviço</h1>
           <p className="text-muted-foreground">Gerencie as ordens de serviço da assistência</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -712,12 +749,12 @@ export function OrdensList() {
               Nova Ordem
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto mx-4 bg-background border-border">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-foreground">
                 {isViewing ? 'Visualizar Ordem' : selectedOrdem ? 'Editar Ordem' : 'Nova Ordem'}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-muted-foreground">
                 {isViewing ? 'Visualize os detalhes da ordem de serviço.' : selectedOrdem ? 'Edite os dados da ordem de serviço.' : 'Crie uma nova ordem de serviço.'}
               </DialogDescription>
             </DialogHeader>
@@ -730,10 +767,10 @@ export function OrdensList() {
         </Dialog>
       </div>
 
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle>Lista de Ordens</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-foreground">Lista de Ordens</CardTitle>
+          <CardDescription className="text-muted-foreground">
             Total de {filteredOrdens.length} ordem{filteredOrdens.length !== 1 ? 's' : ''} {statusFilter !== 'all' ? `com status "${statusLabels[statusFilter as keyof typeof statusLabels]}"` : 'cadastrada' + (filteredOrdens.length !== 1 ? 's' : '')}
           </CardDescription>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -743,16 +780,16 @@ export function OrdensList() {
                 placeholder="Buscar ordens..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-background border-border text-foreground"
               />
             </div>
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-40 bg-background border-border">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border-border">
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="aberta">Aberta</SelectItem>
                   <SelectItem value="em_andamento">Em Andamento</SelectItem>
@@ -765,44 +802,44 @@ export function OrdensList() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-4">Carregando ordens...</div>
+            <div className="text-center py-4 text-muted-foreground">Carregando ordens...</div>
           ) : filteredOrdens.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
               {searchTerm || statusFilter !== 'all' ? 'Nenhuma ordem encontrada com os filtros aplicados.' : 'Nenhuma ordem cadastrada.'}
             </div>
           ) : (
-            <div className="rounded-md border overflow-x-auto">
+            <div className="rounded-md border border-border overflow-x-auto bg-background">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead className="hidden sm:table-cell">Dispositivo</TableHead>
-                    <TableHead className="hidden md:table-cell">Problema</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="hidden lg:table-cell">Data Abertura</TableHead>
-                    <TableHead className="hidden md:table-cell">Valor Manutenção</TableHead>
-                    <TableHead className="hidden lg:table-cell">Total Itens</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                  <TableRow className="border-border hover:bg-muted/50">
+                    <TableHead className="text-muted-foreground">Cliente</TableHead>
+                    <TableHead className="hidden sm:table-cell text-muted-foreground">Dispositivo</TableHead>
+                    <TableHead className="hidden md:table-cell text-muted-foreground">Problema</TableHead>
+                    <TableHead className="text-muted-foreground">Status</TableHead>
+                    <TableHead className="hidden lg:table-cell text-muted-foreground">Data Abertura</TableHead>
+                    <TableHead className="hidden md:table-cell text-muted-foreground">Valor Manutenção</TableHead>
+                    <TableHead className="hidden lg:table-cell text-muted-foreground">Total Itens</TableHead>
+                    <TableHead className="text-right text-muted-foreground">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredOrdens.map((ordem) => (
-                    <TableRow key={ordem.id}>
-                      <TableCell className="font-medium">{ordem.cliente?.nome || 'Cliente não encontrado'}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{ordem.dispositivo || '-'}</TableCell>
-                      <TableCell className="hidden md:table-cell max-w-xs truncate">{ordem.descricao_problema}</TableCell>
+                    <TableRow key={ordem.id} className="border-border hover:bg-muted/50">
+                      <TableCell className="font-medium text-foreground">{ordem.cliente?.nome || 'Cliente não encontrado'}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-foreground">{ordem.dispositivo || '-'}</TableCell>
+                      <TableCell className="hidden md:table-cell max-w-xs truncate text-foreground">{ordem.descricao_problema}</TableCell>
                       <TableCell>
                         <Badge className={statusColors[ordem.status]}>
                           {statusLabels[ordem.status]}
                         </Badge>
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">
+                      <TableCell className="hidden lg:table-cell text-foreground">
                         {new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell className="hidden md:table-cell text-foreground">
                         {ordem.valor_manutencao ? `R$ ${ordem.valor_manutencao?.toFixed(2)}` : '-'}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">
+                      <TableCell className="hidden lg:table-cell text-foreground">
                         {ordem.total ? `R$ ${ordem.total?.toFixed(2)}` : '-'}
                       </TableCell>
                       <TableCell className="text-right">
@@ -831,6 +868,37 @@ export function OrdensList() {
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
+                          {ordem.status !== 'concluida' && ordem.status !== 'cancelada' && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  disabled={concluirOrdem.isPending}
+                                >
+                                  <CheckCircle className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="mx-4 bg-background border-border">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle className="text-foreground">Concluir ordem</AlertDialogTitle>
+                                  <AlertDialogDescription className="text-muted-foreground">
+                                    Tem certeza que deseja marcar esta ordem como concluída? Esta ação irá atualizar o status da ordem.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => handleConcluirOrdem(ordem.id)}
+                                    disabled={concluirOrdem.isPending}
+                                  >
+                                    {concluirOrdem.isPending ? 'Concluindo...' : 'Concluir'}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button
@@ -841,10 +909,10 @@ export function OrdensList() {
                                 <Trash className="h-3 w-3" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent className="mx-4">
+                            <AlertDialogContent className="mx-4 bg-background border-border">
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                <AlertDialogDescription>
+                                <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription className="text-muted-foreground">
                                   Tem certeza que deseja excluir esta ordem de serviço? Esta ação não pode ser desfeita e todos os itens relacionados também serão excluídos.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>

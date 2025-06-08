@@ -1,46 +1,37 @@
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseClient, PecaManutencao } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { useToast } from '@/hooks/use-toast'
-import { Plus, Edit, Trash2, Search, Package } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { PecaForm } from '@/components/PecaForm'
+import { Plus, Search, Edit, Trash, Package } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 export function PecasList() {
+  const [searchTerm, setSearchTerm] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedPeca, setSelectedPeca] = useState<PecaManutencao | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
   const { data: pecas = [], isLoading } = useQuery({
-    queryKey: ['pecas'],
+    queryKey: ['pecas_manutencao'],
     queryFn: async () => {
-      console.log('Fetching pecas...')
       const client = await getSupabaseClient()
-      if (!client) {
-        console.log('Supabase not configured')
-        return []
-      }
+      if (!client) throw new Error('Cliente Supabase não disponível')
       
       const { data, error } = await client
         .from('pecas_manutencao')
         .select('*')
         .order('nome')
       
-      if (error) {
-        console.error('Error fetching pecas:', error)
-        throw error
-      }
-      
-      console.log('Pecas data:', data)
+      if (error) throw error
       return data as PecaManutencao[]
     }
   })
@@ -48,9 +39,7 @@ export function PecasList() {
   const deletePeca = useMutation({
     mutationFn: async (id: string) => {
       const client = await getSupabaseClient()
-      if (!client) {
-        throw new Error('Banco não configurado')
-      }
+      if (!client) throw new Error('Cliente Supabase não disponível')
       
       const { error } = await client
         .from('pecas_manutencao')
@@ -60,7 +49,7 @@ export function PecasList() {
       if (error) throw error
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pecas'] })
+      queryClient.invalidateQueries({ queryKey: ['pecas_manutencao'] })
       toast({
         title: "Peça excluída",
         description: "A peça foi excluída com sucesso.",
@@ -70,32 +59,32 @@ export function PecasList() {
       console.error('Error deleting peca:', error)
       toast({
         title: "Erro",
-        description: "Erro ao excluir peça.",
+        description: "Erro ao excluir peça: " + error.message,
         variant: "destructive",
       })
     }
   })
 
-  const filteredPecas = pecas.filter(peca =>
+  const filteredPecas = pecas.filter(peca => 
     peca.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    peca.fabricante?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    peca.modelo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    peca.codigo_fabricante?.toLowerCase().includes(searchTerm.toLowerCase())
+    (peca.fabricante && peca.fabricante.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (peca.modelo && peca.modelo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (peca.codigo_fabricante && peca.codigo_fabricante.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
-  // Calcular valor total do estoque
-  const valorTotalEstoque = filteredPecas.reduce((total, peca) => {
-    return total + (peca.estoque * peca.preco_unitario)
-  }, 0)
+  const valorEmEstoque = useMemo(() => {
+    return pecas.reduce((total, peca) => {
+      return total + (peca.estoque * peca.preco_unitario)
+    }, 0)
+  }, [pecas])
 
   const handleEdit = (peca: PecaManutencao) => {
     setSelectedPeca(peca)
     setIsDialogOpen(true)
   }
 
-  const handleNew = () => {
-    setSelectedPeca(null)
-    setIsDialogOpen(true)
+  const handleDelete = (id: string) => {
+    deletePeca.mutate(id)
   }
 
   const handleCloseDialog = () => {
@@ -103,112 +92,99 @@ export function PecasList() {
     setSelectedPeca(null)
   }
 
-  const handleDelete = (id: string) => {
-    deletePeca.mutate(id)
-  }
-
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Peças de Manutenção</h1>
-          <p className="text-muted-foreground">Gerencie o estoque de peças</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Peças e Materiais</h1>
+          <p className="text-muted-foreground">Gerencie o estoque de peças para manutenção</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleNew} className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Peça
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[95vw] max-w-2xl mx-2 max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedPeca ? 'Editar Peça' : 'Nova Peça'}
-              </DialogTitle>
-            </DialogHeader>
-            <PecaForm
-              peca={selectedPeca}
-              onSuccess={handleCloseDialog}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+          <div className="text-sm text-muted-foreground ml-auto flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Valor em estoque: R$ {valorEmEstoque.toFixed(2)}
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setSelectedPeca(null)} className="w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Peça
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl mx-4 bg-background border-border">
+              <DialogHeader>
+                <DialogTitle className="text-foreground">
+                  {selectedPeca ? 'Editar Peça' : 'Nova Peça'}
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground">
+                  {selectedPeca ? 'Edite os dados da peça.' : 'Cadastre uma nova peça no estoque.'}
+                </DialogDescription>
+              </DialogHeader>
+              <PecaForm 
+                peca={selectedPeca}
+                onSuccess={handleCloseDialog}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      {/* Card com valor total do estoque */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Valor Total em Estoque</CardTitle>
-          <Package className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">R$ {valorTotalEstoque.toFixed(2)}</div>
-          <p className="text-xs text-muted-foreground">
-            Valor total das {filteredPecas.reduce((total, peca) => total + peca.estoque, 0)} peças em estoque
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle>Lista de Peças</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-foreground">Lista de Peças</CardTitle>
+          <CardDescription className="text-muted-foreground">
             Total de {filteredPecas.length} peça{filteredPecas.length !== 1 ? 's' : ''} cadastrada{filteredPecas.length !== 1 ? 's' : ''}
           </CardDescription>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-4">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar peças..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-background border-border text-foreground"
               />
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-4">Carregando peças...</div>
+            <div className="text-center py-4 text-muted-foreground">Carregando peças...</div>
           ) : filteredPecas.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
               {searchTerm ? 'Nenhuma peça encontrada com os filtros aplicados.' : 'Nenhuma peça cadastrada.'}
             </div>
           ) : (
-            <div className="rounded-md border overflow-x-auto">
+            <div className="rounded-md border border-border overflow-x-auto bg-background">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead className="hidden sm:table-cell">Fabricante</TableHead>
-                    <TableHead className="hidden md:table-cell">Modelo</TableHead>
-                    <TableHead className="hidden lg:table-cell">Código</TableHead>
-                    <TableHead>Preço</TableHead>
-                    <TableHead>Estoque</TableHead>
-                    <TableHead className="hidden md:table-cell">Valor Total</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                  <TableRow className="border-border hover:bg-muted/50">
+                    <TableHead className="text-muted-foreground">Nome</TableHead>
+                    <TableHead className="hidden sm:table-cell text-muted-foreground">Fabricante</TableHead>
+                    <TableHead className="hidden md:table-cell text-muted-foreground">Modelo</TableHead>
+                    <TableHead className="hidden lg:table-cell text-muted-foreground">Código</TableHead>
+                    <TableHead className="text-muted-foreground">Estoque</TableHead>
+                    <TableHead className="hidden sm:table-cell text-muted-foreground">Preço Unit.</TableHead>
+                    <TableHead className="hidden md:table-cell text-muted-foreground">Total</TableHead>
+                    <TableHead className="text-right text-muted-foreground">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPecas.map((peca) => (
-                    <TableRow key={peca.id}>
-                      <TableCell className="font-medium">{peca.nome}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{peca.fabricante || '-'}</TableCell>
-                      <TableCell className="hidden md:table-cell">{peca.modelo || '-'}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{peca.codigo_fabricante || '-'}</TableCell>
-                      <TableCell>R$ {peca.preco_unitario.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <span className={peca.estoque <= 5 ? 'text-red-600 font-medium' : ''}>
+                    <TableRow key={peca.id} className="border-border hover:bg-muted/50">
+                      <TableCell className="font-medium text-foreground">{peca.nome}</TableCell>
+                      <TableCell className="hidden sm:table-cell text-foreground">{peca.fabricante || '-'}</TableCell>
+                      <TableCell className="hidden md:table-cell text-foreground">{peca.modelo || '-'}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-foreground">{peca.codigo_fabricante || '-'}</TableCell>
+                      <TableCell className="text-foreground">
+                        <Badge variant={peca.estoque > 10 ? "default" : peca.estoque > 0 ? "secondary" : "destructive"}>
                           {peca.estoque}
-                        </span>
+                        </Badge>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <span className="font-medium">
-                          R$ {(peca.estoque * peca.preco_unitario).toFixed(2)}
-                        </span>
-                      </TableCell>
+                      <TableCell className="hidden sm:table-cell text-foreground">R$ {peca.preco_unitario.toFixed(2)}</TableCell>
+                      <TableCell className="hidden md:table-cell text-foreground">R$ {(peca.estoque * peca.preco_unitario).toFixed(2)}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end space-x-1">
+                        <div className="flex justify-end space-x-2">
                           <Button
                             variant="outline"
                             size="icon"
@@ -224,13 +200,13 @@ export function PecasList() {
                                 size="icon"
                                 className="h-8 w-8"
                               >
-                                <Trash2 className="h-3 w-3" />
+                                <Trash className="h-3 w-3" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent className="mx-4">
+                            <AlertDialogContent className="mx-4 bg-background border-border">
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                <AlertDialogDescription>
+                                <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
+                                <AlertDialogDescription className="text-muted-foreground">
                                   Tem certeza que deseja excluir a peça "{peca.nome}"? Esta ação não pode ser desfeita.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
