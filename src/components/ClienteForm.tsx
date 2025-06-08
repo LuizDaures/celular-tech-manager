@@ -86,7 +86,7 @@ export function ClienteForm({ cliente, onSuccess, onCancel }: ClienteFormProps) 
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="w-full">
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           <div className="space-y-2">

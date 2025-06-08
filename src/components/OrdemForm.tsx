@@ -211,88 +211,86 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="space-y-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">
-              {ordem ? 'Editar Ordem de Serviço' : 'Nova Ordem de Serviço'}
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              {readOnly ? 'Visualizando ordem de serviço' : 'Preencha os dados da ordem de serviço'}
-            </p>
+    <div className="w-full">
+      <div className="space-y-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground">
+            {ordem ? 'Editar Ordem de Serviço' : 'Nova Ordem de Serviço'}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {readOnly ? 'Visualizando ordem de serviço' : 'Preencha os dados da ordem de serviço'}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Informações Básicas */}
+          <div className="bg-card border rounded-lg p-4 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4 text-card-foreground flex items-center gap-2">
+              <div className="w-1 h-6 bg-primary rounded-full"></div>
+              Informações Básicas
+            </h3>
+            <OrdemBasicInfo
+              clienteId={clienteId}
+              setClienteId={setClienteId}
+              tecnicoId={tecnicoId}
+              setTecnicoId={setTecnicoId}
+              dispositivo={dispositivo}
+              setDispositivo={setDispositivo}
+              descricaoProblema={descricaoProblema}
+              setDescricaoProblema={setDescricaoProblema}
+              diagnostico={diagnostico}
+              setDiagnostico={setDiagnostico}
+              servicoRealizado={servicoRealizado}
+              setServicoRealizado={setServicoRealizado}
+              clientes={clientes}
+              tecnicos={tecnicos}
+              readOnly={readOnly}
+            />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Informações Básicas */}
-            <div className="bg-card border rounded-lg p-6 shadow-sm">
-              <h3 className="text-xl font-semibold mb-6 text-card-foreground flex items-center gap-3">
-                <div className="w-1 h-8 bg-primary rounded-full"></div>
-                Informações Básicas
-              </h3>
-              <OrdemBasicInfo
-                clienteId={clienteId}
-                setClienteId={setClienteId}
-                tecnicoId={tecnicoId}
-                setTecnicoId={setTecnicoId}
-                dispositivo={dispositivo}
-                setDispositivo={setDispositivo}
-                descricaoProblema={descricaoProblema}
-                setDescricaoProblema={setDescricaoProblema}
-                diagnostico={diagnostico}
-                setDiagnostico={setDiagnostico}
-                servicoRealizado={servicoRealizado}
-                setServicoRealizado={setServicoRealizado}
-                clientes={clientes}
-                tecnicos={tecnicos}
-                readOnly={readOnly}
-              />
-            </div>
+          {/* Peças e Materiais */}
+          <div className="bg-card border rounded-lg p-4 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4 text-card-foreground flex items-center gap-2">
+              <div className="w-1 h-6 bg-primary rounded-full"></div>
+              Peças e Materiais
+            </h3>
+            <OrdemItensManager
+              itens={itens}
+              setItens={setItens}
+              readOnly={readOnly}
+            />
+          </div>
 
-            {/* Peças e Materiais */}
-            <div className="bg-card border rounded-lg p-6 shadow-sm">
-              <h3 className="text-xl font-semibold mb-6 text-card-foreground flex items-center gap-3">
-                <div className="w-1 h-8 bg-primary rounded-full"></div>
-                Peças e Materiais
-              </h3>
-              <OrdemItensManager
-                itens={itens}
-                setItens={setItens}
-                readOnly={readOnly}
-              />
-            </div>
+          {/* Status e Valores */}
+          <div className="bg-card border rounded-lg p-4 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4 text-card-foreground flex items-center gap-2">
+              <div className="w-1 h-6 bg-primary rounded-full"></div>
+              Status e Valores
+            </h3>
+            <OrdemStatusSection
+              status={status}
+              setStatus={setStatus}
+              valor={valor}
+              setValor={setValor}
+              totalItens={itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)}
+              readOnly={readOnly}
+            />
+          </div>
 
-            {/* Status e Valores */}
-            <div className="bg-card border rounded-lg p-6 shadow-sm">
-              <h3 className="text-xl font-semibold mb-6 text-card-foreground flex items-center gap-3">
-                <div className="w-1 h-8 bg-primary rounded-full"></div>
-                Status e Valores
-              </h3>
-              <OrdemStatusSection
-                status={status}
-                setStatus={setStatus}
-                valor={valor}
-                setValor={setValor}
-                totalItens={itens.reduce((total, item) => total + (item.quantidade * item.preco_unitario), 0)}
-                readOnly={readOnly}
-              />
+          {/* Botões de Ação */}
+          {!readOnly && (
+            <div className="flex justify-start gap-4 pt-4">
+              <Button 
+                type="submit" 
+                disabled={saveOrdem.isPending}
+                className="min-w-40"
+                size="lg"
+              >
+                {saveOrdem.isPending ? 'Salvando...' : (ordem ? 'Atualizar Ordem' : 'Criar Ordem')}
+              </Button>
             </div>
-
-            {/* Botões de Ação */}
-            {!readOnly && (
-              <div className="flex justify-start gap-4 pt-6">
-                <Button 
-                  type="submit" 
-                  disabled={saveOrdem.isPending}
-                  className="min-w-48"
-                  size="lg"
-                >
-                  {saveOrdem.isPending ? 'Salvando...' : (ordem ? 'Atualizar Ordem' : 'Criar Ordem')}
-                </Button>
-              </div>
-            )}
-          </form>
-        </div>
+          )}
+        </form>
       </div>
     </div>
   )

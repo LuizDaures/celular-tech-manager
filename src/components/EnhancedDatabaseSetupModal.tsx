@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { CheckCircle, Eye, EyeOff, Moon, Sun, XCircle, Database, ClipboardCopy, ExternalLink, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
+import { CheckCircle, Eye, EyeOff, Moon, Sun, XCircle, Database, ClipboardCopy, ExternalLink, ArrowRight, Loader2, AlertCircle, Wrench } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -119,6 +119,7 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
   const [darkMode, setDarkMode] = useState(false)
   const [copied, setCopied] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isCreatingStructure, setIsCreatingStructure] = useState(false)
   const [validationResults, setValidationResults] = useState<{
     connection: boolean | null
     tables: { [key: string]: boolean }
@@ -142,6 +143,7 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
       setShowKey(false)
       setCopied(false)
       setIsLoading(false)
+      setIsCreatingStructure(false)
       setValidationResults({ connection: null, tables: {}, progress: 0 })
       setError('')
     }
@@ -164,11 +166,6 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
   }
 
   const validateAnonKey = (key: string): boolean => {
-    // Validação básica da estrutura da anon key do Supabase
-    // Uma anon key válida deve:
-    // 1. Começar com "eyJ" (início de um JWT)
-    // 2. Ter pelo menos 100 caracteres
-    // 3. Conter pontos separando as seções do JWT
     if (!key || key.length < 100) {
       return false
     }
@@ -186,7 +183,6 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
   }
 
   const validateSupabaseUrl = (testUrl: string): boolean => {
-    // Validação da URL do Supabase
     try {
       const urlObj = new URL(testUrl)
       return urlObj.hostname.includes('supabase.co') || urlObj.hostname.includes('localhost')
@@ -195,8 +191,9 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
     }
   }
 
-  const validateDatabaseStructure = async (testClient: any) => {
-    console.log('Validando estrutura do banco...')
+  // Validação real da estrutura usando fetch direto para a API REST
+  const validateDatabaseStructureWithFetch = async (supabaseUrl: string, anonKey: string) => {
+    console.log('Validando estrutura do banco com fetch direto...')
     setValidationResults(prev => ({ ...prev, connection: true, progress: 20 }))
     
     const results: { [key: string]: boolean } = {}
@@ -209,19 +206,37 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
           progress: 20 + ((validatedCount / REQUIRED_TABLES.length) * 60)
         }))
         
-        const testResult = await Promise.race([
-          testClient.from(tableName).select('*', { count: 'exact', head: true }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 3000)
+        const response = await Promise.race([
+          fetch(`${supabaseUrl}/rest/v1/${tableName}?select=count&limit=1`, {
+            method: 'GET',
+            headers: {
+              'apikey': anonKey,
+              'Authorization': `Bearer ${anonKey}`,
+              'Content-Type': 'application/json'
+            }
+          }),
+          new Promise<Response>((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 5000)
           )
         ])
         
-        results[tableName] = !testResult?.error
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Chave inválida ou projeto Supabase incorreto')
+        }
+        
+        if (response.status === 404) {
+          results[tableName] = false
+        } else if (response.ok) {
+          results[tableName] = true
+        } else {
+          results[tableName] = false
+        }
+        
         validatedCount++
         
         setValidationResults(prev => ({ 
           ...prev, 
-          tables: { ...prev.tables, [tableName]: !testResult?.error }
+          tables: { ...prev.tables, [tableName]: results[tableName] }
         }))
         
         // Small delay for visual feedback
@@ -229,6 +244,9 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
         
       } catch (error: any) {
         console.log(`Erro ao verificar tabela ${tableName}:`, error)
+        if (error.message.includes('Chave inválida') || error.message.includes('projeto Supabase incorreto')) {
+          throw error // Re-throw para ser capturado no nível superior
+        }
         results[tableName] = false
         validatedCount++
         
@@ -240,6 +258,8 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
     }
     
     const allValid = Object.values(results).every(Boolean)
+    const validCount = Object.values(results).filter(Boolean).length
+    
     setValidationResults(prev => ({ 
       ...prev, 
       progress: allValid ? 100 : 80
@@ -248,7 +268,65 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
     return {
       isValid: allValid,
       results,
-      summary: `${Object.values(results).filter(Boolean).length}/${REQUIRED_TABLES.length} tabelas encontradas`
+      summary: `${validCount}/${REQUIRED_TABLES.length} tabelas encontradas`
+    }
+  }
+
+  const createDatabaseStructure = async () => {
+    if (!url || !anonKey) return
+    
+    setIsCreatingStructure(true)
+    setError('')
+    
+    try {
+      const client = createClient(url, anonKey)
+      
+      // Usar a função rpc para executar o SQL
+      const { error } = await client.rpc('execute_sql', { 
+        sql_query: schemaSQL 
+      })
+      
+      if (error) {
+        console.error('Erro RPC:', error)
+        // Fallback: tentar criar tabelas individualmente
+        await createTablesIndividually(client)
+      }
+      
+      toast({
+        title: 'Estrutura criada!',
+        description: 'As tabelas foram criadas com sucesso. Validando...'
+      })
+      
+      // Revalidar estrutura após criação
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      await handleRetryValidation()
+      
+    } catch (error: any) {
+      console.error('Erro ao criar estrutura:', error)
+      setError('Erro ao criar estrutura: ' + error.message)
+      toast({
+        title: 'Erro',
+        description: 'Erro ao criar estrutura do banco. Tente copiar e colar o SQL manualmente.',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsCreatingStructure(false)
+    }
+  }
+
+  const createTablesIndividually = async (client: any) => {
+    // Criar tabelas uma por uma se o RPC falhar
+    const statements = schemaSQL.split(';').filter(s => s.trim())
+    
+    for (const statement of statements) {
+      if (statement.trim()) {
+        try {
+          await client.rpc('execute_sql', { sql_query: statement })
+        } catch (error) {
+          console.log('Statement falhou:', statement, error)
+          // Continuar mesmo se algumas falham
+        }
+      }
     }
   }
 
@@ -276,27 +354,30 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
     setValidationResults({ connection: null, tables: {}, progress: 0 })
 
     try {
-      // Test basic connection
-      const testClient = createClient(url, anonKey)
-      setValidationResults(prev => ({ ...prev, progress: 10 }))
-      
-      // Tentar uma operação simples para validar a conexão
-      const { error: connectionError } = await Promise.race([
-        testClient.auth.getSession(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout na conexão')), 5000)
+      // Teste de conectividade básica primeiro
+      const testResponse = await Promise.race([
+        fetch(`${url}/rest/v1/`, {
+          method: 'GET',
+          headers: {
+            'apikey': anonKey,
+            'Authorization': `Bearer ${anonKey}`
+          }
+        }),
+        new Promise<Response>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout na conexão')), 10000)
         )
-      ]) as any
+      ])
 
-      if (connectionError && connectionError.message.includes('Invalid API key')) {
-        throw new Error('Chave de API inválida. Verifique a anon key.')
+      if (testResponse.status === 401 || testResponse.status === 403) {
+        throw new Error('Chave inválida ou projeto Supabase incorreto')
       }
 
-      // Validate database structure
-      const structureValidation = await validateDatabaseStructure(testClient)
+      // Validate database structure usando fetch direto
+      const structureValidation = await validateDatabaseStructureWithFetch(url, anonKey)
       
       if (structureValidation.isValid) {
         setCurrentStep('complete')
+        localStorage.setItem('supabase_ready', 'true')
         toast({ 
           title: 'Conexão validada!', 
           description: 'Todas as tabelas foram encontradas. Configuração completa.' 
@@ -305,19 +386,22 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
         setCurrentStep('schema')
         toast({ 
           title: 'Estrutura incompleta', 
-          description: 'Algumas tabelas estão faltando. Configure o esquema para continuar.',
+          description: `${structureValidation.summary}. A estrutura do banco precisa ser criada.`,
           variant: 'destructive'
         })
       }
 
     } catch (error: any) {
       console.error('Erro na validação:', error)
-      setError(error.message?.includes('Timeout') ? 
-        'Timeout na conexão. Verifique a URL e tente novamente.' :
-        error.message?.includes('Invalid API key') ?
-        'Chave de API inválida. Verifique a anon key.' :
-        'Falha na conexão. Verifique suas credenciais.'
-      )
+      
+      if (error.message?.includes('Chave inválida') || error.message?.includes('projeto Supabase incorreto')) {
+        setError('Chave inválida ou projeto Supabase incorreto.')
+      } else if (error.message?.includes('Timeout')) {
+        setError('Timeout na conexão. Verifique a URL e tente novamente.')
+      } else {
+        setError('Falha na conexão. Verifique suas credenciais.')
+      }
+      
       setCurrentStep('credentials')
     } finally {
       setIsLoading(false)
@@ -333,27 +417,31 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
     setValidationResults({ connection: null, tables: {}, progress: 0 })
 
     try {
-      const testClient = createClient(url, anonKey)
-      const structureValidation = await validateDatabaseStructure(testClient)
+      const structureValidation = await validateDatabaseStructureWithFetch(url, anonKey)
       
       if (structureValidation.isValid) {
         setCurrentStep('complete')
+        localStorage.setItem('supabase_ready', 'true')
         toast({ 
           title: 'Estrutura validada!', 
           description: 'Todas as tabelas foram encontradas.' 
         })
       } else {
-        // Manter no estado 'schema' para mostrar o botão novamente
         setCurrentStep('schema')
         toast({ 
           title: 'Ainda faltam tabelas', 
-          description: 'Execute o SQL fornecido e tente novamente.',
+          description: `${structureValidation.summary}. Execute o SQL fornecido ou use o botão de criação automática.`,
           variant: 'destructive'
         })
       }
     } catch (error: any) {
-      setError('Erro na validação: ' + error.message)
-      setCurrentStep('schema') // Manter no estado schema para permitir nova tentativa
+      if (error.message?.includes('Chave inválida') || error.message?.includes('projeto Supabase incorreto')) {
+        setError('Chave inválida ou projeto Supabase incorreto.')
+        setCurrentStep('credentials')
+      } else {
+        setError('Erro na validação: ' + error.message)
+        setCurrentStep('schema')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -363,6 +451,7 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
     console.log('Salvando configuração validada')
     localStorage.setItem('supabase_config', JSON.stringify({ url, anonKey }))
     localStorage.setItem('db_configured', 'true')
+    localStorage.setItem('supabase_ready', 'true')
     
     toast({ title: 'Configuração salva!', description: 'Sistema configurado com sucesso!' })
     onConnectionSuccess()
@@ -380,7 +469,7 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
 
   return (
     <Dialog open={isOpen} modal>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto [&>button]:hidden">
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto [&>button]:hidden">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
@@ -543,7 +632,7 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>
-                        Algumas tabelas estão faltando. Execute o SQL abaixo no painel do Supabase para criar a estrutura necessária.
+                        Tabela não encontrada. Parece que a estrutura do banco ainda não foi criada.
                       </AlertDescription>
                     </Alert>
 
@@ -560,24 +649,50 @@ export function EnhancedDatabaseSetupModal({ isOpen, onConnectionSuccess }: Enha
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <Button onClick={handleRetryValidation} disabled={isLoading} className="flex-1">
-                        {isLoading ? (
+                    <div className="space-y-3">
+                      <Button 
+                        onClick={createDatabaseStructure} 
+                        disabled={isCreatingStructure || isLoading} 
+                        className="w-full"
+                        variant="default"
+                      >
+                        {isCreatingStructure ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Validando...
+                            Criando Estrutura...
                           </>
                         ) : (
-                          'Tentar Novamente'
+                          <>
+                            <Wrench className="mr-2 h-4 w-4" />
+                            Criar Estrutura do Banco
+                          </>
                         )}
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => window.open(`${url.replace('.supabase.co', '')}.supabase.co/sql`, '_blank')}
-                      >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        Abrir SQL Editor
-                      </Button>
+
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={handleRetryValidation} 
+                          disabled={isLoading || isCreatingStructure} 
+                          className="flex-1"
+                          variant="outline"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Validando...
+                            </>
+                          ) : (
+                            'Tentar Novamente'
+                          )}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => window.open(`${url.replace('.supabase.co', '')}.supabase.co/sql`, '_blank')}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          SQL Editor
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
