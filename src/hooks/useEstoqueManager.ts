@@ -82,7 +82,7 @@ export function useEstoqueManager() {
 
     const ajustes: { pecaId: string, quantidadeAlterada: number }[] = []
 
-    // 1. Itens removidos
+    // 1. Itens removidos (devolver ao estoque)
     for (const [pecaId, quantidadeOriginal] of itensOriginaisMap.entries()) {
       if (!novosItensMap.has(pecaId)) {
         ajustes.push({ pecaId, quantidadeAlterada: quantidadeOriginal })
@@ -90,20 +90,62 @@ export function useEstoqueManager() {
       }
     }
 
-    // 2. Itens adicionados
+    // 2. Itens adicionados (retirar do estoque)
     for (const [pecaId, novaQuantidade] of novosItensMap.entries()) {
       if (!itensOriginaisMap.has(pecaId)) {
+        // Verificar se há estoque suficiente antes de debitar
+        const client = await getSupabaseClient()
+        if (client) {
+          const { data: peca, error } = await client
+            .from('pecas_manutencao')
+            .select('estoque, nome')
+            .eq('id', pecaId)
+            .single()
+
+          if (error) {
+            log(`Erro ao buscar peça ${pecaId}:`, error)
+            throw new Error(`Erro ao verificar estoque da peça`)
+          }
+
+          if (peca.estoque < novaQuantidade) {
+            throw new Error(`Estoque insuficiente para ${peca.nome}. Disponível: ${peca.estoque}, Solicitado: ${novaQuantidade}`)
+          }
+        }
+        
         ajustes.push({ pecaId, quantidadeAlterada: -novaQuantidade })
         log(`➖ Retirar do estoque: ${pecaId} -${novaQuantidade}`)
       }
     }
 
-    // 3. Itens alterados
+    // 3. Itens alterados (ajustar estoque)
     for (const [pecaId, novaQuantidade] of novosItensMap.entries()) {
       if (itensOriginaisMap.has(pecaId)) {
         const quantidadeOriginal = itensOriginaisMap.get(pecaId)!
         const diferenca = quantidadeOriginal - novaQuantidade
+        
         if (diferenca !== 0) {
+          // Se a diferença é negativa (aumentou a quantidade), verificar estoque
+          if (diferenca < 0) {
+            const quantidadeAdicional = Math.abs(diferenca)
+            const client = await getSupabaseClient()
+            if (client) {
+              const { data: peca, error } = await client
+                .from('pecas_manutencao')
+                .select('estoque, nome')
+                .eq('id', pecaId)
+                .single()
+
+              if (error) {
+                log(`Erro ao buscar peça ${pecaId}:`, error)
+                throw new Error(`Erro ao verificar estoque da peça`)
+              }
+
+              if (peca.estoque < quantidadeAdicional) {
+                throw new Error(`Estoque insuficiente para ${peca.nome}. Disponível: ${peca.estoque}, Necessário adicionar: ${quantidadeAdicional}`)
+              }
+            }
+          }
+          
           ajustes.push({ pecaId, quantidadeAlterada: diferenca })
           log(`📊 Ajustar estoque: ${pecaId} ${diferenca > 0 ? '+' : ''}${diferenca}`)
         }

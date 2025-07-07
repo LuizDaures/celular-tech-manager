@@ -131,6 +131,7 @@ export type Database = {
       itens_ordem: {
         Row: {
           id: string
+          is_from_estoque: boolean | null
           nome_item: string | null
           ordem_id: string | null
           peca_id: string | null
@@ -139,6 +140,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          is_from_estoque?: boolean | null
           nome_item?: string | null
           ordem_id?: string | null
           peca_id?: string | null
@@ -147,6 +149,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          is_from_estoque?: boolean | null
           nome_item?: string | null
           ordem_id?: string | null
           peca_id?: string | null

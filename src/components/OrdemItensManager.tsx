@@ -28,15 +28,33 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
   }
 
 const addItemFromSelector = (item: ItemForm) => {
-  const pecaJaAdicionada = item.peca_id && itens.some(existingItem => existingItem.peca_id === item.peca_id)
+  // Verificar duplicatas para peças do estoque (com peca_id)
+  if (item.peca_id) {
+    const pecaJaAdicionada = itens.some(existingItem => existingItem.peca_id === item.peca_id)
+    if (pecaJaAdicionada) {
+      toast({
+        title: "Peça já adicionada",
+        description: "Esta peça já foi adicionada à ordem. Edite a quantidade se necessário.",
+        variant: "destructive",
+      })
+      return
+    }
+  }
 
-  if (pecaJaAdicionada) {
-    toast({
-      title: "Peça já adicionada",
-      description: "Esta peça já foi adicionada à ordem. Edite a quantidade se necessário.",
-      variant: "destructive",
-    })
-    return
+  // Verificar duplicatas para itens manuais (sem peca_id, por nome)
+  if (!item.peca_id) {
+    const nomeJaExiste = itens.some(existingItem => 
+      !existingItem.peca_id && 
+      existingItem.nome_item.toLowerCase().trim() === item.nome_item.toLowerCase().trim()
+    )
+    if (nomeJaExiste) {
+      toast({
+        title: "Item já adicionado",
+        description: "Já existe um item com este nome na ordem. Edite a quantidade se necessário.",
+        variant: "destructive",
+      })
+      return
+    }
   }
 
   setItens([...itens, item])
@@ -49,6 +67,24 @@ const addItemFromSelector = (item: ItemForm) => {
 
   const updateItem = (index: number, field: keyof ItemForm, value: string | number) => {
     const updatedItens = [...itens]
+    
+    // Se está alterando o nome de um item manual, verificar duplicatas
+    if (field === 'nome_item' && typeof value === 'string' && !updatedItens[index].peca_id) {
+      const nomeJaExiste = itens.some((existingItem, existingIndex) => 
+        existingIndex !== index &&
+        !existingItem.peca_id && 
+        existingItem.nome_item.toLowerCase().trim() === value.toLowerCase().trim()
+      )
+      if (nomeJaExiste) {
+        toast({
+          title: "Nome duplicado",
+          description: "Já existe um item com este nome na ordem.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+    
     updatedItens[index] = { ...updatedItens[index], [field]: value }
     setItens(updatedItens)
   }

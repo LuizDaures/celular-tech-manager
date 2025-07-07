@@ -180,9 +180,21 @@ useEffect(() => {
     },
     onError: (error: any) => {
       console.error('Erro ao salvar ordem:', error)
+      
+      let errorMessage = "Erro inesperado ao salvar ordem"
+      
+      // Verificar se é erro de estoque
+      if (error.message && error.message.includes('Estoque insuficiente')) {
+        errorMessage = error.message
+      } else if (error.message && error.message.includes('estoque')) {
+        errorMessage = error.message
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
       toast({
-        title: "Erro",
-        description: "Erro ao salvar ordem: " + error.message,
+        title: "Erro ao salvar ordem",
+        description: errorMessage,
         variant: "destructive",
       })
     }
