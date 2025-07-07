@@ -68,7 +68,8 @@ export function OrdensList() {
             id,
             nome_item,
             quantidade,
-            preco_unitario
+            preco_unitario,
+            is_from_estoque
           )
         `)
         .order('data_abertura', { ascending: false })
@@ -744,7 +745,10 @@ export function OrdensList() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setSelectedOrdem(null)} className="w-full sm:w-auto">
+            <Button  onClick={() => {
+    setSelectedOrdem(null)
+    setIsViewing(false)
+  }} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" />
               Nova Ordem
             </Button>
@@ -771,9 +775,9 @@ export function OrdensList() {
         <CardHeader>
           <CardTitle className="text-foreground">Lista de Ordens</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Total de {filteredOrdens.length} ordem{filteredOrdens.length !== 1 ? 's' : ''} {statusFilter !== 'all' ? `com status "${statusLabels[statusFilter as keyof typeof statusLabels]}"` : 'cadastrada' + (filteredOrdens.length !== 1 ? 's' : '')}
+            Total de {filteredOrdens.length} {filteredOrdens.length !== 1 ? 'ordens' : 'ordem'} {statusFilter !== 'all' ? `com status "${statusLabels[statusFilter as keyof typeof statusLabels]}"` : 'cadastrada' + (filteredOrdens.length !== 1 ? 's' : '')}
           </CardDescription>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -816,9 +820,8 @@ export function OrdensList() {
                     <TableHead className="hidden sm:table-cell text-muted-foreground">Dispositivo</TableHead>
                     <TableHead className="hidden md:table-cell text-muted-foreground">Problema</TableHead>
                     <TableHead className="text-muted-foreground">Status</TableHead>
-                    <TableHead className="hidden lg:table-cell text-muted-foreground">Data Abertura</TableHead>
-                    <TableHead className="hidden md:table-cell text-muted-foreground">Valor Manutenção</TableHead>
-                    <TableHead className="hidden lg:table-cell text-muted-foreground">Total Itens</TableHead>
+                    <TableHead className="hidden lg:table-cell text-muted-foreground">Abertura</TableHead>
+                    <TableHead className="hidden lg:table-cell text-muted-foreground">Valor</TableHead>
                     <TableHead className="text-right text-muted-foreground">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -827,7 +830,7 @@ export function OrdensList() {
                     <TableRow key={ordem.id} className="border-border hover:bg-muted/50">
                       <TableCell className="font-medium text-foreground">{ordem.cliente?.nome || 'Cliente não encontrado'}</TableCell>
                       <TableCell className="hidden sm:table-cell text-foreground">{ordem.dispositivo || '-'}</TableCell>
-                      <TableCell className="hidden md:table-cell max-w-xs truncate text-foreground">{ordem.descricao_problema}</TableCell>
+                      <TableCell className="hidden md:table-cell text-foreground">{ordem.descricao_problema}</TableCell>
                       <TableCell>
                         <Badge className={statusColors[ordem.status]}>
                           {statusLabels[ordem.status]}
@@ -836,11 +839,8 @@ export function OrdensList() {
                       <TableCell className="hidden lg:table-cell text-foreground">
                         {new Date(ordem.data_abertura).toLocaleDateString('pt-BR')}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-foreground">
-                        {ordem.valor_manutencao ? `R$ ${ordem.valor_manutencao?.toFixed(2)}` : '-'}
-                      </TableCell>
                       <TableCell className="hidden lg:table-cell text-foreground">
-                        {ordem.total ? `R$ ${ordem.total?.toFixed(2)}` : '-'}
+                        {ordem.total ? `R$ ${(ordem.valor_manutencao + ordem.total).toFixed(2).replace('.', ',')}` : '-'}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-1">

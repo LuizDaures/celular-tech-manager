@@ -27,20 +27,21 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
     setItens([...itens, { nome_item: '', quantidade: 1, preco_unitario: 0, is_from_estoque: false }])
   }
 
-  const addItemFromSelector = (item: ItemForm) => {
-    const pecaJaAdicionada = itens.some(existingItem => existingItem.peca_id === item.peca_id)
-    
-    if (pecaJaAdicionada) {
-      toast({
-        title: "Peça já adicionada",
-        description: "Esta peça já foi adicionada à ordem. Edite a quantidade se necessário.",
-        variant: "destructive",
-      })
-      return
-    }
+const addItemFromSelector = (item: ItemForm) => {
+  const pecaJaAdicionada = item.peca_id && itens.some(existingItem => existingItem.peca_id === item.peca_id)
 
-    setItens([...itens, item])
+  if (pecaJaAdicionada) {
+    toast({
+      title: "Peça já adicionada",
+      description: "Esta peça já foi adicionada à ordem. Edite a quantidade se necessário.",
+      variant: "destructive",
+    })
+    return
   }
+
+  setItens([...itens, item])
+}
+
 
   const removeItem = (index: number) => {
     setItens(itens.filter((_, i) => i !== index))
@@ -61,7 +62,7 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
           <Package2 className="h-5 w-5 text-muted-foreground" />
           <Label className="text-lg font-medium">Peças Utilizadas</Label>
         </div>
-        
+
         {itens.length > 0 ? (
           <div className="space-y-4">
             {itens.map((item, index) => (
@@ -92,7 +93,7 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
                 </div>
               </div>
             ))}
-            
+
             <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
               <div className="flex justify-between items-center">
                 <Label className="font-medium text-lg">Total das Peças</Label>
@@ -118,21 +119,26 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
           <Package2 className="h-5 w-5 text-muted-foreground" />
           <Label className="text-lg font-medium">Peças Utilizadas</Label>
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-3 w-full">
-          <div className="flex-1">
-            <ItemSelector 
-              onAddItem={addItemFromSelector} 
-              itensJaAdicionados={itens}
-            />
-          </div>
-          <Button type="button" variant="outline" size="sm" onClick={addItem} className="w-full sm:w-auto">
+
+        <div className="flex flex-col sm:flex-row justify-start gap-3 w-full">
+          <ItemSelector
+            onAddItem={addItemFromSelector}
+            itensJaAdicionados={itens}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addItem}
+            className="w-full sm:w-auto"
+          >
             <Plus className="h-4 w-4 mr-2" />
-            Item Manual
+            Manual
           </Button>
         </div>
+
       </div>
-      
+
       {itens.length > 0 && (
         <div className="space-y-4">
           {itens.map((item, index) => (
@@ -151,11 +157,12 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
                   />
                   {item.is_from_estoque && (
                     <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                      📦 Peça do estoque - nome não editável
+                      <span className="cursor-default" title="Peça do estoque">📦</span>
+                      Nome não editável
                     </p>
                   )}
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Quantidade</Label>
@@ -167,7 +174,7 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
                       className="mt-1"
                     />
                   </div>
-                  
+
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Preço Unit.</Label>
                     <Input
@@ -180,15 +187,16 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
                     />
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Total</Label>
-                    <div className="font-medium text-lg text-green-600">
+                    <div className="text-lg font-bold text-green-600 mt-2">
                       R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
                     </div>
+
                   </div>
-                  
+
                   <Button
                     type="button"
                     variant="outline"
@@ -215,11 +223,13 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
                   />
                   {item.is_from_estoque && (
                     <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                      📦 Peça do estoque - nome não editável
+                      <span className="cursor-default" title="Peça do estoque">📦</span>
+                      Nome não editável
                     </p>
+
                   )}
                 </div>
-                
+
                 <div className="w-28">
                   <Label className="text-sm font-medium text-muted-foreground">Qtd</Label>
                   <Input
@@ -230,7 +240,7 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
                     className="mt-1"
                   />
                 </div>
-                
+
                 <div className="w-32">
                   <Label className="text-sm font-medium text-muted-foreground">Preço Unit.</Label>
                   <Input
@@ -242,14 +252,14 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
                     className="mt-1"
                   />
                 </div>
-                
+
                 <div className="w-32">
                   <Label className="text-sm font-medium text-muted-foreground">Total</Label>
                   <div className="font-medium bg-muted px-3 py-2 rounded mt-1 text-center text-green-600">
                     R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
                   </div>
                 </div>
-                
+
                 <div className="mt-6">
                   <Button
                     type="button"
@@ -264,7 +274,7 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
               </div>
             </div>
           ))}
-          
+
           <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
             <div className="flex justify-between items-center">
               <Label className="font-medium text-lg">Total das Peças</Label>
@@ -273,7 +283,7 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
           </div>
         </div>
       )}
-      
+
       {itens.length === 0 && (
         <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
           <Package2 className="h-12 w-12 mx-auto mb-4 opacity-50" />

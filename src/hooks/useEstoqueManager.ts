@@ -1,4 +1,3 @@
-
 import { useQueryClient } from '@tanstack/react-query'
 import { getSupabaseClient } from '@/lib/supabase'
 
@@ -15,109 +14,117 @@ export function useEstoqueManager() {
 
   const updateEstoque = async (pecaId: string, quantidadeAlterada: number) => {
     if (!pecaId) return
-    
-    console.log(`Atualizando estoque da peça ${pecaId} em ${quantidadeAlterada} unidades`)
-    
+
+    const log = (...args: any[]) => {
+      if (process.env.NODE_ENV !== 'production') console.log(...args)
+    }
+
+    log(`🔧 Atualizando estoque da peça ${pecaId} em ${quantidadeAlterada} unidades`)
+
     const client = await getSupabaseClient()
     if (!client) throw new Error('Cliente Supabase não disponível')
-    
+
     const { data: peca, error: fetchError } = await client
       .from('pecas_manutencao')
       .select('estoque')
       .eq('id', pecaId)
       .single()
-    
+
     if (fetchError) {
       console.error('Erro ao buscar estoque atual:', fetchError)
       throw fetchError
     }
-    
+
     const novoEstoque = peca.estoque + quantidadeAlterada
-    console.log(`Estoque atual: ${peca.estoque}, alteração: ${quantidadeAlterada}, novo estoque: ${novoEstoque}`)
-    
+
     if (novoEstoque < 0) {
       throw new Error(`Estoque insuficiente. Estoque atual: ${peca.estoque}, tentativa de débito: ${Math.abs(quantidadeAlterada)}`)
     }
-    
+
     const { error } = await client
       .from('pecas_manutencao')
       .update({ estoque: novoEstoque })
       .eq('id', pecaId)
-    
+
     if (error) {
       console.error('Erro ao atualizar estoque:', error)
       throw error
     }
 
-    console.log(`Estoque atualizado com sucesso para peça ${pecaId}: ${novoEstoque}`)
-    // Invalidar todos os caches relacionados
+    log(`✅ Estoque atualizado com sucesso para peça ${pecaId}: ${novoEstoque}`)
+
     await queryClient.invalidateQueries({ queryKey: ['pecas'] })
     await queryClient.invalidateQueries({ queryKey: ['pecas_manutencao'] })
+    await queryClient.invalidateQueries({ queryKey: ['estoque'] })
+  }
+
+  const agruparPorPecaComSoma = (itens: ItemForm[]) => {
+    const mapa = new Map<string, number>()
+    for (const item of itens) {
+      if (item.peca_id && item.is_from_estoque) {
+        mapa.set(item.peca_id, (mapa.get(item.peca_id) || 0) + item.quantidade)
+      }
+    }
+    return mapa
   }
 
   const processarMudancasEstoque = async (novosItens: ItemForm[], itensOriginais: ItemForm[] = []) => {
-    console.log('=== INICIANDO PROCESSAMENTO DE MUDANÇAS NO ESTOQUE ===')
-    console.log('Itens originais:', itensOriginais)
-    console.log('Novos itens:', novosItens)
+    const log = (...args: any[]) => {
+      if (process.env.NODE_ENV !== 'production') console.log(...args)
+    }
 
-    // Criar mapas apenas para itens do estoque
-    const itensOriginaisMap = new Map<string, number>()
-    const novosItensMap = new Map<string, number>()
+    log('=== INICIANDO PROCESSAMENTO DE MUDANÇAS NO ESTOQUE ===')
+    log('Itens originais:', itensOriginais)
+    log('Novos itens:', novosItens)
 
-    // Processar itens originais do estoque
-    itensOriginais.forEach(item => {
-      if (item.peca_id && item.is_from_estoque) {
-        itensOriginaisMap.set(item.peca_id, item.quantidade)
-        console.log(`Item original do estoque: ${item.peca_id} - Qtd: ${item.quantidade}`)
+    const itensOriginaisMap = agruparPorPecaComSoma(itensOriginais)
+    const novosItensMap = agruparPorPecaComSoma(novosItens)
+
+    const ajustes: { pecaId: string, quantidadeAlterada: number }[] = []
+
+    // 1. Itens removidos
+    for (const [pecaId, quantidadeOriginal] of itensOriginaisMap.entries()) {
+      if (!novosItensMap.has(pecaId)) {
+        ajustes.push({ pecaId, quantidadeAlterada: quantidadeOriginal })
+        log(`🔁 Devolver ao estoque: ${pecaId} +${quantidadeOriginal}`)
       }
-    })
+    }
 
-    // Processar novos itens do estoque
-    novosItens.forEach(item => {
-      if (item.peca_id && item.is_from_estoque) {
-        novosItensMap.set(item.peca_id, item.quantidade)
-        console.log(`Novo item do estoque: ${item.peca_id} - Qtd: ${item.quantidade}`)
+    // 2. Itens adicionados
+    for (const [pecaId, novaQuantidade] of novosItensMap.entries()) {
+      if (!itensOriginaisMap.has(pecaId)) {
+        ajustes.push({ pecaId, quantidadeAlterada: -novaQuantidade })
+        log(`➖ Retirar do estoque: ${pecaId} -${novaQuantidade}`)
       }
-    })
+    }
+
+    // 3. Itens alterados
+    for (const [pecaId, novaQuantidade] of novosItensMap.entries()) {
+      if (itensOriginaisMap.has(pecaId)) {
+        const quantidadeOriginal = itensOriginaisMap.get(pecaId)!
+        const diferenca = quantidadeOriginal - novaQuantidade
+        if (diferenca !== 0) {
+          ajustes.push({ pecaId, quantidadeAlterada: diferenca })
+          log(`📊 Ajustar estoque: ${pecaId} ${diferenca > 0 ? '+' : ''}${diferenca}`)
+        }
+      }
+    }
 
     try {
-      // 1. Processar itens removidos - devolver ao estoque (CRÍTICO: ESTE ERA O BUG)
-      for (const [pecaId, quantidadeOriginal] of itensOriginaisMap) {
-        if (!novosItensMap.has(pecaId)) {
-          console.log(`🔄 DEVOLVENDO ${quantidadeOriginal} unidades da peça ${pecaId} ao estoque (item removido)`)
-          await updateEstoque(pecaId, quantidadeOriginal)
-        }
-      }
-
-      // 2. Processar itens adicionados - debitar do estoque
-      for (const [pecaId, novaQuantidade] of novosItensMap) {
-        if (!itensOriginaisMap.has(pecaId)) {
-          console.log(`➖ DEBITANDO ${novaQuantidade} unidades da peça ${pecaId} do estoque (item adicionado)`)
-          await updateEstoque(pecaId, -novaQuantidade)
-        }
-      }
-
-      // 3. Processar itens com quantidade alterada
-      for (const [pecaId, novaQuantidade] of novosItensMap) {
-        const quantidadeOriginal = itensOriginaisMap.get(pecaId)
-        if (quantidadeOriginal !== undefined) {
-          const diferenca = quantidadeOriginal - novaQuantidade
-          if (diferenca !== 0) {
-            console.log(`📊 AJUSTANDO estoque da peça ${pecaId}: diferença de ${diferenca} unidades (original: ${quantidadeOriginal}, nova: ${novaQuantidade})`)
-            await updateEstoque(pecaId, diferenca)
-          }
-        }
-      }
-
-      console.log('=== PROCESSAMENTO DE ESTOQUE CONCLUÍDO COM SUCESSO ===')
+      await Promise.all(
+        ajustes.map(({ pecaId, quantidadeAlterada }) =>
+          updateEstoque(pecaId, quantidadeAlterada)
+        )
+      )
+      log('✅ Processamento de estoque concluído com sucesso')
     } catch (error) {
-      console.error('=== ERRO NO PROCESSAMENTO DE ESTOQUE ===', error)
+      console.error('❌ Erro durante o processamento de estoque:', error)
       throw error
     }
   }
 
   return {
     updateEstoque,
-    processarMudancasEstoque
+    processarMudancasEstoque,
   }
 }

@@ -174,8 +174,9 @@ export interface ItemOrdem {
   ordem_id: string
   nome_item: string
   quantidade: number
-  peca_id: string,
+  peca_id: string
   preco_unitario: number
+  is_from_estoque?: boolean
 }
 
 export interface DadosEmpresa {
@@ -200,7 +201,6 @@ export interface OrdemCompleta extends Omit<OrdemServico, 'id'> {
   cliente_endereco?: string
   tecnico_nome?: string
   tecnico_cpf?: string
-  total_ordem?: number
   valor_manutencao?: number
 }
 

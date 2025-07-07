@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useToast } from '@/hooks/use-toast'
@@ -10,11 +9,9 @@ export function useOrdemActions() {
   const deleteOrdem = useMutation({
     mutationFn: async (ordemId: string) => {
       const client = await getSupabaseClient()
-      if (!client) {
-        throw new Error('Banco não configurado')
-      }
+      if (!client) throw new Error('Banco não configurado')
 
-      // Primeiro, buscar os itens da ordem que vieram do estoque
+      // Buscar itens da ordem
       const { data: itens, error: itensError } = await client
         .from('itens_ordem')
         .select('*')
@@ -22,37 +19,38 @@ export function useOrdemActions() {
 
       if (itensError) throw itensError
 
-      // Devolver ao estoque apenas itens que têm peca_id (vieram do estoque)
+      // Restaurar estoque apenas se veio do estoque
       for (const item of itens || []) {
-        if (item.peca_id) {
-          console.log(`Devolvendo ${item.quantidade} unidades da peça ${item.peca_id} ao estoque`)
-          
-          // Buscar estoque atual
-          const { data: peca, error: fetchError } = await client
-            .from('pecas_manutencao')
-            .select('estoque')
-            .eq('id', item.peca_id)
-            .single()
+        if (item.peca_id && item.is_from_estoque) {
+          try {
+            const { data: peca, error: fetchError } = await client
+              .from('pecas_manutencao')
+              .select('estoque')
+              .eq('id', item.peca_id)
+              .single()
 
-          if (fetchError) {
-            console.error('Erro ao buscar estoque atual:', fetchError)
-            continue // Continua mesmo se não conseguir devolver uma peça
-          }
+            if (fetchError || !peca || typeof peca.estoque !== 'number') {
+              console.warn(`Não foi possível recuperar estoque da peça ${item.peca_id}`, fetchError)
+              continue
+            }
 
-          // Atualizar estoque
-          const novoEstoque = peca.estoque + item.quantidade
-          const { error: updateError } = await client
-            .from('pecas_manutencao')
-            .update({ estoque: novoEstoque })
-            .eq('id', item.peca_id)
+            const novoEstoque = peca.estoque + item.quantidade
 
-          if (updateError) {
-            console.error('Erro ao devolver estoque:', updateError)
+            const { error: updateError } = await client
+              .from('pecas_manutencao')
+              .update({ estoque: novoEstoque })
+              .eq('id', item.peca_id)
+
+            if (updateError) {
+              console.warn(`Erro ao atualizar estoque da peça ${item.peca_id}`, updateError)
+            }
+          } catch (e) {
+            console.error(`Erro ao tentar devolver peça ${item.peca_id} ao estoque`, e)
           }
         }
       }
 
-      // Deletar itens da ordem
+      // Excluir itens
       const { error: deleteItensError } = await client
         .from('itens_ordem')
         .delete()
@@ -60,7 +58,7 @@ export function useOrdemActions() {
 
       if (deleteItensError) throw deleteItensError
 
-      // Deletar a ordem
+      // Excluir a ordem
       const { error: deleteOrdemError } = await client
         .from('ordens_servico')
         .delete()
@@ -72,16 +70,16 @@ export function useOrdemActions() {
       queryClient.invalidateQueries({ queryKey: ['ordens'] })
       queryClient.invalidateQueries({ queryKey: ['pecas'] })
       toast({
-        title: "Ordem excluída",
-        description: "A ordem foi excluída e o estoque foi restaurado.",
+        title: 'Ordem excluída',
+        description: 'A ordem foi excluída e o estoque restaurado.',
       })
     },
     onError: (error: any) => {
-      console.error('Error deleting ordem:', error)
+      console.error('Erro ao excluir ordem:', error)
       toast({
-        title: "Erro",
-        description: "Erro ao excluir ordem: " + error.message,
-        variant: "destructive",
+        title: 'Erro ao excluir',
+        description: error.message || 'Erro inesperado ao excluir a ordem.',
+        variant: 'destructive',
       })
     }
   })

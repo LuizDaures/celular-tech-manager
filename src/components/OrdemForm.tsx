@@ -21,7 +21,6 @@ interface ItemForm {
   quantidade: number
   preco_unitario: number
   is_from_estoque?: boolean
-  vinculado_ao_estoque?: boolean
 }
 
 export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps) {
@@ -44,21 +43,25 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const { processarMudancasEstoque } = useEstoqueManager()
 
   // useEffect para carregar itens
-  useEffect(() => {
-    if (ordem?.itens) {
-      const itensCarregados = ordem.itens.map(item => ({
-        peca_id: item.peca_id,
-        nome_item: item.nome_item,
-        quantidade: item.quantidade,
-        preco_unitario: item.preco_unitario,
-        is_from_estoque: !!item.peca_id,
-        vinculado_ao_estoque: !!item.peca_id
-      }))
-      setItens(itensCarregados)
-      setOriginalItens(itensCarregados)
-      console.log('Itens originais carregados:', itensCarregados)
-    }
-  }, [ordem?.itens])
+useEffect(() => {
+  if (ordem?.itens && originalItens.length === 0) {
+    const itensCarregados = ordem.itens.map(item => ({
+      peca_id: item.peca_id,
+      nome_item: item.nome_item,
+      quantidade: item.quantidade,
+      preco_unitario: item.preco_unitario,
+      is_from_estoque: item.is_from_estoque === true,
+    }))
+
+    const unicos = Array.from(new Map(itensCarregados.map(item => [item.peca_id, item])).values())
+
+    setItens(unicos)
+    setOriginalItens(unicos) // << só define se originalItens estiver vazio
+    console.log('Itens originais carregados:', unicos)
+  }
+}, [ordem?.itens])
+
+
 
   // queries para dados
   const { data: clientes = [] } = useQuery({
@@ -142,13 +145,15 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
         // Inserir novos itens
         if (data.itens.length > 0) {
-          const itensToInsert = data.itens.map((item: ItemForm) => ({
-            ordem_id: ordemId,
-            peca_id: item.peca_id || null,
-            nome_item: item.nome_item,
-            quantidade: item.quantidade,
-            preco_unitario: item.preco_unitario
-          }))
+        const itensToInsert = data.itens.map((item: ItemForm) => ({
+  ordem_id: ordemId,
+  peca_id: item.peca_id || null,
+  nome_item: item.nome_item,
+  quantidade: item.quantidade,
+  preco_unitario: item.preco_unitario,
+  is_from_estoque: !!item.is_from_estoque
+}))
+
 
           const { error: itensError } = await client
             .from('itens_ordem')
@@ -281,7 +286,7 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
 
           {/* Botões de Ação */}
           {!readOnly && (
-            <div className="flex justify-start gap-4 pt-4">
+            <div className="flex justify-end gap-4 pt-4">
               <Button 
                 type="submit" 
                 disabled={saveOrdem.isPending}

@@ -73,9 +73,9 @@ export function OrdemStatusSection({
         
         <div>
           <Label className="text-sm font-medium">Total Geral</Label>
-          <Card className="mt-1">
-            <CardContent className="p-3">
-              <p className="text-lg font-bold text-center">R$ {totalGeral.toFixed(2)}</p>
+          <Card className="mt-2">
+             <CardContent className="p-2 items-center">
+              <p className="text-sm font-bold text-center text-primary">R$ {totalGeral.toFixed(2)}</p>
             </CardContent>
           </Card>
         </div>
@@ -114,14 +114,11 @@ export function OrdemStatusSection({
           />
         </div>
 
-        <div className="space-y-2">
+        <div>
           <Label className="text-sm font-medium">Total Geral</Label>
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="p-3">
-              <p className="text-xl font-bold text-center text-primary">R$ {totalGeral.toFixed(2)}</p>
-              <div className="text-xs text-center text-muted-foreground mt-1">
-                Peças: R$ {totalItens.toFixed(2)} + Serviço: R$ {valorManutencao.toFixed(2)}
-              </div>
+          <Card className="mt-2">
+            <CardContent className="p-2 items-center">
+              <p className="text-sm font-bold text-center text-primary">R$ {totalGeral.toFixed(2)}</p>
             </CardContent>
           </Card>
         </div>

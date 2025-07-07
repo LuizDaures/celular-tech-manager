@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS public.itens_ordem (
   nome_item text,
   quantidade int4,
   peca_id uuid,
+  is_from_estoque boolean,
   preco_unitario numeric
 );
 ALTER TABLE public.itens_ordem ENABLE ROW LEVEL SECURITY;

@@ -91,7 +91,7 @@ export function ItemSelector({ onAddItem, itensJaAdicionados = [] }: ItemSelecto
       <DialogTrigger asChild>
         <Button type="button" variant="outline" size="sm" className="w-full sm:w-auto">
           <Search className="h-4 w-4 mr-2" />
-          Buscar Peça
+         Estoque
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto mx-4">
@@ -208,7 +208,7 @@ export function ItemSelector({ onAddItem, itensJaAdicionados = [] }: ItemSelecto
                 </div>
               </div>
               
-              <div className="mt-6 flex justify-start">
+              <div className="mt-6 flex justify-end">
                 <Button 
                   onClick={handleAddItem}
                   disabled={quantity > selectedPeca.estoque || quantity <= 0}

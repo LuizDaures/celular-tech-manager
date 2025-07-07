@@ -56,7 +56,7 @@ export function PecaForm({ peca, onSuccess }: PecaFormProps) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pecas'] })
+queryClient.invalidateQueries({ queryKey: ['pecas_manutencao'] })
       toast({
         title: peca ? "Peça atualizada" : "Peça criada",
         description: peca ? 

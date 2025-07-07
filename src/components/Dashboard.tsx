@@ -52,7 +52,7 @@ export function Dashboard() {
   const [recentOrders, setRecentOrders] = useState<any[]>([])
   const [filteredOrders, setFilteredOrders] = useState<any[]>([])
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [dateFilter, setDateFilter] = useState<{from?: Date, to?: Date}>({})
+  const [dateFilter, setDateFilter] = useState<{ from?: Date, to?: Date }>({})
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
@@ -80,32 +80,32 @@ export function Dashboard() {
 
   const applyFilters = () => {
     let filtered = [...recentOrders]
-    
+
     if (statusFilter !== 'all') {
       filtered = filtered.filter(order => order.status === statusFilter)
     }
-    
+
     if (dateFilter.from) {
       const fromDate = new Date(dateFilter.from)
       fromDate.setHours(0, 0, 0, 0)
-      
+
       filtered = filtered.filter(order => {
         const orderDate = new Date(order.data_abertura)
         orderDate.setHours(0, 0, 0, 0)
         return orderDate >= fromDate
       })
     }
-    
+
     if (dateFilter.to) {
       const toDate = new Date(dateFilter.to)
       toDate.setHours(23, 59, 59, 999)
-      
+
       filtered = filtered.filter(order => {
         const orderDate = new Date(order.data_abertura)
         return orderDate <= toDate
       })
     }
-    
+
     setFilteredOrders(filtered)
   }
 
@@ -161,7 +161,7 @@ export function Dashboard() {
       const totalFaturamento = allOrders?.reduce((total, ordem) => {
         if (ordem.status === 'concluida') {
           const valorOrdem = ordem.valor || 0
-          const valorItens = ordem.itens?.reduce((sum: number, item: any) => 
+          const valorItens = ordem.itens?.reduce((sum: number, item: any) =>
             sum + (item.quantidade * item.preco_unitario), 0) || 0
           return total + valorOrdem + valorItens
         }
@@ -233,10 +233,10 @@ export function Dashboard() {
       const ws = XLSX.utils.json_to_sheet(metricsData)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Métricas do Sistema')
-      
+
       const fileName = `metricas_sistema_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
       XLSX.writeFile(wb, fileName)
-      
+
       toast({
         title: 'Métricas exportadas',
         description: `Arquivo ${fileName} baixado com sucesso`,
@@ -262,9 +262,9 @@ export function Dashboard() {
     }
 
     const excelData = filteredOrders.map(order => {
-      const itensValue = order.itens?.reduce((total: number, item: any) => 
+      const itensValue = order.itens?.reduce((total: number, item: any) =>
         total + (item.quantidade * item.preco_unitario), 0) || 0
-      
+
       return {
         'ID': order.id,
         'Cliente': order.clientes?.nome || 'N/A',
@@ -276,7 +276,7 @@ export function Dashboard() {
         'Valor Manutenção': order.valor || 0,
         'Valor Peças': itensValue,
         'Total': (order.valor || 0) + itensValue,
-        'Data Conclusão': order.data_conclusao ? 
+        'Data Conclusão': order.data_conclusao ?
           format(new Date(order.data_conclusao), 'dd/MM/yyyy', { locale: ptBR }) : 'N/A'
       }
     })
@@ -284,10 +284,10 @@ export function Dashboard() {
     const ws = XLSX.utils.json_to_sheet(excelData)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Ordens de Serviço')
-    
+
     const fileName = `ordens_servico_${format(new Date(), 'yyyy-MM-dd')}.xlsx`
     XLSX.writeFile(wb, fileName)
-    
+
     toast({
       title: 'Arquivo baixado',
       description: `${filteredOrders.length} ordens exportadas para ${fileName}`,
@@ -347,7 +347,7 @@ export function Dashboard() {
       // Calculate statistics
       const hoje = new Date()
       hoje.setHours(0, 0, 0, 0)
-      
+
       const ordensHoje = ordens?.filter(o => {
         const dataOrdem = new Date(o.data_abertura)
         dataOrdem.setHours(0, 0, 0, 0)
@@ -356,15 +356,15 @@ export function Dashboard() {
 
       const mesAtual = new Date().getMonth()
       const anoAtual = new Date().getFullYear()
-      
+
       const faturamentoMes = ordens?.filter(o => {
         const dataOrdem = new Date(o.data_abertura)
-        return dataOrdem.getMonth() === mesAtual && 
-               dataOrdem.getFullYear() === anoAtual &&
-               o.status === 'concluida'
+        return dataOrdem.getMonth() === mesAtual &&
+          dataOrdem.getFullYear() === anoAtual &&
+          o.status === 'concluida'
       }).reduce((total, ordem) => {
         const valorOrdem = ordem.valor || 0
-        const valorItens = ordem.itens?.reduce((sum: number, item: any) => 
+        const valorItens = ordem.itens?.reduce((sum: number, item: any) =>
           sum + (item.quantidade * item.preco_unitario), 0) || 0
         return total + valorOrdem + valorItens
       }, 0) || 0
@@ -397,7 +397,7 @@ export function Dashboard() {
 
   const getStatusBadge = (status: string) => {
     const StatusIcon = statusIcons[status as keyof typeof statusIcons] || Activity
-    
+
     return (
       <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${statusColors[status as keyof typeof statusColors] || 'text-muted-foreground bg-muted border-border'}`}>
         <StatusIcon className="h-3 w-3" />
@@ -545,12 +545,12 @@ export function Dashboard() {
               <CardTitle className="text-xl font-semibold text-foreground">Ordens de Serviço</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
                 {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
-                  ? `Todas as ${recentOrders.length} ordens de serviço` 
+                  ? `Todas as ${recentOrders.length} ordens de serviço`
                   : `Ordens filtradas - Total: ${filteredOrders.length}`
                 }
               </CardDescription>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
@@ -567,7 +567,7 @@ export function Dashboard() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -597,8 +597,8 @@ export function Dashboard() {
                     initialFocus
                     mode="range"
                     defaultMonth={dateFilter.from}
-                    selected={{from: dateFilter.from, to: dateFilter.to}}
-                    onSelect={(range) => setDateFilter({from: range?.from, to: range?.to})}
+                    selected={{ from: dateFilter.from, to: dateFilter.to }}
+                    onSelect={(range) => setDateFilter({ from: range?.from, to: range?.to })}
                     numberOfMonths={1}
                     className="pointer-events-auto"
                   />
@@ -654,12 +654,12 @@ export function Dashboard() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="divide-y divide-border">
+        <div className="divide-y divide-border">
             {paginatedOrders.map((order) => {
-              const itensValue = order.itens?.reduce((total: number, item: any) => 
+              const itensValue = order.itens?.reduce((total: number, item: any) =>
                 total + (item.quantidade * item.preco_unitario), 0) || 0
               const totalValue = (order.valor || 0) + itensValue
-              
+
               return (
                 <div key={order.id} className="p-4 hover:bg-muted/50 transition-colors">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -667,6 +667,15 @@ export function Dashboard() {
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                         <p className="font-semibold text-base text-foreground">{order.clientes?.nome || 'Cliente não encontrado'}</p>
                         {getStatusBadge(order.status)}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => viewOrderDetails(order)}
+                          className="flex items-center gap-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Ver Detalhes
+                        </Button>
                       </div>
                       <p className="text-sm font-medium text-foreground">{order.dispositivo}</p>
                       <p className="text-sm text-muted-foreground line-clamp-2">{order.descricao_problema}</p>
@@ -685,17 +694,9 @@ export function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => viewOrderDetails(order)}
-                        className="flex items-center gap-2"
-                      >
-                        <Eye className="h-4 w-4" />
-                        Ver Detalhes
-                      </Button>
+
                       {totalValue > 0 && (
-                        <div className="text-right space-y-1">
+                        <div className="text-right">
                           <div className="text-base font-bold text-green-600 dark:text-green-400">
                             R$ {totalValue.toFixed(2)}
                           </div>
@@ -712,23 +713,22 @@ export function Dashboard() {
               )
             })}
           </div>
-
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="p-4 border-t border-border bg-muted/25">
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious 
+                    <PaginationPrevious
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                       className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>
-                  
+
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     const pageNumber = Math.max(1, Math.min(currentPage - 2 + i, totalPages - 4 + i))
                     if (pageNumber > totalPages) return null
-                    
+
                     return (
                       <PaginationItem key={pageNumber}>
                         <PaginationLink
@@ -741,9 +741,9 @@ export function Dashboard() {
                       </PaginationItem>
                     )
                   })}
-                  
+
                   <PaginationItem>
-                    <PaginationNext 
+                    <PaginationNext
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
@@ -758,7 +758,7 @@ export function Dashboard() {
               <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
               <p className="text-lg font-medium text-muted-foreground">
                 {statusFilter === 'all' && !dateFilter.from && !dateFilter.to
-                  ? 'Nenhuma ordem de serviço encontrada' 
+                  ? 'Nenhuma ordem de serviço encontrada'
                   : 'Nenhuma ordem encontrada com os filtros aplicados'
                 }
               </p>

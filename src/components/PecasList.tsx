@@ -100,10 +100,6 @@ export function PecasList() {
           <p className="text-muted-foreground">Gerencie o estoque de peças para manutenção</p>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-          <div className="text-sm text-muted-foreground ml-auto flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Valor em estoque: R$ {valorEmEstoque.toFixed(2)}
-          </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => setSelectedPeca(null)} className="w-full sm:w-auto">
@@ -145,7 +141,12 @@ export function PecasList() {
                 className="pl-10 bg-background border-border text-foreground"
               />
             </div>
+               <div className="text-sm text-muted-foreground ml-auto flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Valor em estoque: R$ {valorEmEstoque.toFixed(2)}
           </div>
+          </div>
+          
         </CardHeader>
         <CardContent>
           {isLoading ? (
