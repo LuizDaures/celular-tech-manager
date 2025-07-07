@@ -44,39 +44,6 @@ export type Database = {
         }
         Relationships: []
       }
-      configuracoes_loja: {
-        Row: {
-          cor_primaria: string | null
-          cor_secundaria: string | null
-          created_at: string | null
-          id: string
-          logo_url: string | null
-          nome_loja: string
-          tempo_preparo_medio: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          cor_primaria?: string | null
-          cor_secundaria?: string | null
-          created_at?: string | null
-          id?: string
-          logo_url?: string | null
-          nome_loja?: string
-          tempo_preparo_medio?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          cor_primaria?: string | null
-          cor_secundaria?: string | null
-          created_at?: string | null
-          id?: string
-          logo_url?: string | null
-          nome_loja?: string
-          tempo_preparo_medio?: number | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       dados_empresa: {
         Row: {
           cnpj: string | null
@@ -98,33 +65,6 @@ export type Database = {
           id?: string
           logo_base64?: string | null
           nome?: string | null
-        }
-        Relationships: []
-      }
-      ingredientes: {
-        Row: {
-          ativo: boolean | null
-          categoria: string
-          criado_em: string | null
-          id: string
-          imagem_url: string | null
-          nome: string
-        }
-        Insert: {
-          ativo?: boolean | null
-          categoria: string
-          criado_em?: string | null
-          id?: string
-          imagem_url?: string | null
-          nome: string
-        }
-        Update: {
-          ativo?: boolean | null
-          categoria?: string
-          criado_em?: string | null
-          id?: string
-          imagem_url?: string | null
-          nome?: string
         }
         Relationships: []
       }
@@ -256,123 +196,6 @@ export type Database = {
           modelo?: string | null
           nome?: string | null
           preco_unitario?: number | null
-        }
-        Relationships: []
-      }
-      pedidos: {
-        Row: {
-          atualizado_em: string | null
-          cliente_endereco: string | null
-          cliente_nome: string
-          cliente_telefone: string
-          criado_em: string | null
-          id: string
-          itens: Json
-          numero_pedido: string
-          observacoes: string | null
-          status: string
-          valor_total: number
-        }
-        Insert: {
-          atualizado_em?: string | null
-          cliente_endereco?: string | null
-          cliente_nome: string
-          cliente_telefone: string
-          criado_em?: string | null
-          id?: string
-          itens: Json
-          numero_pedido: string
-          observacoes?: string | null
-          status?: string
-          valor_total: number
-        }
-        Update: {
-          atualizado_em?: string | null
-          cliente_endereco?: string | null
-          cliente_nome?: string
-          cliente_telefone?: string
-          criado_em?: string | null
-          id?: string
-          itens?: Json
-          numero_pedido?: string
-          observacoes?: string | null
-          status?: string
-          valor_total?: number
-        }
-        Relationships: []
-      }
-      produtos: {
-        Row: {
-          ativo: boolean | null
-          atualizado_em: string | null
-          categoria: string
-          criado_em: string | null
-          descricao: string | null
-          destaque: boolean | null
-          disponivel: boolean | null
-          id: string
-          imagem_url: string | null
-          ingredientes: string[] | null
-          nome: string
-          preco_opcoes: Json
-          tempo_preparo: number | null
-        }
-        Insert: {
-          ativo?: boolean | null
-          atualizado_em?: string | null
-          categoria: string
-          criado_em?: string | null
-          descricao?: string | null
-          destaque?: boolean | null
-          disponivel?: boolean | null
-          id?: string
-          imagem_url?: string | null
-          ingredientes?: string[] | null
-          nome: string
-          preco_opcoes: Json
-          tempo_preparo?: number | null
-        }
-        Update: {
-          ativo?: boolean | null
-          atualizado_em?: string | null
-          categoria?: string
-          criado_em?: string | null
-          descricao?: string | null
-          destaque?: boolean | null
-          disponivel?: boolean | null
-          id?: string
-          imagem_url?: string | null
-          ingredientes?: string[] | null
-          nome?: string
-          preco_opcoes?: Json
-          tempo_preparo?: number | null
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          created_at: string | null
-          endereco: string | null
-          id: string
-          nome: string
-          telefone: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          endereco?: string | null
-          id: string
-          nome: string
-          telefone?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          endereco?: string | null
-          id?: string
-          nome?: string
-          telefone?: string | null
-          updated_at?: string | null
         }
         Relationships: []
       }
