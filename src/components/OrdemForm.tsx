@@ -42,9 +42,11 @@ export function OrdemForm({ ordem, readOnly = false, onSuccess }: OrdemFormProps
   const queryClient = useQueryClient()
   const { processarMudancasEstoque } = useEstoqueManager()
 
-  // useEffect para carregar itens
+// useEffect para carregar itens
+const [hasLoadedOriginalItens, setHasLoadedOriginalItens] = useState(false)
+
 useEffect(() => {
-  if (ordem?.itens && originalItens.length === 0) {
+  if (ordem?.itens && !hasLoadedOriginalItens) {
     const itensCarregados = ordem.itens.map(item => ({
       peca_id: item.peca_id,
       nome_item: item.nome_item,
@@ -56,10 +58,25 @@ useEffect(() => {
     const unicos = Array.from(new Map(itensCarregados.map(item => [item.peca_id, item])).values())
 
     setItens(unicos)
-    setOriginalItens(unicos) // << só define se originalItens estiver vazio
-    console.log('Itens originais carregados:', unicos)
+    setOriginalItens(unicos)
+    setHasLoadedOriginalItens(true)
+    console.log('Itens originais carregados pela primeira vez:', unicos)
+  } else if (ordem?.itens && hasLoadedOriginalItens) {
+    // Apenas atualiza os itens atuais, mantém os originais
+    const itensCarregados = ordem.itens.map(item => ({
+      peca_id: item.peca_id,
+      nome_item: item.nome_item,
+      quantidade: item.quantidade,
+      preco_unitario: item.preco_unitario,
+      is_from_estoque: item.is_from_estoque === true,
+    }))
+
+    const unicos = Array.from(new Map(itensCarregados.map(item => [item.peca_id, item])).values())
+    setItens(unicos)
+    console.log('Itens atuais atualizados:', unicos)
+    console.log('Itens originais preservados:', originalItens)
   }
-}, [ordem?.itens])
+}, [ordem?.itens, hasLoadedOriginalItens])
 
 
 
