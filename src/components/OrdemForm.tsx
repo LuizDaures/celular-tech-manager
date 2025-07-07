@@ -129,6 +129,9 @@ useEffect(() => {
       }
 
       // Processar mudanças no estoque ANTES de gerenciar itens
+      console.log('🔍 DEBUGGING - Chamando processarMudancasEstoque com:')
+      console.log('  Novos itens:', data.itens)
+      console.log('  Itens originais:', originalItens)
       await processarMudancasEstoque(data.itens, originalItens)
 
       // Gerenciar itens da ordem

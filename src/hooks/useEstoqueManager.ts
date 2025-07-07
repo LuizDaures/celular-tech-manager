@@ -81,6 +81,9 @@ export function useEstoqueManager() {
     const itensOriginaisMap = agruparPorPecaComSoma(itensOriginais)
     const novosItensMap = agruparPorPecaComSoma(novosItens)
 
+    log('Mapa itens originais:', Array.from(itensOriginaisMap.entries()))
+    log('Mapa novos itens:', Array.from(novosItensMap.entries()))
+
     const ajustes: { pecaId: string, quantidadeAlterada: number }[] = []
 
     // 1. Itens removidos (devolver ao estoque)
