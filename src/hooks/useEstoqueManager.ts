@@ -61,7 +61,8 @@ export function useEstoqueManager() {
   const agruparPorPecaComSoma = (itens: ItemForm[]) => {
     const mapa = new Map<string, number>()
     for (const item of itens) {
-      if (item.peca_id && item.is_from_estoque) {
+      // Se tem peca_id, é do estoque (independente do is_from_estoque)
+      if (item.peca_id) {
         mapa.set(item.peca_id, (mapa.get(item.peca_id) || 0) + item.quantidade)
       }
     }
