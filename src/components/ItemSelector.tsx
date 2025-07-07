@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Plus, Search } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 interface ItemForm {
   peca_id?: string
@@ -29,6 +30,7 @@ export function ItemSelector({ onAddItem, itensJaAdicionados = [] }: ItemSelecto
   const [quantity, setQuantity] = useState(1)
   const [customPrice, setCustomPrice] = useState('')
   const [selectedPeca, setSelectedPeca] = useState<PecaManutencao | null>(null)
+  const { toast } = useToast()
 
   const { data: pecas = [] } = useQuery({
     queryKey: ['pecas'],
@@ -65,8 +67,34 @@ export function ItemSelector({ onAddItem, itensJaAdicionados = [] }: ItemSelecto
   const handleAddItem = () => {
     if (!selectedPeca) return
 
+    // Verificar se a peça já foi adicionada
+    const pecaJaAdicionada = itensJaAdicionados.some(item => item.peca_id === selectedPeca.id)
+    if (pecaJaAdicionada) {
+      toast({
+        title: "Peça já adicionada",
+        description: "Esta peça já foi adicionada à ordem. Edite a quantidade se necessário.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Verificar estoque disponível
     if (quantity > selectedPeca.estoque) {
-      return // Não permite adicionar se quantidade for maior que estoque
+      toast({
+        title: "Estoque insuficiente",
+        description: `Apenas ${selectedPeca.estoque} unidades disponíveis em estoque.`,
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (quantity <= 0) {
+      toast({
+        title: "Quantidade inválida",
+        description: "A quantidade deve ser maior que zero.",
+        variant: "destructive",
+      })
+      return
     }
 
     const itemToAdd: ItemForm = {
