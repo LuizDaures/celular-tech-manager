@@ -71,18 +71,18 @@ export function useEstoqueManager() {
 
   const processarMudancasEstoque = async (novosItens: ItemForm[], itensOriginais: ItemForm[] = []) => {
     const log = (...args: any[]) => {
-      if (process.env.NODE_ENV !== 'production') console.log(...args)
+      console.log(...args) // Sempre mostrar logs para debug
     }
 
     log('=== INICIANDO PROCESSAMENTO DE MUDANÇAS NO ESTOQUE ===')
-    log('Itens originais:', itensOriginais)
-    log('Novos itens:', novosItens)
+    log('📋 Itens originais recebidos:', JSON.stringify(itensOriginais, null, 2))
+    log('📋 Novos itens recebidos:', JSON.stringify(novosItens, null, 2))
 
     const itensOriginaisMap = agruparPorPecaComSoma(itensOriginais)
     const novosItensMap = agruparPorPecaComSoma(novosItens)
 
-    log('Mapa itens originais:', Array.from(itensOriginaisMap.entries()))
-    log('Mapa novos itens:', Array.from(novosItensMap.entries()))
+    log('🗺️ Mapa itens originais:', Array.from(itensOriginaisMap.entries()))
+    log('🗺️ Mapa novos itens:', Array.from(novosItensMap.entries()))
 
     const ajustes: { pecaId: string, quantidadeAlterada: number }[] = []
 

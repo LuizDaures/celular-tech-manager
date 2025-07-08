@@ -147,8 +147,21 @@ useEffect(() => {
 
       // Processar mudanças no estoque ANTES de gerenciar itens
       console.log('🔍 DEBUGGING - Chamando processarMudancasEstoque com:')
-      console.log('  Novos itens:', data.itens)
-      console.log('  Itens originais:', originalItens)
+      console.log('  📋 Novos itens (atual):', JSON.stringify(data.itens, null, 2))
+      console.log('  📋 Itens originais (preservados):', JSON.stringify(originalItens, null, 2))
+      console.log('  🔍 Verificando se há diferenças...')
+      
+      // Verificar se há itens para processar
+      if (originalItens.length === 0 && data.itens.length === 0) {
+        console.log('  ⚠️ Nenhum item para processar (ambos arrays vazios)')
+      } else if (originalItens.length === 0) {
+        console.log('  ➕ Apenas itens novos (criação)')
+      } else if (data.itens.length === 0) {
+        console.log('  ➖ Apenas remoção de itens')
+      } else {
+        console.log('  🔄 Comparando itens para detectar mudanças')
+      }
+      
       await processarMudancasEstoque(data.itens, originalItens)
 
       // Gerenciar itens da ordem
