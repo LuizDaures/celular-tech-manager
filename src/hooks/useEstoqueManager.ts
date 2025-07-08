@@ -59,13 +59,29 @@ export function useEstoqueManager() {
   }
 
   const agruparPorPecaComSoma = (itens: ItemForm[]) => {
+    const log = (...args: any[]) => {
+      console.log(...args) // Debug temporário
+    }
+    
     const mapa = new Map<string, number>()
+    
+    log('🔍 Analisando itens para agrupar:', itens)
+    
     for (const item of itens) {
+      log(`📋 Item: ${item.nome_item}, peca_id: ${item.peca_id}, is_from_estoque: ${item.is_from_estoque}`)
+      
       // Se tem peca_id, é do estoque (independente do is_from_estoque)
       if (item.peca_id) {
-        mapa.set(item.peca_id, (mapa.get(item.peca_id) || 0) + item.quantidade)
+        const quantidadeAtual = mapa.get(item.peca_id) || 0
+        const novaQuantidade = quantidadeAtual + item.quantidade
+        mapa.set(item.peca_id, novaQuantidade)
+        log(`➕ Adicionado ao mapa: ${item.peca_id} = ${novaQuantidade}`)
+      } else {
+        log(`⚠️ Item sem peca_id, ignorado para controle de estoque`)
       }
     }
+    
+    log('🗺️ Mapa final:', Array.from(mapa.entries()))
     return mapa
   }
 
