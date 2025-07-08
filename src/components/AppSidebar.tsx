@@ -1,5 +1,5 @@
 
-import { Home, Users, Wrench, FileText, Settings, Package } from 'lucide-react'
+import { Home, Users, Wrench, FileText, Settings } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { getSupabaseClient } from '@/lib/supabase'
 import {
@@ -29,11 +29,6 @@ const menuItems = [
     title: 'Técnicos',
     url: '#tecnicos',
     icon: Wrench,
-  },
-  {
-    title: 'Peças',
-    url: '#pecas',
-    icon: Package,
   },
   {
     title: 'Ordens de Serviço',

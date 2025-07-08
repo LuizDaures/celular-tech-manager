@@ -4,7 +4,6 @@ import { Layout } from '@/components/Layout'
 import { Dashboard } from '@/components/Dashboard'
 import { ClientesList } from '@/components/ClientesList'
 import { TecnicosList } from '@/components/TecnicosList'
-import { PecasList } from '@/components/PecasList'
 import { OrdensList } from '@/components/OrdensList'
 import { Configuracoes } from '@/components/Configuracoes'
 import { EnhancedDatabaseSetupModal } from '@/components/EnhancedDatabaseSetupModal'
@@ -80,8 +79,6 @@ const Index = () => {
         return <ClientesList />
       case 'tecnicos':
         return <TecnicosList />
-      case 'pecas':
-        return <PecasList />
       case 'ordens':
         return <OrdensList />
       case 'configuracoes':

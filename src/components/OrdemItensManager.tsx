@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Trash2, Plus, Package2 } from 'lucide-react'
-import { ItemSelector } from '@/components/ItemSelector'
+
 import { useToast } from '@/hooks/use-toast'
 
 interface ItemForm {
@@ -26,39 +26,6 @@ export function OrdemItensManager({ itens, setItens, readOnly = false }: OrdemIt
   const addItem = () => {
     setItens([...itens, { nome_item: '', quantidade: 1, preco_unitario: 0, is_from_estoque: false }])
   }
-
-const addItemFromSelector = (item: ItemForm) => {
-  // Verificar duplicatas para peças do estoque (com peca_id)
-  if (item.peca_id) {
-    const pecaJaAdicionada = itens.some(existingItem => existingItem.peca_id === item.peca_id)
-    if (pecaJaAdicionada) {
-      toast({
-        title: "Peça já adicionada",
-        description: "Esta peça já foi adicionada à ordem. Edite a quantidade se necessário.",
-        variant: "destructive",
-      })
-      return
-    }
-  }
-
-  // Verificar duplicatas para itens manuais (sem peca_id, por nome)
-  if (!item.peca_id) {
-    const nomeJaExiste = itens.some(existingItem => 
-      !existingItem.peca_id && 
-      existingItem.nome_item.toLowerCase().trim() === item.nome_item.toLowerCase().trim()
-    )
-    if (nomeJaExiste) {
-      toast({
-        title: "Item já adicionado",
-        description: "Já existe um item com este nome na ordem. Edite a quantidade se necessário.",
-        variant: "destructive",
-      })
-      return
-    }
-  }
-
-  setItens([...itens, item])
-}
 
 
   const removeItem = (index: number) => {
@@ -157,10 +124,6 @@ const addItemFromSelector = (item: ItemForm) => {
         </div>
 
         <div className="flex flex-col sm:flex-row justify-start gap-3 w-full">
-          <ItemSelector
-            onAddItem={addItemFromSelector}
-            itensJaAdicionados={itens}
-          />
           <Button
             type="button"
             variant="outline"
@@ -169,7 +132,7 @@ const addItemFromSelector = (item: ItemForm) => {
             className="w-full sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Manual
+            Adicionar Peça/Item
           </Button>
         </div>
 
@@ -324,7 +287,7 @@ const addItemFromSelector = (item: ItemForm) => {
         <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
           <Package2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>Nenhuma peça adicionada</p>
-          <p className="text-sm">Use os botões acima para adicionar peças</p>
+          <p className="text-sm">Use o botão acima para adicionar peças</p>
         </div>
       )}
     </div>
