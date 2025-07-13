@@ -14,227 +14,279 @@ export type Database = {
   }
   public: {
     Tables: {
-      clientes: {
+      clients: {
         Row: {
+          address: string | null
           cpf: string | null
-          criado_em: string | null
+          created_at: string
           email: string | null
-          endereco: string | null
           id: string
-          nome: string | null
-          telefone: string | null
+          name: string
+          phone: string | null
+          updated_at: string
         }
         Insert: {
+          address?: string | null
           cpf?: string | null
-          criado_em?: string | null
+          created_at?: string
           email?: string | null
-          endereco?: string | null
           id?: string
-          nome?: string | null
-          telefone?: string | null
+          name: string
+          phone?: string | null
+          updated_at?: string
         }
         Update: {
+          address?: string | null
           cpf?: string | null
-          criado_em?: string | null
+          created_at?: string
           email?: string | null
-          endereco?: string | null
           id?: string
-          nome?: string | null
-          telefone?: string | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
-      dados_empresa: {
+      product_categories: {
         Row: {
-          cnpj: string | null
-          created_at: string | null
+          created_at: string
           id: string
-          logo_base64: string | null
-          nome: string | null
+          name: string
         }
         Insert: {
-          cnpj?: string | null
-          created_at?: string | null
+          created_at?: string
           id?: string
-          logo_base64?: string | null
-          nome?: string | null
+          name: string
         }
         Update: {
-          cnpj?: string | null
-          created_at?: string | null
+          created_at?: string
           id?: string
-          logo_base64?: string | null
-          nome?: string | null
+          name?: string
         }
         Relationships: []
       }
-      itens_ordem: {
+      products: {
         Row: {
+          brand: string | null
+          category_id: string | null
+          cost_price: number | null
+          created_at: string
+          description: string | null
           id: string
-          is_from_estoque: boolean | null
-          nome_item: string | null
-          ordem_id: string | null
-          peca_id: string | null
-          preco_unitario: number | null
-          quantidade: number | null
+          name: string
+          price: number
+          sku: string | null
+          stock_quantity: number
+          updated_at: string
+          warranty_months: number
         }
         Insert: {
+          brand?: string | null
+          category_id?: string | null
+          cost_price?: number | null
+          created_at?: string
+          description?: string | null
           id?: string
-          is_from_estoque?: boolean | null
-          nome_item?: string | null
-          ordem_id?: string | null
-          peca_id?: string | null
-          preco_unitario?: number | null
-          quantidade?: number | null
+          name: string
+          price: number
+          sku?: string | null
+          stock_quantity?: number
+          updated_at?: string
+          warranty_months?: number
         }
         Update: {
+          brand?: string | null
+          category_id?: string | null
+          cost_price?: number | null
+          created_at?: string
+          description?: string | null
           id?: string
-          is_from_estoque?: boolean | null
-          nome_item?: string | null
-          ordem_id?: string | null
-          peca_id?: string | null
-          preco_unitario?: number | null
-          quantidade?: number | null
+          name?: string
+          price?: number
+          sku?: string | null
+          stock_quantity?: number
+          updated_at?: string
+          warranty_months?: number
         }
         Relationships: [
           {
-            foreignKeyName: "itens_ordem_ordem_id_fkey"
-            columns: ["ordem_id"]
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
             isOneToOne: false
-            referencedRelation: "ordens_servico"
+            referencedRelation: "product_categories"
             referencedColumns: ["id"]
           },
         ]
       }
-      ordens_servico: {
+      profiles: {
         Row: {
-          cliente_id: string | null
-          data_abertura: string | null
-          data_conclusao: string | null
-          descricao_problema: string | null
-          diagnostico: string | null
-          dispositivo: string | null
+          created_at: string
           id: string
-          servico_realizado: string | null
-          status: string | null
-          tecnico_id: string | null
-          valor: number | null
+          is_active: boolean
+          name: string
+          role: string
+          updated_at: string
         }
         Insert: {
-          cliente_id?: string | null
-          data_abertura?: string | null
-          data_conclusao?: string | null
-          descricao_problema?: string | null
-          diagnostico?: string | null
-          dispositivo?: string | null
-          id?: string
-          servico_realizado?: string | null
-          status?: string | null
-          tecnico_id?: string | null
-          valor?: number | null
+          created_at?: string
+          id: string
+          is_active?: boolean
+          name: string
+          role?: string
+          updated_at?: string
         }
         Update: {
-          cliente_id?: string | null
-          data_abertura?: string | null
-          data_conclusao?: string | null
-          descricao_problema?: string | null
-          diagnostico?: string | null
-          dispositivo?: string | null
+          created_at?: string
           id?: string
-          servico_realizado?: string | null
-          status?: string | null
-          tecnico_id?: string | null
-          valor?: number | null
+          is_active?: boolean
+          name?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sale_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string | null
+          quantity: number
+          sale_id: string | null
+          unit_price: number
+          warranty_end_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          quantity: number
+          sale_id?: string | null
+          unit_price: number
+          warranty_end_date?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          quantity?: number
+          sale_id?: string | null
+          unit_price?: number
+          warranty_end_date?: string
         }
         Relationships: [
           {
-            foreignKeyName: "ordens_servico_cliente_id_fkey"
-            columns: ["cliente_id"]
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: "clientes"
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "ordens_servico_tecnico_id_fkey"
-            columns: ["tecnico_id"]
+            foreignKeyName: "sale_items_sale_id_fkey"
+            columns: ["sale_id"]
             isOneToOne: false
-            referencedRelation: "tecnicos"
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
         ]
       }
-      pecas_manutencao: {
+      sales: {
         Row: {
-          atualizado_em: string | null
-          codigo_fabricante: string | null
-          criado_em: string | null
-          estoque: number | null
-          fabricante: string | null
+          client_id: string | null
+          created_at: string
           id: string
-          modelo: string | null
-          nome: string | null
-          preco_unitario: number | null
+          notes: string | null
+          payment_method: string | null
+          sale_date: string
+          salesperson_name: string
+          status: string
+          total_amount: number
+          updated_at: string
         }
         Insert: {
-          atualizado_em?: string | null
-          codigo_fabricante?: string | null
-          criado_em?: string | null
-          estoque?: number | null
-          fabricante?: string | null
+          client_id?: string | null
+          created_at?: string
           id?: string
-          modelo?: string | null
-          nome?: string | null
-          preco_unitario?: number | null
+          notes?: string | null
+          payment_method?: string | null
+          sale_date?: string
+          salesperson_name: string
+          status?: string
+          total_amount: number
+          updated_at?: string
         }
         Update: {
-          atualizado_em?: string | null
-          codigo_fabricante?: string | null
-          criado_em?: string | null
-          estoque?: number | null
-          fabricante?: string | null
+          client_id?: string | null
+          created_at?: string
           id?: string
-          modelo?: string | null
-          nome?: string | null
-          preco_unitario?: number | null
+          notes?: string | null
+          payment_method?: string | null
+          sale_date?: string
+          salesperson_name?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sales_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      tecnicos: {
+      stock_movements: {
         Row: {
-          cpf: string | null
-          criado_em: string | null
-          email: string | null
-          endereco: string | null
+          created_at: string
           id: string
-          nome: string | null
-          telefone: string | null
+          movement_type: string
+          notes: string | null
+          product_id: string | null
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
         }
         Insert: {
-          cpf?: string | null
-          criado_em?: string | null
-          email?: string | null
-          endereco?: string | null
+          created_at?: string
           id?: string
-          nome?: string | null
-          telefone?: string | null
+          movement_type: string
+          notes?: string | null
+          product_id?: string | null
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
         }
         Update: {
-          cpf?: string | null
-          criado_em?: string | null
-          email?: string | null
-          endereco?: string | null
+          created_at?: string
           id?: string
-          nome?: string | null
-          telefone?: string | null
+          movement_type?: string
+          notes?: string | null
+          product_id?: string | null
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      set_default_password: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
